@@ -1,0 +1,63 @@
+Overview
+----------
+UniDesign is a command-line-based Unified platform for protein Design, 
+aiming at all kinds of protein design and engineering tasks, as well as 
+for protein structure modeling and scoring. UniDesign is mainly extended 
+from EvoEF2 (https://zhanglab.ccmb.med.umich.edu/EvoEF/) and in part 
+from EvoDesign (https://zhanglab.ccmb.med.umich.edu/EvoDesign/) but has 
+many new features.
+
+Please red UniDesign Manual under doc/ to know more about UniDesign.
+
+Applications
+-------------
+UniDesign can be used to do but is not limited to the following tasks:
+
+1. Protein design (de novo protein sequence design and redesign):
+*) design monomer proteins
+*) design protein-protein interactions
+*) design protein-ligand interactions
+*) design protein-nucleic acid interactions
+*) design enzymes
+
+2. Protein structure modeling applications:
+*) protein side-chain packing
+*) repair missing protein side chains
+*) protein structure energy minimization
+*) build mutant structural models
+*) add polar hydrogen atoms
+*) optimize hydrogen atom's position
+
+3. The scoring applications include:
+*) calculate protein fold stability score
+*) calculate protein-protein binding energy score
+
+Usage
+------
+Please read the manul in doc/ for full details.
+
+Availability
+-------------
+UniDesign is free to all users.
+
+Citations
+----------
+The UniDesign paper is in preparation and has not been published 
+formally in a peer-reviewed journal. If UniDesign is useful to 
+your work, please cite the following papers:
+
+1. Xiaoqiang Huang, Robin Pearce, Yang Zhang. EvoEF2: accurate and fast 
+energy function for computational protein design. Bioinformatics 
+(2020), 36: 1135-1142.
+
+2. Robin Pearce, Xiaoqiang Huang, Dani Setiawan, Yang Zhang. EvoDesign: 
+Designing protein-protein binding interactions using evolutionary 
+interface profiles in conjunction with an optimized physical energy 
+function. Journal of Molecular Biology (2019), 431: 2467-2476.
+
+
+Reporting bugs, comments, and suggestions
+------------------------------------------
+If you find bugs or have comments and suggestions for improving 
+UniDesign, please contact Dr. Xiaoqiang Huang (tommyhuangthu@foxmail.com 
+or xiaoqiah@umich.edu). We will try our best to improve the program.
