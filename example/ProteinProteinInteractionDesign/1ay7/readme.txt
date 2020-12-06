@@ -1,3 +1,1 @@
-
-./UniDesign --command=ProteinDesign --ppint --pdb=example/ProteinProteinInteractionDesign/1ay7/1ay7.pdb --interface_only
-
+../../../UniDesign --command=ProteinDesign --ppint --pdb=1ay7.pdb --interface_only

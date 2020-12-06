@@ -1,2 +1,1 @@
-
-./UniDesign --command=ProteinDesign --monomer --pdb=example/MonomerDesign/1igd/1igd.pdb
+../../../UniDesign.exe --command=ProteinDesign --monomer --pdb=1igd.pdb

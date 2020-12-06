@@ -1,3 +1,2 @@
-
-./UniDesign --command=ProteinDesign --ppint --pdb=example/ProteinProteinInteractionDesign/1e44.pdb
+../../../UniDesign.exe --command=ProteinDesign --ppint --pdb=1e44.pdb
 

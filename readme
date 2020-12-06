@@ -9,6 +9,7 @@ many new features.
 
 Please red UniDesign Manual under doc/ to know more about UniDesign.
 
+
 Applications
 -------------
 UniDesign can be used to do but is not limited to the following tasks:
@@ -32,13 +33,16 @@ UniDesign can be used to do but is not limited to the following tasks:
 *) calculate protein fold stability score
 *) calculate protein-protein binding energy score
 
+
 Usage
 ------
 Please read the manul in doc/ for full details.
 
+
 Availability
 -------------
 UniDesign is free to all users.
+
 
 Citations
 ----------
