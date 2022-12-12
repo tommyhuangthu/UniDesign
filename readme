@@ -50,11 +50,11 @@ The UniDesign paper is in preparation and has not been published
 formally in a peer-reviewed journal. If UniDesign is useful to 
 your work, please cite the following papers:
 
-1. Xiaoqiang Huang, Robin Pearce, Yang Zhang. EvoEF2: accurate and fast 
+Xiaoqiang Huang, Robin Pearce, Yang Zhang. EvoEF2: accurate and fast 
 energy function for computational protein design. Bioinformatics 
 (2020), 36: 1135-1142.
 
-2. Robin Pearce, Xiaoqiang Huang, Dani Setiawan, Yang Zhang. EvoDesign: 
+Robin Pearce, Xiaoqiang Huang, Dani Setiawan, Yang Zhang. EvoDesign: 
 Designing protein-protein binding interactions using evolutionary 
 interface profiles in conjunction with an optimized physical energy 
 function. Journal of Molecular Biology (2019), 431: 2467-2476.
@@ -63,5 +63,5 @@ function. Journal of Molecular Biology (2019), 431: 2467-2476.
 Reporting bugs, comments, and suggestions
 ------------------------------------------
 If you find bugs or have comments and suggestions for improving 
-UniDesign, please contact Dr. Xiaoqiang Huang (tommyhuangthu@foxmail.com 
-or xiaoqiah@umich.edu). We will try our best to improve the program.
+UniDesign, please contact Dr. Xiaoqiang Huang (tommyhuangthu@foxmail.com). 
+We will try our best to improve the program.
