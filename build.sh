@@ -1,3 +1,2 @@
 #!/usr/bin/bash
-name=UniDesign
-g++ -O3 --fast-math -o UniDesign src/*.cpp
+g++ -w -O3 --fast-math -o UniDesign src/*.cpp
