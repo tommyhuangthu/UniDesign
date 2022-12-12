@@ -1,16 +1,16 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com, xiaoqiah@umich.edu)
+Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
-files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, 
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE 
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
 
@@ -177,30 +177,31 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define  radius_Other           0.6500
 
 
-typedef enum _EEF1_AtomType{
-  EEF1_AtomType_CO, 
-  EEF1_AtomType_COO, 
-  EEF1_AtomType_CR, 
-  EEF1_AtomType_CH1E, 
-  EEF1_AtomType_CH2E, 
-  EEF1_AtomType_CH3E, 
+typedef enum _EEF1_AtomType
+{
+  EEF1_AtomType_CO,
+  EEF1_AtomType_COO,
+  EEF1_AtomType_CR,
+  EEF1_AtomType_CH1E,
+  EEF1_AtomType_CH2E,
+  EEF1_AtomType_CH3E,
   EEF1_AtomType_CR1E,
   EEF1_AtomType_Carg,
-  EEF1_AtomType_Hpol, 
-  EEF1_AtomType_Hnpl, 
-  EEF1_AtomType_OH1, 
+  EEF1_AtomType_Hpol,
+  EEF1_AtomType_Hnpl,
+  EEF1_AtomType_OH1,
   EEF1_AtomType_OH2,
-  EEF1_AtomType_Oest, 
-  EEF1_AtomType_OC, 
-  EEF1_AtomType_OOC, 
-  EEF1_AtomType_NH1, 
-  EEF1_AtomType_NH2, 
-  EEF1_AtomType_NH3, 
-  EEF1_AtomType_NR, 
-  EEF1_AtomType_Narg, 
-  EEF1_AtomType_Npro, 
-  EEF1_AtomType_P, 
-  EEF1_AtomType_S, 
+  EEF1_AtomType_Oest,
+  EEF1_AtomType_OC,
+  EEF1_AtomType_OOC,
+  EEF1_AtomType_NH1,
+  EEF1_AtomType_NH2,
+  EEF1_AtomType_NH3,
+  EEF1_AtomType_NR,
+  EEF1_AtomType_Narg,
+  EEF1_AtomType_Npro,
+  EEF1_AtomType_P,
+  EEF1_AtomType_S,
   EEF1_AtomType_SH1E,
   EEF1_AtomType_B,
   EEF1_AtomType_F,
@@ -217,7 +218,7 @@ typedef enum _EEF1_AtomType{
   EEF1_AtomType_Other,
 } EEF1_AtomType;
 
-int AtomAssignParameter(Atom* pAtom,char* atomType,double dgfree,double lambda,double volume,double epsilon,double radius);
-int AssignAtomParameterByEEF1Type(Atom* pAtom,int eef1type);
+int AtomAssignParameter(Atom* pAtom, char* atomType, double dgfree, double lambda, double volume, double epsilon, double radius);
+int AssignAtomParameterByEEF1Type(Atom* pAtom, int eef1type);
 
 #endif // EEF1_H

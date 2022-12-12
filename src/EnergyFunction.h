@@ -1,16 +1,16 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com, xiaoqiah@umich.edu)
+Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
-files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, 
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE 
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
 
@@ -20,15 +20,15 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Rotamer.h"
 
 
-#define ENERGY_DEBUG_MODE_VDW_ATT           0
-#define ENERGY_DEBUG_MODE_VDW_REP           0
-#define ENERGY_DEBUG_MODE_HBOND             0
-#define ENERGY_DEBUG_MODE_ELEC              0
-#define ENERGY_DEBUG_MODE_DESOLV            0
+#define ENERGY_DEBUG_MODE_VDW_ATT          0
+#define ENERGY_DEBUG_MODE_VDW_REP          0
+#define ENERGY_DEBUG_MODE_HBOND            0
+#define ENERGY_DEBUG_MODE_ELEC             0
+#define ENERGY_DEBUG_MODE_DESOLV           0
 
 
 // a maximum of energy weights
-#define MAX_ENERGY_TERM          100
+#define MAX_ENERGY_TERM                  100
 
 #define ENERGY_DISTANCE_CUTOFF             6.0
 // scale for 1-2, 1-3, 1-4 and >=1-5 interactions
@@ -36,14 +36,23 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define ENERGY_SCALE_FACTOR_BOND_14        0.2
 #define ENERGY_SCALE_FACTOR_BOND_15        1.0
 // VDW interactions
-#define RADIUS_SCALE_FOR_VDW              0.95
+#define RADIUS_SCALE_FOR_VDW               0.95
 
 //HBond interactions
-#define HBOND_DISTANCE_CUTOFF_MAX          3.0
-#define HBOND_WELL_DEPTH                   1.0
-#define HBOND_OPTIMAL_DISTANCE             1.9
+#define HB_HA_DIST_CUTOFF_MAX              3.0
+#define HB_HA_OPT_DIST                     1.9
+#define HB_HA_DIST_CUTOFF_MIN              1.4
+#define HB_HA_WELL_DEPTH                   1.0
+#define HB_DA_DIST_CUTOFF_MAX              3.9
+#define HB_DA_OPT_DIST                     2.8
+#define HB_DA_DIST_CUTOFF_MIN              2.3
+#define HB_DA_WELL_DEPTH                   1.0
+#define ANGLE_DHA_CUTOFF_MIN              90.0
+#define ANGLE_HAB_CUTOFF_MIN              90.0
+#define ANGLE_DAB_CUTOFF_MIN              90.0
+
 //reduce local hbonds if |i-j|<=2
-#define HBOND_LOCAL_REDUCE                 0.5
+#define HB_LOCAL_SCALE                     0.5
 
 
 // Electrostatics interactions
@@ -67,44 +76,41 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SSBOND_CUTOFF_MIN                  1.95
 
 
-int EnergyTermInitialize(double *energyTerms);
-int EnergyTermWeighting(double *energyTerms);
-int EnergyTermShowMonomer(double *energyTerms);
+int EnergyTermInitialize(double* energyTerms);
+int EnergyTermWeighting(double* energyTerms);
+int EnergyTermShowMonomer(double* energyTerms);
 int EnergyTermShowComplex(double* energyTerms);
 
-int EnergyWeightRead(char* weightfile);
-int EnergyWeightWrite(char* weightfile);
+int EnergyWeightRead(char* file);
+int EnergyWeightWrite(char* file);
 
-double CalcResidueBuriedRatio(Residue* pResi1);
-double CalcAverageBuriedRatio(double ratio1, double ratio2);
-
-BOOL ResidueIntraBond12Check(char *atom1,char *atom2, BondSet* pBondSet);
-BOOL ResidueIntraBond13Check(char *atom1,char *atom2, BondSet* pBondSet);
-BOOL ResidueIntraBond14Check(char *atom1,char *atom2, BondSet* pBondSet);
-int ResidueIntraBondConnectionCheck(char *atom1,char *atom2, BondSet* pBondSet);
-int ResidueAndNextResidueInterBondConnectionCheck_charmm22(char *atomOnPreResi, char *atomOnNextResi, Residue *pPreResi, Residue *pNextResi);
-int ResidueAndNextResidueInterBondConnectionCheck_charmm19(char *atomOnPreResi, char *atomOnNextResi, char *nextResiName);
+BOOL ResidueIntraBond12Check(char* atom1, char* atom2, BondSet* pBondSet);
+BOOL ResidueIntraBond13Check(char* atom1, char* atom2, BondSet* pBondSet);
+BOOL ResidueIntraBond14Check(char* atom1, char* atom2, BondSet* pBondSet);
+int ResidueIntraBondConnectionCheck(char* atom1, char* atom2, BondSet* pBondSet);
+int ResidueAndNextResidueInterBondConnectionCheck_charmm22(char* atomOnPreResi, char* atomOnNextResi, Residue* pPreResi, Residue* pNextResi);
+int ResidueAndNextResidueInterBondConnectionCheck_charmm19(char* atomOnPreResi, char* atomOnNextResi, char* nextResiName);
 
 //physics- and knowledge-based energy terms
-int VdwAttEnergyAtomAndAtom(Atom *pAtom1, Atom *pAtom2, double distance, int bondType,double *vdwAtt);
-int VdwRepEnergyAtomAndAtom(Atom *pAtom1, Atom *pAtom2, double distance, int bondType, double *vdwRep);
-int HBondEnergyAtomAndAtom(Atom *atomH, Atom *atomA, Atom*atomD, Atom *atomB,double distanceHA, int bondType, double *etotal, double *edist, double *etheta, double *ephi);
-int ElecEnergyAtomAndAtom(Atom *pAtom1, Atom *pAtom2, double distance12,int bondType, double *elec);
-int LKDesolvationEnergyAtomAndAtom(Atom *pAtom1, Atom *pAtom2, double distance,int bondType, double *energyP, double *energyH);
-int SSbondEnergyAtomAndAtom(Atom *pAtomS1,Atom *pAtomS2,Atom *pAtomCB1,Atom *pAtomCB2,Atom* pAtomCA1,Atom* pAtomCA2,double* sse);
+int VdwAttEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double distance, int bondType, double* vdwAtt);
+int VdwRepEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double distance, int bondType, double* vdwRep);
+int HBondEnergyAtomAndAtom(Atom* atomH, Atom* atomA, Atom* atomD, Atom* atomB, double distanceHA, int bondType, double* etotal, double* edist, double* etheta, double* ephi);
+int ElecEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double distance12, int bondType, double* elec);
+int LKDesolvationEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double distance, int bondType, double* energyP, double* energyH);
+int SSbondEnergyAtomAndAtom(Atom* pAtomS1, Atom* pAtomS2, Atom* pAtomCB1, Atom* pAtomCB2, Atom* pAtomCA1, Atom* pAtomCA2, double* sse);
 
 
 //reference energy to balance the composition of designed sequence
 //make the designed sequences more native-like
-int AminoAcidReferenceEnergy(char *AAname, double energyTerm[MAX_ENERGY_TERM]);
+int AminoAcidReferenceEnergy(char* AAname, double energyTerm[MAX_ENERGY_TERM]);
 
 
 //residue-residue energy, including backbone and sidechain
 int EnergyIntraResidue(Residue* pThis, double energyTerm[MAX_ENERGY_TERM]);
 int EnergyResidueAndNextResidue(Residue* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
 int EnergyResidueAndOtherResidueSameChain(Residue* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyResidueAndOtherResidueDiffChain(Residue* pThis, Residue* pOther,double energyTerms[MAX_ENERGY_TERM]);
-int EnergyResidueAndLigResidue(Residue* pProtein, Residue* pLigand,double energyTerm[MAX_ENERGY_TERM]);
+int EnergyResidueAndOtherResidueDiffChain(Residue* pThis, Residue* pOther, double energyTerms[MAX_ENERGY_TERM]);
+int EnergyResidueAndLigandResidue(Residue* pProtein, Residue* pLigand, double energyTerm[MAX_ENERGY_TERM]);
 
 
 //protein rotamer-specific energy, similar to residue-specific energy
@@ -120,27 +126,29 @@ int EnergyRotamerAndDesignResidueDiffChain(Rotamer* pThis, Residue* pOther, doub
 int EnergyRotamerAndFixedLigResidue(Rotamer* pThis, Residue* pLigand, double energyTerm[MAX_ENERGY_TERM]);
 int EnergyLigRotamerAndFixedResidue(Rotamer* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
 int EnergyLigRotamerAndDesignResidue(Rotamer* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyRotamerAndLigRotamer(Rotamer* pThis,Rotamer* pOther,double energyTerms[MAX_ENERGY_TERM]);
+int EnergyRotamerAndLigandRotamer(Rotamer* pThis, Rotamer* pOther, double energyTerms[MAX_ENERGY_TERM]);
 
 
-typedef struct _RamaTable{
+typedef struct _RamaTable
+{
   double ramatable[36][36][20];
 }RamaTable;
 
-int RamaTableReadFromFile(RamaTable* pRama,char* ramafile);
+int RamaTableReadFromFile(RamaTable* pRama, char* ramafile);
 
-typedef struct _AAppTable{
+typedef struct _AAppTable
+{
   double aapptable[36][36][20];
 }AAppTable;
 
-int AApropensityTableReadFromFile(AAppTable* pAAppTable,char* aappfile);
+int AApropensityTableReadFromFile(AAppTable* pAAppTable, char* aappfile);
 
-int AminoAcidPropensityAndRamachandranEnergy(Residue* pThis,AAppTable* pAAppTable,RamaTable* pRama);
-int AminoAcidDunbrackEnergy(Residue* pThis,BBdepRotamerLib* pBBdepRotLib);
-int RotamerPropensityAndRamachandranEnergy(Rotamer* pThis,Residue* pResidue,AAppTable* pAAppTable,RamaTable* pRama,double energyTerms[MAX_ENERGY_TERM]);
-int RotamerDunbrackEnergy(Rotamer* pThis,double energyTerms[MAX_ENERGY_TERM]);
+int AminoAcidPropensityAndRamachandranEnergy(Residue* pThis, AAppTable* pAAppTable, RamaTable* pRama);
+int AminoAcidDunbrackEnergy(Residue* pThis, BBdepRotamerLib* pBBdepRotLib);
+int RotamerPropensityAndRamachandranEnergy(Rotamer* pThis, Residue* pResidue, AAppTable* pAAppTable, RamaTable* pRama, double energyTerms[MAX_ENERGY_TERM]);
+int RotamerDunbrackEnergy(Rotamer* pThis, double energyTerms[MAX_ENERGY_TERM]);
 
-int EnergyResidueAndResidueSameChain(Residue* pThis,Residue* pOther,double energyTerms[MAX_ENERGY_TERM]);
+int EnergyResidueAndResidueSameChain(Residue* pThis, Residue* pOther, double energyTerms[MAX_ENERGY_TERM]);
 
 #endif // ENERGY_FUNCTION_H
 

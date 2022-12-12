@@ -1,16 +1,16 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com, xiaoqiah@umich.edu)
+Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
-files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, 
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE 
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
 
@@ -20,66 +20,80 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 
-int DEERotamerListAndEnergyMatrixDelete(RotamerList* pList,EnergyMatrix* pMatrix,EnergyMatrix* pRemainFlag,IntArray* pIndexOfDeletedRotamers){
+int DEERotamerListAndEnergyMatrixDelete(RotamerList* pList, EnergyMatrix* pMatrix, EnergyMatrix* pRemainFlag, IntArray* pIndexOfDeletedRotamers)
+{
   int result;
-  char errMsg[MAX_LENGTH_ERR_MSG+1];
-  BOOL** rotamerDeletedFlag = (BOOL**)malloc(sizeof(BOOL*)*pList->designSiteCount);
+  char errMsg[MAX_LEN_ERR_MSG + 1];
+  BOOL** rotamerDeletedFlag = (BOOL**)malloc(sizeof(BOOL*) * pList->desSiteCount);
 
-  for(int i=0;i<pList->designSiteCount;i++){
-    rotamerDeletedFlag[i] = (BOOL*)malloc(sizeof(BOOL)*EnergyMatrixGetBlock(pMatrix,i,i)->RotamerCountSiteI);
-    for(int j=0;j<EnergyMatrixGetBlock(pMatrix,i,i)->RotamerCountSiteI;j++){
+  for (int i = 0;i < pList->desSiteCount;i++)
+  {
+    rotamerDeletedFlag[i] = (BOOL*)malloc(sizeof(BOOL) * EnergyMatrixGetBlock(pMatrix, i, i)->RotamerCountSiteI);
+    for (int j = 0;j < EnergyMatrixGetBlock(pMatrix, i, i)->RotamerCountSiteI;j++)
+    {
       rotamerDeletedFlag[i][j] = FALSE;
     }
   }
 
-  if(IntArrayGetLength(pIndexOfDeletedRotamers)%2!=0){
+  if (IntArrayGetLength(pIndexOfDeletedRotamers) % 2 != 0)
+  {
     result = FormatError;
-    sprintf(errMsg,"in file %s line %d, parameter #3 must be a int array with even number length",__FILE__,__LINE__);
-    TraceError(errMsg,result);
+    sprintf(errMsg, "in file %s line %d, parameter #3 must be a int array with even number length", __FILE__, __LINE__);
+    TraceError(errMsg, result);
     return result;
   }
-  for(int i=0;i<IntArrayGetLength(pIndexOfDeletedRotamers);i+=2){
-    int siteIndex = IntArrayGet(pIndexOfDeletedRotamers,i);
-    int rotamerIndex = IntArrayGet(pIndexOfDeletedRotamers,i+1);
-    if( siteIndex >= pList->designSiteCount || rotamerIndex >= EnergyMatrixGetBlock(pMatrix,siteIndex,siteIndex)->RotamerCountSiteI ){
-        result = ValueError;
-        sprintf(errMsg,"in file %s line %d, rotamer #%d on site #%d does not exist",__FILE__,__LINE__,rotamerIndex,siteIndex);
-        TraceError(errMsg,result);
-        return result;
+  for (int i = 0;i < IntArrayGetLength(pIndexOfDeletedRotamers);i += 2)
+  {
+    int siteIndex = IntArrayGet(pIndexOfDeletedRotamers, i);
+    int rotamerIndex = IntArrayGet(pIndexOfDeletedRotamers, i + 1);
+    if (siteIndex >= pList->desSiteCount || rotamerIndex >= EnergyMatrixGetBlock(pMatrix, siteIndex, siteIndex)->RotamerCountSiteI)
+    {
+      result = ValueError;
+      sprintf(errMsg, "in file %s line %d, rotamer #%d on site #%d does not exist", __FILE__, __LINE__, rotamerIndex, siteIndex);
+      TraceError(errMsg, result);
+      return result;
     }
     rotamerDeletedFlag[siteIndex][rotamerIndex] = TRUE;
   }
 
   //Update the RemainRotamerList
-  for(int i=0;i<pList->designSiteCount;i++){
+  for (int i = 0;i < pList->desSiteCount;i++)
+  {
     int remainCount = 0;
-    for(int j=0;j<pList->rotamerCount[i];j++){
-      if(pList->remainFlag[i][j] == TRUE){
-        if(rotamerDeletedFlag[i][remainCount]){
+    for (int j = 0;j < pList->rotamerCount[i];j++)
+    {
+      if (pList->remainFlag[i][j] == TRUE)
+      {
+        if (rotamerDeletedFlag[i][remainCount])
+        {
           pList->remainFlag[i][j] = FALSE;
         }
-        remainCount++;      
+        remainCount++;
       }
     }
-    if(remainCount==0){
+    if (remainCount == 0)
+    {
       result = ValueError;
-      sprintf(errMsg,"in file %s line %d, all rotamers on design site %d have been deleted",__FILE__,__LINE__,i);
-      TraceError(errMsg,result);
+      sprintf(errMsg, "in file %s line %d, all rotamers on design site %d have been deleted", __FILE__, __LINE__, i);
+      TraceError(errMsg, result);
       return result;
     }
   }
 
   //Update the EnergyMatrix and RemainFlag
-  for(int i=0;i<pList->designSiteCount;i++){
-    for(int j=i;j<pList->designSiteCount;j++){
-      EnergyMatrixBlockUpdate(EnergyMatrixGetBlock(pMatrix,i,j),
-        rotamerDeletedFlag[i],rotamerDeletedFlag[j]);
-      EnergyMatrixBlockUpdate(EnergyMatrixGetBlock(pRemainFlag,i,j),
-        rotamerDeletedFlag[i],rotamerDeletedFlag[j]);
+  for (int i = 0;i < pList->desSiteCount;i++)
+  {
+    for (int j = i;j < pList->desSiteCount;j++)
+    {
+      EnergyMatrixBlockUpdate(EnergyMatrixGetBlock(pMatrix, i, j),
+        rotamerDeletedFlag[i], rotamerDeletedFlag[j]);
+      EnergyMatrixBlockUpdate(EnergyMatrixGetBlock(pRemainFlag, i, j),
+        rotamerDeletedFlag[i], rotamerDeletedFlag[j]);
     }
   }
 
-  for(int i=0;i<pList->designSiteCount;i++){
+  for (int i = 0;i < pList->desSiteCount;i++)
+  {
     free(rotamerDeletedFlag[i]);
   }
   free(rotamerDeletedFlag);
@@ -87,37 +101,45 @@ int DEERotamerListAndEnergyMatrixDelete(RotamerList* pList,EnergyMatrix* pMatrix
 }
 
 
-BOOL DEEGoldsteinCriteria(EnergyMatrix* pMatrix,int siteI,int rotJ,int refRot,double deeThreshold,EnergyMatrix* pRemainFlag){
-  if(refRot == rotJ) return FALSE;
-  double energyDiff = *EnergyMatrixGet(pMatrix,siteI,siteI,rotJ,rotJ) - *EnergyMatrixGet(pMatrix,siteI,siteI,refRot,refRot);
-  for(int i=0; i<pMatrix->designSiteCount; i++){
+BOOL DEEGoldsteinCriteria(EnergyMatrix* pMatrix, int siteI, int rotJ, int refRot, double deeThreshold, EnergyMatrix* pRemainFlag)
+{
+  if (refRot == rotJ) return FALSE;
+  double energyDiff = *EnergyMatrixGet(pMatrix, siteI, siteI, rotJ, rotJ) - *EnergyMatrixGet(pMatrix, siteI, siteI, refRot, refRot);
+  for (int i = 0; i < pMatrix->designSiteCount; i++)
+  {
     double minDiff = 1e8;
-    if(i==siteI) continue;
-    for(int j=0;j<EnergyMatrixGetRotamerCount(pMatrix,i);j++){
-      if(*EnergyMatrixGet(pRemainFlag,i,i,j,j)<0.0) continue;
-      if(*EnergyMatrixGet(pRemainFlag,siteI,i,rotJ,j)<0.0) continue;
-      double diff = *EnergyMatrixGet(pMatrix,siteI,i,rotJ,j) - *EnergyMatrixGet(pMatrix,siteI,i,refRot,j);
-      if(diff < minDiff) minDiff = diff;
+    if (i == siteI) continue;
+    for (int j = 0;j < EnergyMatrixGetRotamerCount(pMatrix, i);j++)
+    {
+      if (*EnergyMatrixGet(pRemainFlag, i, i, j, j) < 0.0) continue;
+      if (*EnergyMatrixGet(pRemainFlag, siteI, i, rotJ, j) < 0.0) continue;
+      double diff = *EnergyMatrixGet(pMatrix, siteI, i, rotJ, j) - *EnergyMatrixGet(pMatrix, siteI, i, refRot, j);
+      if (diff < minDiff) minDiff = diff;
     }
     energyDiff += minDiff;
   }
-  if(energyDiff > deeThreshold) return TRUE;
+  if (energyDiff > deeThreshold) return TRUE;
   else return FALSE;
 }
 
 
-int DEEGoldstein(EnergyMatrix* pMatrix,IntArray* pDelete,double deeThreshold,EnergyMatrix* pRemainFlag){
-  IntArrayResize(pDelete,0);
-  for(int i=0;i<pMatrix->designSiteCount;i++){
-    int rotamerCountOnSiteI = EnergyMatrixGetBlock(pMatrix,i,i)->RotamerCountSiteI;
-    for(int j=0; j<rotamerCountOnSiteI; j++){
-      for(int s=0; s<rotamerCountOnSiteI; s++){
-        if(s==j) continue;
-        if(*EnergyMatrixGet(pRemainFlag,i,i,s,s)<0.0) continue;
-        if(DEEGoldsteinCriteria(pMatrix,i,j,s,deeThreshold,pRemainFlag)){
-          IntArrayAppend(pDelete,i);
-          IntArrayAppend(pDelete,j);
-          *EnergyMatrixGet(pRemainFlag,i,i,j,j) = -1.0;
+int DEEGoldstein(EnergyMatrix* pMatrix, IntArray* pDelete, double deeThreshold, EnergyMatrix* pRemainFlag)
+{
+  IntArrayResize(pDelete, 0);
+  for (int i = 0;i < pMatrix->designSiteCount;i++)
+  {
+    int rotamerCountOnSiteI = EnergyMatrixGetBlock(pMatrix, i, i)->RotamerCountSiteI;
+    for (int j = 0; j < rotamerCountOnSiteI; j++)
+    {
+      for (int s = 0; s < rotamerCountOnSiteI; s++)
+      {
+        if (s == j) continue;
+        if (*EnergyMatrixGet(pRemainFlag, i, i, s, s) < 0.0) continue;
+        if (DEEGoldsteinCriteria(pMatrix, i, j, s, deeThreshold, pRemainFlag))
+        {
+          IntArrayAppend(pDelete, i);
+          IntArrayAppend(pDelete, j);
+          *EnergyMatrixGet(pRemainFlag, i, i, j, j) = -1.0;
           break;
         }
       }
@@ -128,61 +150,73 @@ int DEEGoldstein(EnergyMatrix* pMatrix,IntArray* pDelete,double deeThreshold,Ene
 }
 
 
-BOOL DEESplitCriteria(EnergyMatrix* pMatrix,int siteI,int rotJ,double deeTreshold,EnergyMatrix* pRemainFlag){
-  double** minEnergyDiff      = (double**)malloc(sizeof(double*)*EnergyMatrixGetRotamerCount(pMatrix,siteI));
-  double*  sumOfminEnergyDiff = (double*)malloc(sizeof(double)* EnergyMatrixGetRotamerCount(pMatrix,siteI));
-  
-  for(int i=0;i<EnergyMatrixGetRotamerCount(pMatrix,siteI);i++){
-    minEnergyDiff[i] = (double*)malloc(sizeof(double)*EnergyMatrixGetSiteCount(pMatrix));
+BOOL DEESplitCriteria(EnergyMatrix* pMatrix, int siteI, int rotJ, double deeTreshold, EnergyMatrix* pRemainFlag)
+{
+  double** minEnergyDiff = (double**)malloc(sizeof(double*) * EnergyMatrixGetRotamerCount(pMatrix, siteI));
+  double* sumOfminEnergyDiff = (double*)malloc(sizeof(double) * EnergyMatrixGetRotamerCount(pMatrix, siteI));
+
+  for (int i = 0;i < EnergyMatrixGetRotamerCount(pMatrix, siteI);i++)
+  {
+    minEnergyDiff[i] = (double*)malloc(sizeof(double) * EnergyMatrixGetSiteCount(pMatrix));
   }
-  for(int refRot=0; refRot<EnergyMatrixGetRotamerCount(pMatrix,siteI);refRot++){
+  for (int refRot = 0; refRot < EnergyMatrixGetRotamerCount(pMatrix, siteI);refRot++)
+  {
     sumOfminEnergyDiff[refRot] = 0.0;
-    for(int siteK=0;siteK<EnergyMatrixGetSiteCount(pMatrix);siteK++){
-      if(refRot==rotJ || siteK==siteI){
+    for (int siteK = 0;siteK < EnergyMatrixGetSiteCount(pMatrix);siteK++)
+    {
+      if (refRot == rotJ || siteK == siteI)
+      {
         minEnergyDiff[refRot][siteK] = 0.0;
         continue;
       }
       else minEnergyDiff[refRot][siteK] = 1e10;
-      for(int rotamerKS=0; rotamerKS<EnergyMatrixGetRotamerCount(pMatrix,siteK); rotamerKS++){
+      for (int rotamerKS = 0; rotamerKS < EnergyMatrixGetRotamerCount(pMatrix, siteK); rotamerKS++)
+      {
         double diff;
-        if(*EnergyMatrixGet(pRemainFlag,siteK,siteK,rotamerKS,rotamerKS)<0.0) continue;
-        if(*EnergyMatrixGet(pRemainFlag,siteI,siteK,rotJ,rotamerKS)<0.0) continue;
-        diff = *EnergyMatrixGet(pMatrix,siteI,siteK,rotJ,rotamerKS) - *EnergyMatrixGet(pMatrix,siteI,siteK,refRot,  rotamerKS);
-        if(diff < minEnergyDiff[refRot][siteK]) minEnergyDiff[refRot][siteK] = diff;
+        if (*EnergyMatrixGet(pRemainFlag, siteK, siteK, rotamerKS, rotamerKS) < 0.0) continue;
+        if (*EnergyMatrixGet(pRemainFlag, siteI, siteK, rotJ, rotamerKS) < 0.0) continue;
+        diff = *EnergyMatrixGet(pMatrix, siteI, siteK, rotJ, rotamerKS) - *EnergyMatrixGet(pMatrix, siteI, siteK, refRot, rotamerKS);
+        if (diff < minEnergyDiff[refRot][siteK]) minEnergyDiff[refRot][siteK] = diff;
       }
-      sumOfminEnergyDiff[refRot] += minEnergyDiff[refRot][siteK]; 
+      sumOfminEnergyDiff[refRot] += minEnergyDiff[refRot][siteK];
     }
   }
 
   BOOL canBeEliminated = FALSE;
-  for(int splitSite=0; splitSite<EnergyMatrixGetSiteCount(pMatrix);splitSite++){
+  for (int splitSite = 0; splitSite < EnergyMatrixGetSiteCount(pMatrix);splitSite++)
+  {
     BOOL splitSiteSuccessful = TRUE;
-    if(splitSite==siteI) continue;
-    for(int rotOnSplitSite=0; rotOnSplitSite<EnergyMatrixGetRotamerCount(pMatrix,splitSite); rotOnSplitSite++){
+    if (splitSite == siteI) continue;
+    for (int rotOnSplitSite = 0; rotOnSplitSite < EnergyMatrixGetRotamerCount(pMatrix, splitSite); rotOnSplitSite++)
+    {
       BOOL foundInTheSplittedConformation = FALSE;
-      for(int refRot=0; refRot<EnergyMatrixGetRotamerCount(pMatrix,siteI); refRot++ ){
-        if(refRot==rotJ) continue;
-        double diff = *EnergyMatrixGet(pMatrix,siteI,siteI,rotJ,rotJ)
-           - *EnergyMatrixGet(pMatrix,siteI,siteI,refRot,  refRot)
-           + *EnergyMatrixGet(pMatrix,siteI,splitSite,  rotJ,rotOnSplitSite)
-           - *EnergyMatrixGet(pMatrix,siteI,splitSite,  refRot,  rotOnSplitSite)
-           + sumOfminEnergyDiff[refRot]
-           - minEnergyDiff[refRot][splitSite];
-        if(diff > deeTreshold){
+      for (int refRot = 0; refRot < EnergyMatrixGetRotamerCount(pMatrix, siteI); refRot++)
+      {
+        if (refRot == rotJ) continue;
+        double diff = *EnergyMatrixGet(pMatrix, siteI, siteI, rotJ, rotJ)
+          - *EnergyMatrixGet(pMatrix, siteI, siteI, refRot, refRot)
+          + *EnergyMatrixGet(pMatrix, siteI, splitSite, rotJ, rotOnSplitSite)
+          - *EnergyMatrixGet(pMatrix, siteI, splitSite, refRot, rotOnSplitSite)
+          + sumOfminEnergyDiff[refRot]
+          - minEnergyDiff[refRot][splitSite];
+        if (diff > deeTreshold)
+        {
           foundInTheSplittedConformation = TRUE;
           break;
         }
       }
-      if(foundInTheSplittedConformation == FALSE){
+      if (foundInTheSplittedConformation == FALSE)
+      {
         splitSiteSuccessful = FALSE;
         break;
       }
     }
-    if(splitSiteSuccessful == FALSE) continue;
-    else{ canBeEliminated = TRUE; break;}
+    if (splitSiteSuccessful == FALSE) continue;
+    else { canBeEliminated = TRUE; break; }
   }
 
-  for(int i=0;i<EnergyMatrixGetRotamerCount(pMatrix,siteI);i++){
+  for (int i = 0;i < EnergyMatrixGetRotamerCount(pMatrix, siteI);i++)
+  {
     free(minEnergyDiff[i]);
   }
   free(minEnergyDiff);
@@ -192,30 +226,40 @@ BOOL DEESplitCriteria(EnergyMatrix* pMatrix,int siteI,int rotJ,double deeTreshol
 }
 
 
-int DEEDouble(EnergyMatrix* pEnergyMatrix,double deeThreshold,EnergyMatrix* pRemainFlag){
+int DEEDouble(EnergyMatrix* pEnergyMatrix, double deeThreshold, EnergyMatrix* pRemainFlag)
+{
   int eliminatedPairCount = 0;
   int site[2];
   int criteriaRunnedTimes = 0;
 
-  for(site[0]=0; site[0]<EnergyMatrixGetSiteCount(pEnergyMatrix); site[0]++){
-    for(site[1]=site[0]+1; site[1]<EnergyMatrixGetSiteCount(pEnergyMatrix); site[1]++){
+  for (site[0] = 0; site[0] < EnergyMatrixGetSiteCount(pEnergyMatrix); site[0]++)
+  {
+    for (site[1] = site[0] + 1; site[1] < EnergyMatrixGetSiteCount(pEnergyMatrix); site[1]++)
+    {
       int rot[2];
-      for(rot[0]=0; rot[0]<EnergyMatrixGetRotamerCount(pEnergyMatrix,site[0]); rot[0]++){
-        for(rot[1]=0; rot[1]<EnergyMatrixGetRotamerCount(pEnergyMatrix,site[1]); rot[1]++){
+      for (rot[0] = 0; rot[0] < EnergyMatrixGetRotamerCount(pEnergyMatrix, site[0]); rot[0]++)
+      {
+        for (rot[1] = 0; rot[1] < EnergyMatrixGetRotamerCount(pEnergyMatrix, site[1]); rot[1]++)
+        {
           int refRot[2];
           BOOL rotPairDeleted = FALSE;
-          for(refRot[0]=0; refRot[0]<EnergyMatrixGetRotamerCount(pEnergyMatrix,site[0]); refRot[0]++){
-            for(refRot[1]=0; refRot[1]<EnergyMatrixGetRotamerCount(pEnergyMatrix,site[1]); refRot[1]++){
+          for (refRot[0] = 0; refRot[0] < EnergyMatrixGetRotamerCount(pEnergyMatrix, site[0]); refRot[0]++)
+          {
+            for (refRot[1] = 0; refRot[1] < EnergyMatrixGetRotamerCount(pEnergyMatrix, site[1]); refRot[1]++)
+            {
               int result;
-              if(rotPairDeleted){
+              if (rotPairDeleted)
+              {
                 break;
               }
-              if(refRot[0]==rot[0] && refRot[1]==rot[1]){
+              if (refRot[0] == rot[0] && refRot[1] == rot[1])
+              {
                 continue;
               }
-              result = DEEDoubleCriteria(pEnergyMatrix,site,rot,refRot,deeThreshold,pRemainFlag);
-              if(result){
-                *EnergyMatrixGet(pRemainFlag,site[0],site[1],rot[0],rot[1]) = -1.0;
+              result = DEEDoubleCriteria(pEnergyMatrix, site, rot, refRot, deeThreshold, pRemainFlag);
+              if (result)
+              {
+                *EnergyMatrixGet(pRemainFlag, site[0], site[1], rot[0], rot[1]) = -1.0;
                 eliminatedPairCount++;
                 rotPairDeleted = TRUE;
               }
@@ -231,74 +275,87 @@ int DEEDouble(EnergyMatrix* pEnergyMatrix,double deeThreshold,EnergyMatrix* pRem
 }
 
 
-BOOL DEEDoubleCriteria(EnergyMatrix* pEnergyMatrix,int designSite[2],int rot[2],int refRot[2],
-             double deeThreshold,EnergyMatrix* pRemainFlag)
+BOOL DEEDoubleCriteria(EnergyMatrix* pEnergyMatrix, int designSite[2], int rot[2], int refRot[2],
+  double deeThreshold, EnergyMatrix* pRemainFlag)
 {
   int otherSite;
   int rotOnOtherSite;
   double energyDiff;
-  if(*EnergyMatrixGet(pRemainFlag,designSite[0],designSite[1],rot[0],rot[1])<0.0){
+  if (*EnergyMatrixGet(pRemainFlag, designSite[0], designSite[1], rot[0], rot[1]) < 0.0)
+  {
     return FALSE;
   }
-  if(*EnergyMatrixGet(pRemainFlag,designSite[0],designSite[1],refRot[0],refRot[1])<0.0){
+  if (*EnergyMatrixGet(pRemainFlag, designSite[0], designSite[1], refRot[0], refRot[1]) < 0.0)
+  {
     return FALSE;
   }
-  
 
 
-  energyDiff = *EnergyMatrixGet(pEnergyMatrix,designSite[0],designSite[0],rot[0],rot[0])
-         + *EnergyMatrixGet(pEnergyMatrix,designSite[1],designSite[1],rot[1],rot[1])
-         + *EnergyMatrixGet(pEnergyMatrix,designSite[0],designSite[1],rot[0],rot[1])
-         - *EnergyMatrixGet(pEnergyMatrix,designSite[0],designSite[0],refRot[0],refRot[0])
-         - *EnergyMatrixGet(pEnergyMatrix,designSite[1],designSite[1],refRot[1],refRot[1])
-         - *EnergyMatrixGet(pEnergyMatrix,designSite[0],designSite[1],refRot[0],refRot[1]);
 
-  for(otherSite=0; otherSite<EnergyMatrixGetSiteCount(pEnergyMatrix); otherSite++){
+  energyDiff = *EnergyMatrixGet(pEnergyMatrix, designSite[0], designSite[0], rot[0], rot[0])
+    + *EnergyMatrixGet(pEnergyMatrix, designSite[1], designSite[1], rot[1], rot[1])
+    + *EnergyMatrixGet(pEnergyMatrix, designSite[0], designSite[1], rot[0], rot[1])
+    - *EnergyMatrixGet(pEnergyMatrix, designSite[0], designSite[0], refRot[0], refRot[0])
+    - *EnergyMatrixGet(pEnergyMatrix, designSite[1], designSite[1], refRot[1], refRot[1])
+    - *EnergyMatrixGet(pEnergyMatrix, designSite[0], designSite[1], refRot[0], refRot[1]);
+
+  for (otherSite = 0; otherSite < EnergyMatrixGetSiteCount(pEnergyMatrix); otherSite++)
+  {
     double minDiff = 1e8;
     int site0Increment;
     int site1Increment;
-    int rotCountOnOtherSite = EnergyMatrixGetRotamerCount(pEnergyMatrix,otherSite);
-    double* pRemainFlag_site0_otherSite_rot0_rotOnOtherSite = EnergyMatrixGet(pRemainFlag,designSite[0],otherSite,rot[0],0);
-    double* pRemainFlag_site1_otherSite_rot1_rotOnOtherSite = EnergyMatrixGet(pRemainFlag,designSite[1],otherSite,rot[1],0);
-    double* pEM_Site0_otherSite_rot0_rotOnOtherSite = EnergyMatrixGet(pEnergyMatrix,designSite[0],otherSite,rot[0],0);
-    double* pEM_Site1_otherSite_rot1_rotOnOtherSite = EnergyMatrixGet(pEnergyMatrix,designSite[1],otherSite,rot[1],0);
-    double* pEM_Site0_otherSite_refRot0_rotOnOtherSite = EnergyMatrixGet(pEnergyMatrix,designSite[0],otherSite,refRot[0],0);
-    double* pEM_Site1_otherSite_refRot1_rotOnOtherSite = EnergyMatrixGet(pEnergyMatrix,designSite[1],otherSite,refRot[1],0);
-    if(otherSite > designSite[0]){
+    int rotCountOnOtherSite = EnergyMatrixGetRotamerCount(pEnergyMatrix, otherSite);
+    double* pRemainFlag_site0_otherSite_rot0_rotOnOtherSite = EnergyMatrixGet(pRemainFlag, designSite[0], otherSite, rot[0], 0);
+    double* pRemainFlag_site1_otherSite_rot1_rotOnOtherSite = EnergyMatrixGet(pRemainFlag, designSite[1], otherSite, rot[1], 0);
+    double* pEM_Site0_otherSite_rot0_rotOnOtherSite = EnergyMatrixGet(pEnergyMatrix, designSite[0], otherSite, rot[0], 0);
+    double* pEM_Site1_otherSite_rot1_rotOnOtherSite = EnergyMatrixGet(pEnergyMatrix, designSite[1], otherSite, rot[1], 0);
+    double* pEM_Site0_otherSite_refRot0_rotOnOtherSite = EnergyMatrixGet(pEnergyMatrix, designSite[0], otherSite, refRot[0], 0);
+    double* pEM_Site1_otherSite_refRot1_rotOnOtherSite = EnergyMatrixGet(pEnergyMatrix, designSite[1], otherSite, refRot[1], 0);
+    if (otherSite > designSite[0])
+    {
       site0Increment = 1;
     }
-    else{
-      site0Increment = EnergyMatrixGetRotamerCount(pEnergyMatrix,designSite[0]);
+    else
+    {
+      site0Increment = EnergyMatrixGetRotamerCount(pEnergyMatrix, designSite[0]);
     }
-    if(otherSite > designSite[1]){
+    if (otherSite > designSite[1])
+    {
       site1Increment = 1;
     }
-    else{
-      site1Increment = EnergyMatrixGetRotamerCount(pEnergyMatrix,designSite[1]);
+    else
+    {
+      site1Increment = EnergyMatrixGetRotamerCount(pEnergyMatrix, designSite[1]);
     }
 
 
-    if(otherSite==designSite[0] || otherSite==designSite[1]){
+    if (otherSite == designSite[0] || otherSite == designSite[1])
+    {
       continue;
     }
-    for(rotOnOtherSite=0; rotOnOtherSite<rotCountOnOtherSite; rotOnOtherSite++){
+    for (rotOnOtherSite = 0; rotOnOtherSite < rotCountOnOtherSite; rotOnOtherSite++)
+    {
       double diff;
       BOOL skip;
-      
-      if( *pRemainFlag_site0_otherSite_rot0_rotOnOtherSite<0.0 ||
-        *pRemainFlag_site1_otherSite_rot1_rotOnOtherSite<0.0){
-          skip = TRUE;
+
+      if (*pRemainFlag_site0_otherSite_rot0_rotOnOtherSite < 0.0 ||
+        *pRemainFlag_site1_otherSite_rot1_rotOnOtherSite < 0.0)
+      {
+        skip = TRUE;
       }
-      else{
+      else
+      {
         skip = FALSE;
       }
 
-      if(!skip){
+      if (!skip)
+      {
         diff = *pEM_Site0_otherSite_rot0_rotOnOtherSite
-           + *pEM_Site1_otherSite_rot1_rotOnOtherSite
-           - *pEM_Site0_otherSite_refRot0_rotOnOtherSite
-           - *pEM_Site1_otherSite_refRot1_rotOnOtherSite;
-        if(diff<minDiff){
+          + *pEM_Site1_otherSite_rot1_rotOnOtherSite
+          - *pEM_Site0_otherSite_refRot0_rotOnOtherSite
+          - *pEM_Site1_otherSite_refRot1_rotOnOtherSite;
+        if (diff < minDiff)
+        {
           minDiff = diff;
         }
       }
@@ -316,51 +373,61 @@ BOOL DEEDoubleCriteria(EnergyMatrix* pEnergyMatrix,int designSite[2],int rot[2],
   //printf("Site %d %d, Rot %d %d, Ref %d %d, Total : %f\n",
   //  designSite[0],designSite[1],
   //  rot[0],rot[1],refRot[0],refRot[1],energyDiff);
-  
-  if(energyDiff > deeThreshold){
+
+  if (energyDiff > deeThreshold)
+  {
     return TRUE;
   }
-  else{
+  else
+  {
     return FALSE;
   }
 
 }
 
 
-int DEESplit(EnergyMatrix* pEnergyMatrix,IntArray* pDeleteList,double deeTreshold,EnergyMatrix* pRemainFlag){
+int DEESplit(EnergyMatrix* pEnergyMatrix, IntArray* pDeleteList, double deeTreshold, EnergyMatrix* pRemainFlag)
+{
   int designSiteI;
   int rotamerIJ;
 
-  IntArrayResize(pDeleteList,0);
+  IntArrayResize(pDeleteList, 0);
 
-  for(designSiteI=0;designSiteI<EnergyMatrixGetSiteCount(pEnergyMatrix);designSiteI++){
-    int rotamerCountOnSiteI = EnergyMatrixGetRotamerCount(pEnergyMatrix,designSiteI);
-    for(rotamerIJ=0;rotamerIJ< rotamerCountOnSiteI; rotamerIJ++){
-      if(DEESplitCriteria(pEnergyMatrix,designSiteI,rotamerIJ,deeTreshold,pRemainFlag)){
-        IntArrayAppend(pDeleteList,designSiteI);
-        IntArrayAppend(pDeleteList,rotamerIJ);
+  for (designSiteI = 0;designSiteI < EnergyMatrixGetSiteCount(pEnergyMatrix);designSiteI++)
+  {
+    int rotamerCountOnSiteI = EnergyMatrixGetRotamerCount(pEnergyMatrix, designSiteI);
+    for (rotamerIJ = 0;rotamerIJ < rotamerCountOnSiteI; rotamerIJ++)
+    {
+      if (DEESplitCriteria(pEnergyMatrix, designSiteI, rotamerIJ, deeTreshold, pRemainFlag))
+      {
+        IntArrayAppend(pDeleteList, designSiteI);
+        IntArrayAppend(pDeleteList, rotamerIJ);
       }
     }
   }
-  
+
   return Success;
 }
-double DEECalcMinEnergy(EnergyMatrix* pEnergyMatrix,RotamerList* pList){
+double DEECalcMinEnergy(EnergyMatrix* pEnergyMatrix, RotamerList* pList)
+{
   int i;
   double totalEnergy = 0.0;
 
-  for(i=0;i<EnergyMatrixGetSiteCount(pEnergyMatrix);i++){
+  for (i = 0;i < EnergyMatrixGetSiteCount(pEnergyMatrix);i++)
+  {
     int k;
-    totalEnergy += *EnergyMatrixGet(pEnergyMatrix,i,i,0,0);
-    for(k=i+1;k<EnergyMatrixGetSiteCount(pEnergyMatrix);k++){
-      totalEnergy += *EnergyMatrixGet(pEnergyMatrix,i,k,0,0);
+    totalEnergy += *EnergyMatrixGet(pEnergyMatrix, i, i, 0, 0);
+    for (k = i + 1;k < EnergyMatrixGetSiteCount(pEnergyMatrix);k++)
+    {
+      totalEnergy += *EnergyMatrixGet(pEnergyMatrix, i, k, 0, 0);
     }
   }
   return totalEnergy;
 }
 
 
-int DEENodeUnifyRecordCreate(DEENodeUnifyRecord* pThis){
+int DEENodeUnifyRecordCreate(DEENodeUnifyRecord* pThis)
+{
   pThis->oldSiteIndexOfNewSites = NULL;
   pThis->oldRotIndexFromSite1 = NULL;
   pThis->oldRotIndexFromSite2 = NULL;
@@ -368,123 +435,141 @@ int DEENodeUnifyRecordCreate(DEENodeUnifyRecord* pThis){
 }
 
 
-void DEENodeUnifyRecordDestroy(DEENodeUnifyRecord* pThis){
+void DEENodeUnifyRecordDestroy(DEENodeUnifyRecord* pThis)
+{
   free(pThis->oldSiteIndexOfNewSites);
   free(pThis->oldRotIndexFromSite1);
   free(pThis->oldRotIndexFromSite2);
 }
 
 
-void DEENodeUnifyRecordShow(DEENodeUnifyRecord* pThis){
+void DEENodeUnifyRecordShow(DEENodeUnifyRecord* pThis)
+{
   int i;
-  printf("NewSiteCount: %d\n",pThis->newSiteCount);
+  printf("NewSiteCount: %d\n", pThis->newSiteCount);
   printf("Site %d and %d unified to Site %d\n",
-    pThis->whichTwoOldSitesHaveBeenUnified[0],pThis->whichTwoOldSitesHaveBeenUnified[1],
-    pThis->newSiteCount-1);
+    pThis->whichTwoOldSitesHaveBeenUnified[0], pThis->whichTwoOldSitesHaveBeenUnified[1],
+    pThis->newSiteCount - 1);
   printf("There are originally %d and %d rotamers on the old sites\n",
     pThis->totalRotCountOnOldSites[0],
     pThis->totalRotCountOnOldSites[1]);
-  for(i=0;i<pThis->newSiteCount;i++){
-    printf("Site %d : %d\n",i,pThis->oldSiteIndexOfNewSites[i]);
+  for (i = 0;i < pThis->newSiteCount;i++)
+  {
+    printf("Site %d : %d\n", i, pThis->oldSiteIndexOfNewSites[i]);
   }
-  printf("New Site have %d rotamers:\n",pThis->rotCountOfUnifiedNewSite);
-  for(i=0;i<pThis->rotCountOfUnifiedNewSite;i++){
-    printf("Rot %d comes from %d and %d\n",i,pThis->oldRotIndexFromSite1[i],pThis->oldRotIndexFromSite2[i]);
+  printf("New Site have %d rotamers:\n", pThis->rotCountOfUnifiedNewSite);
+  for (i = 0;i < pThis->rotCountOfUnifiedNewSite;i++)
+  {
+    printf("Rot %d comes from %d and %d\n", i, pThis->oldRotIndexFromSite1[i], pThis->oldRotIndexFromSite2[i]);
   }
 }
 
 
-int DEENodeUnifyUpdateRotamerList(RotamerList* pList,DEENodeUnifyRecord* pRecord){
-  int i,j,counter;
+int DEENodeUnifyUpdateRotamerList(RotamerList* pList, DEENodeUnifyRecord* pRecord)
+{
+  int i, j, counter;
   BOOL** newRemainFlag;
   int* newRotamerCount;
-  newRotamerCount = (int*)malloc(sizeof(int)*pRecord->newSiteCount);
-  newRemainFlag = (BOOL**)malloc(sizeof(BOOL*)*pRecord->newSiteCount);
+  newRotamerCount = (int*)malloc(sizeof(int) * pRecord->newSiteCount);
+  newRemainFlag = (BOOL**)malloc(sizeof(BOOL*) * pRecord->newSiteCount);
   counter = 0;
-  for(i=0;i<pList->designSiteCount;i++){
-    if(i==pRecord->whichTwoOldSitesHaveBeenUnified[0] || i==pRecord->whichTwoOldSitesHaveBeenUnified[1]){
+  for (i = 0;i < pList->desSiteCount;i++)
+  {
+    if (i == pRecord->whichTwoOldSitesHaveBeenUnified[0] || i == pRecord->whichTwoOldSitesHaveBeenUnified[1])
+    {
       continue;
     }
     newRotamerCount[counter] = pList->rotamerCount[i];
-    newRemainFlag[counter] = (BOOL*)malloc(sizeof(BOOL)*pList->rotamerCount[i]);
-    for(j=0;j<newRotamerCount[counter];j++){
+    newRemainFlag[counter] = (BOOL*)malloc(sizeof(BOOL) * pList->rotamerCount[i]);
+    for (j = 0;j < newRotamerCount[counter];j++)
+    {
       newRemainFlag[counter][j] = pList->remainFlag[i][j];
     }
     counter++;
   }
 
-  newRotamerCount[pRecord->newSiteCount-1] = pRecord->rotCountOfUnifiedNewSite;
-  newRemainFlag[pRecord->newSiteCount-1] = (BOOL*)malloc(sizeof(BOOL)*pRecord->rotCountOfUnifiedNewSite);
-  for(i=0;i<pRecord->rotCountOfUnifiedNewSite;i++){
-    newRemainFlag[pRecord->newSiteCount-1][i] = TRUE;
+  newRotamerCount[pRecord->newSiteCount - 1] = pRecord->rotCountOfUnifiedNewSite;
+  newRemainFlag[pRecord->newSiteCount - 1] = (BOOL*)malloc(sizeof(BOOL) * pRecord->rotCountOfUnifiedNewSite);
+  for (i = 0;i < pRecord->rotCountOfUnifiedNewSite;i++)
+  {
+    newRemainFlag[pRecord->newSiteCount - 1][i] = TRUE;
   }
-  
+
   RotamerListDestroy(pList);
-  pList->designSiteCount = pRecord->newSiteCount;
+  pList->desSiteCount = pRecord->newSiteCount;
   pList->remainFlag = newRemainFlag;
   pList->rotamerCount = newRotamerCount;
   return Success;
 }
 
 
-int DEENodeUnifyUpdateEnergyMatrix(EnergyMatrix* pEnergyMatrix,DEENodeUnifyRecord* pRecord){
-  int i,k;
+int DEENodeUnifyUpdateEnergyMatrix(EnergyMatrix* pEnergyMatrix, DEENodeUnifyRecord* pRecord)
+{
+  int i, k;
   EnergyMatrix newMatrix;
   EnergyMatrixCreate(&newMatrix);
-  
-  
-  newMatrix.designSiteCount = pEnergyMatrix->designSiteCount-1;
+
+
+  newMatrix.designSiteCount = pEnergyMatrix->designSiteCount - 1;
   newMatrix.blocks = (EnergyMatrixBlock*)malloc(
-    sizeof(EnergyMatrixBlock)*newMatrix.designSiteCount*newMatrix.designSiteCount);
-  
-  for(i=0;i<newMatrix.designSiteCount-1;i++){
-    for(k=i;k<newMatrix.designSiteCount-1;k++){
+    sizeof(EnergyMatrixBlock) * newMatrix.designSiteCount * newMatrix.designSiteCount);
+
+  for (i = 0;i < newMatrix.designSiteCount - 1;i++)
+  {
+    for (k = i;k < newMatrix.designSiteCount - 1;k++)
+    {
       int oldSite1 = pRecord->oldSiteIndexOfNewSites[i];
       int oldSIte2 = pRecord->oldSiteIndexOfNewSites[k];
-      EnergyMatrixBlockCreate(EnergyMatrixGetBlock(&newMatrix,i,k));
-      EnergyMatrixBlockCopy(EnergyMatrixGetBlock(&newMatrix,i,k),
-        EnergyMatrixGetBlock(pEnergyMatrix,oldSite1,oldSIte2));
+      EnergyMatrixBlockCreate(EnergyMatrixGetBlock(&newMatrix, i, k));
+      EnergyMatrixBlockCopy(EnergyMatrixGetBlock(&newMatrix, i, k),
+        EnergyMatrixGetBlock(pEnergyMatrix, oldSite1, oldSIte2));
     }
   }
 
   //The last column of the new energy matrix needs to be calculated
-  for(i=0;i<newMatrix.designSiteCount;i++){
+  for (i = 0;i < newMatrix.designSiteCount;i++)
+  {
     EnergyMatrixBlock* pBlock;
     int oldSite1 = pRecord->whichTwoOldSitesHaveBeenUnified[0];
     int oldSite2 = pRecord->whichTwoOldSitesHaveBeenUnified[1];
     int j;
     int s;
-    
-    pBlock = EnergyMatrixGetBlock(&newMatrix,i,newMatrix.designSiteCount-1);
+
+    pBlock = EnergyMatrixGetBlock(&newMatrix, i, newMatrix.designSiteCount - 1);
     EnergyMatrixBlockCreate(pBlock);
     pBlock->DesignSiteI = i;
-    pBlock->DesignSiteK = newMatrix.designSiteCount-1;
+    pBlock->DesignSiteK = newMatrix.designSiteCount - 1;
 
-    if(i==newMatrix.designSiteCount-1){
+    if (i == newMatrix.designSiteCount - 1)
+    {
       pBlock->RotamerCountSiteI = pBlock->RotamerCountSiteK = pRecord->rotCountOfUnifiedNewSite;
-      pBlock->energyIK = (double*)malloc(sizeof(double)*pBlock->RotamerCountSiteI*pBlock->RotamerCountSiteK);
-      for(j=0;j<pBlock->RotamerCountSiteI;j++){
-        int rotIndexOnSite1 = j/EnergyMatrixGetRotamerCount(pEnergyMatrix,oldSite2);
-        int rotIndexOnSite2 = j%EnergyMatrixGetRotamerCount(pEnergyMatrix,oldSite2);
-        *EnergyMatrixBlockGet(pBlock,j,j) = 
-          *EnergyMatrixGet(pEnergyMatrix,oldSite1,oldSite1,rotIndexOnSite1,rotIndexOnSite1)
-          + *EnergyMatrixGet(pEnergyMatrix,oldSite2,oldSite2,rotIndexOnSite2,rotIndexOnSite2)
-          + *EnergyMatrixGet(pEnergyMatrix,oldSite1,oldSite2,rotIndexOnSite1,rotIndexOnSite2);
+      pBlock->energyIK = (double*)malloc(sizeof(double) * pBlock->RotamerCountSiteI * pBlock->RotamerCountSiteK);
+      for (j = 0;j < pBlock->RotamerCountSiteI;j++)
+      {
+        int rotIndexOnSite1 = j / EnergyMatrixGetRotamerCount(pEnergyMatrix, oldSite2);
+        int rotIndexOnSite2 = j % EnergyMatrixGetRotamerCount(pEnergyMatrix, oldSite2);
+        *EnergyMatrixBlockGet(pBlock, j, j) =
+          *EnergyMatrixGet(pEnergyMatrix, oldSite1, oldSite1, rotIndexOnSite1, rotIndexOnSite1)
+          + *EnergyMatrixGet(pEnergyMatrix, oldSite2, oldSite2, rotIndexOnSite2, rotIndexOnSite2)
+          + *EnergyMatrixGet(pEnergyMatrix, oldSite1, oldSite2, rotIndexOnSite1, rotIndexOnSite2);
       }
     }
-    else{
-      pBlock->RotamerCountSiteI = EnergyMatrixGetRotamerCount(pEnergyMatrix,pRecord->oldSiteIndexOfNewSites[i]);
+    else
+    {
+      pBlock->RotamerCountSiteI = EnergyMatrixGetRotamerCount(pEnergyMatrix, pRecord->oldSiteIndexOfNewSites[i]);
       pBlock->RotamerCountSiteK = pRecord->rotCountOfUnifiedNewSite;
-      pBlock->energyIK = (double*)malloc(sizeof(double)*pBlock->RotamerCountSiteI*pBlock->RotamerCountSiteK);
-      for(j=0;j<pBlock->RotamerCountSiteI;j++){
-        for(s=0;s<pBlock->RotamerCountSiteK;s++){
-          int rotIndexOnSite1 = s/EnergyMatrixGetRotamerCount(pEnergyMatrix,oldSite2);
-          int rotIndexOnSite2 = s%EnergyMatrixGetRotamerCount(pEnergyMatrix,oldSite2);
-          *EnergyMatrixBlockGet(pBlock,j,s) = 
-            *EnergyMatrixGet(pEnergyMatrix,pRecord->oldSiteIndexOfNewSites[i],oldSite1,j,rotIndexOnSite1)
-          +   *EnergyMatrixGet(pEnergyMatrix,pRecord->oldSiteIndexOfNewSites[i],oldSite2,j,rotIndexOnSite2);
-          
-          
+      pBlock->energyIK = (double*)malloc(sizeof(double) * pBlock->RotamerCountSiteI * pBlock->RotamerCountSiteK);
+      for (j = 0;j < pBlock->RotamerCountSiteI;j++)
+      {
+        for (s = 0;s < pBlock->RotamerCountSiteK;s++)
+        {
+          int rotIndexOnSite1 = s / EnergyMatrixGetRotamerCount(pEnergyMatrix, oldSite2);
+          int rotIndexOnSite2 = s % EnergyMatrixGetRotamerCount(pEnergyMatrix, oldSite2);
+          *EnergyMatrixBlockGet(pBlock, j, s) =
+            *EnergyMatrixGet(pEnergyMatrix, pRecord->oldSiteIndexOfNewSites[i], oldSite1, j, rotIndexOnSite1)
+            + *EnergyMatrixGet(pEnergyMatrix, pRecord->oldSiteIndexOfNewSites[i], oldSite2, j, rotIndexOnSite2);
+
+
         }
       }
     }
@@ -497,67 +582,81 @@ int DEENodeUnifyUpdateEnergyMatrix(EnergyMatrix* pEnergyMatrix,DEENodeUnifyRecor
 }
 
 
-int DEENodeUnifyUpdateRemainFlag(EnergyMatrix* pRemainFlag,DEENodeUnifyRecord* pRecord){
-  int i,k;
+int DEENodeUnifyUpdateRemainFlag(EnergyMatrix* pRemainFlag, DEENodeUnifyRecord* pRecord)
+{
+  int i, k;
   EnergyMatrix newMatrix;
   EnergyMatrixCreate(&newMatrix);
 
-  newMatrix.designSiteCount = pRemainFlag->designSiteCount-1;
+  newMatrix.designSiteCount = pRemainFlag->designSiteCount - 1;
   newMatrix.blocks = (EnergyMatrixBlock*)malloc(
-    sizeof(EnergyMatrixBlock)*newMatrix.designSiteCount*newMatrix.designSiteCount);
+    sizeof(EnergyMatrixBlock) * newMatrix.designSiteCount * newMatrix.designSiteCount);
 
-  for(i=0;i<newMatrix.designSiteCount-1;i++){
-    for(k=i;k<newMatrix.designSiteCount-1;k++){
+  for (i = 0;i < newMatrix.designSiteCount - 1;i++)
+  {
+    for (k = i;k < newMatrix.designSiteCount - 1;k++)
+    {
       int oldSite1 = pRecord->oldSiteIndexOfNewSites[i];
       int oldSIte2 = pRecord->oldSiteIndexOfNewSites[k];
-      EnergyMatrixBlockCreate(EnergyMatrixGetBlock(&newMatrix,i,k));
-      EnergyMatrixBlockCopy(EnergyMatrixGetBlock(&newMatrix,i,k),
-        EnergyMatrixGetBlock(pRemainFlag,oldSite1,oldSIte2));
+      EnergyMatrixBlockCreate(EnergyMatrixGetBlock(&newMatrix, i, k));
+      EnergyMatrixBlockCopy(EnergyMatrixGetBlock(&newMatrix, i, k),
+        EnergyMatrixGetBlock(pRemainFlag, oldSite1, oldSIte2));
     }
   }
 
   //The last column of the new energy matrix needs to be calculated
-  for(i=0;i<newMatrix.designSiteCount;i++){
+  for (i = 0;i < newMatrix.designSiteCount;i++)
+  {
     EnergyMatrixBlock* pBlock;
     int oldSite1 = pRecord->whichTwoOldSitesHaveBeenUnified[0];
     int oldSite2 = pRecord->whichTwoOldSitesHaveBeenUnified[1];
     int j;
     int s;
 
-    pBlock = EnergyMatrixGetBlock(&newMatrix,i,newMatrix.designSiteCount-1);
+    pBlock = EnergyMatrixGetBlock(&newMatrix, i, newMatrix.designSiteCount - 1);
     EnergyMatrixBlockCreate(pBlock);
     pBlock->DesignSiteI = i;
-    pBlock->DesignSiteK = newMatrix.designSiteCount-1;
+    pBlock->DesignSiteK = newMatrix.designSiteCount - 1;
 
-    if(i==newMatrix.designSiteCount-1){
+    if (i == newMatrix.designSiteCount - 1)
+    {
       pBlock->RotamerCountSiteI = pBlock->RotamerCountSiteK = pRecord->rotCountOfUnifiedNewSite;
-      pBlock->energyIK = (double*)malloc(sizeof(double)*pBlock->RotamerCountSiteI*pBlock->RotamerCountSiteK);
-      for(j=0;j<pBlock->RotamerCountSiteI;j++){
-        int rotIndexOnSite1 = j/EnergyMatrixGetRotamerCount(pRemainFlag,oldSite2);
-        int rotIndexOnSite2 = j%EnergyMatrixGetRotamerCount(pRemainFlag,oldSite2);
-        if( *EnergyMatrixGet(pRemainFlag,oldSite1,oldSite1,rotIndexOnSite1,rotIndexOnSite1)<0.0 ||
-          *EnergyMatrixGet(pRemainFlag,oldSite2,oldSite2,rotIndexOnSite2,rotIndexOnSite2)<0.0 ||
-          *EnergyMatrixGet(pRemainFlag,oldSite1,oldSite2,rotIndexOnSite1,rotIndexOnSite2)<0.0 ){
-            *EnergyMatrixBlockGet(pBlock,j,j) = -1.0;
+      pBlock->energyIK = (double*)malloc(sizeof(double) * pBlock->RotamerCountSiteI * pBlock->RotamerCountSiteK);
+      for (j = 0;j < pBlock->RotamerCountSiteI;j++)
+      {
+        int rotIndexOnSite1 = j / EnergyMatrixGetRotamerCount(pRemainFlag, oldSite2);
+        int rotIndexOnSite2 = j % EnergyMatrixGetRotamerCount(pRemainFlag, oldSite2);
+        if (*EnergyMatrixGet(pRemainFlag, oldSite1, oldSite1, rotIndexOnSite1, rotIndexOnSite1) < 0.0 ||
+          *EnergyMatrixGet(pRemainFlag, oldSite2, oldSite2, rotIndexOnSite2, rotIndexOnSite2) < 0.0 ||
+          *EnergyMatrixGet(pRemainFlag, oldSite1, oldSite2, rotIndexOnSite1, rotIndexOnSite2) < 0.0)
+        {
+          *EnergyMatrixBlockGet(pBlock, j, j) = -1.0;
         }
-        else{
-          *EnergyMatrixBlockGet(pBlock,j,j) = 1.0;
+        else
+        {
+          *EnergyMatrixBlockGet(pBlock, j, j) = 1.0;
         }
       }
     }
-    else{
-      pBlock->RotamerCountSiteI = EnergyMatrixGetRotamerCount(pRemainFlag,pRecord->oldSiteIndexOfNewSites[i]);
+    else
+    {
+      pBlock->RotamerCountSiteI = EnergyMatrixGetRotamerCount(pRemainFlag, pRecord->oldSiteIndexOfNewSites[i]);
       pBlock->RotamerCountSiteK = pRecord->rotCountOfUnifiedNewSite;
-      pBlock->energyIK = (double*)malloc(sizeof(double)*pBlock->RotamerCountSiteI*pBlock->RotamerCountSiteK);
-      for(j=0;j<pBlock->RotamerCountSiteI;j++){
-        for(s=0;s<pBlock->RotamerCountSiteK;s++){
-          int rotIndexOnSite1 = s/EnergyMatrixGetRotamerCount(pRemainFlag,oldSite2);
-          int rotIndexOnSite2 = s%EnergyMatrixGetRotamerCount(pRemainFlag,oldSite2);
-          if( *EnergyMatrixGet(pRemainFlag,pRecord->oldSiteIndexOfNewSites[i],oldSite1,j,rotIndexOnSite1)<0.0 ||
-            *EnergyMatrixGet(pRemainFlag,pRecord->oldSiteIndexOfNewSites[i],oldSite2,j,rotIndexOnSite2)<0.0 ){
-              *EnergyMatrixBlockGet(pBlock,j,s) = -1.0;
-          }else{
-            *EnergyMatrixBlockGet(pBlock,j,s) = 1.0;
+      pBlock->energyIK = (double*)malloc(sizeof(double) * pBlock->RotamerCountSiteI * pBlock->RotamerCountSiteK);
+      for (j = 0;j < pBlock->RotamerCountSiteI;j++)
+      {
+        for (s = 0;s < pBlock->RotamerCountSiteK;s++)
+        {
+          int rotIndexOnSite1 = s / EnergyMatrixGetRotamerCount(pRemainFlag, oldSite2);
+          int rotIndexOnSite2 = s % EnergyMatrixGetRotamerCount(pRemainFlag, oldSite2);
+          if (*EnergyMatrixGet(pRemainFlag, pRecord->oldSiteIndexOfNewSites[i], oldSite1, j, rotIndexOnSite1) < 0.0 ||
+            *EnergyMatrixGet(pRemainFlag, pRecord->oldSiteIndexOfNewSites[i], oldSite2, j, rotIndexOnSite2) < 0.0)
+          {
+            *EnergyMatrixBlockGet(pBlock, j, s) = -1.0;
+          }
+          else
+          {
+            *EnergyMatrixBlockGet(pBlock, j, s) = 1.0;
           }
         }
       }
@@ -571,43 +670,49 @@ int DEENodeUnifyUpdateRemainFlag(EnergyMatrix* pRemainFlag,DEENodeUnifyRecord* p
 }
 
 
-int DEENodeUnify(EnergyMatrix* pEnergyMatrix,EnergyMatrix* pRemainFlag,RotamerList* pList,DEENodeUnifyRecord* pRecord){
+int DEENodeUnify(EnergyMatrix* pEnergyMatrix, EnergyMatrix* pRemainFlag, RotamerList* pList, DEENodeUnifyRecord* pRecord)
+{
   int result = Success;
-  char errMsg[MAX_LENGTH_ERR_MSG+1];
-  int i,j,counter;
-  int unifySite[2] = {-1,-1};
-  int unifySiteRotCount[2] = {1000000,1000000};
-  //Find the two sites with fewest rotamers
-  if(pList->designSiteCount<2){
-    sprintf(errMsg,"in file %s line %d, only one site remained, do not need unifying",__FILE__,__LINE__);
+  char errMsg[MAX_LEN_ERR_MSG + 1];
+  int i, j, counter;
+  int unifySite[2] = { -1,-1 };
+  int unifySiteRotCount[2] = { 1000000,1000000 };
+  //Find the two sites with fewest rots
+  if (pList->desSiteCount < 2)
+  {
+    sprintf(errMsg, "in file %s line %d, only one site remained, do not need unifying", __FILE__, __LINE__);
     result = ValueError;
-    TraceError(errMsg,result);
+    TraceError(errMsg, result);
     return result;
   }
-  for(i=0;i<EnergyMatrixGetSiteCount(pEnergyMatrix);i++){
-    int rotCount = EnergyMatrixGetRotamerCount(pEnergyMatrix,i);
-    if(rotCount<unifySiteRotCount[0]){
+  for (i = 0;i < EnergyMatrixGetSiteCount(pEnergyMatrix);i++)
+  {
+    int rotCount = EnergyMatrixGetRotamerCount(pEnergyMatrix, i);
+    if (rotCount < unifySiteRotCount[0])
+    {
       unifySiteRotCount[1] = unifySiteRotCount[0];
       unifySiteRotCount[0] = rotCount;
       unifySite[1] = unifySite[0];
       unifySite[0] = i;
     }
-    else if(rotCount>=unifySiteRotCount[0] && rotCount<unifySiteRotCount[1]){
+    else if (rotCount >= unifySiteRotCount[0] && rotCount < unifySiteRotCount[1])
+    {
       unifySiteRotCount[1] = rotCount;
       unifySite[1] = i;
     }
   }
-  if(unifySite[0]>unifySite[1]){
+  if (unifySite[0] > unifySite[1])
+  {
     int swap = unifySite[1];
     unifySite[1] = unifySite[0];
-    unifySite[0] = swap;      
+    unifySite[0] = swap;
   }
-  
+
   //Recording
   DEENodeUnifyRecordDestroy(pRecord);
   DEENodeUnifyRecordCreate(pRecord);
-  pRecord->newSiteCount = EnergyMatrixGetSiteCount(pEnergyMatrix)-1;
-  pRecord->oldSiteIndexOfNewSites = (int*)malloc(sizeof(int)*pRecord->newSiteCount);
+  pRecord->newSiteCount = EnergyMatrixGetSiteCount(pEnergyMatrix) - 1;
+  pRecord->oldSiteIndexOfNewSites = (int*)malloc(sizeof(int) * pRecord->newSiteCount);
   pRecord->whichTwoOldSitesHaveBeenUnified[0] = unifySite[0];
   pRecord->whichTwoOldSitesHaveBeenUnified[1] = unifySite[1];
   pRecord->totalRotCountOnOldSites[0] = pList->rotamerCount[unifySite[0]];
@@ -615,25 +720,31 @@ int DEENodeUnify(EnergyMatrix* pEnergyMatrix,EnergyMatrix* pRemainFlag,RotamerLi
 
   //The new unified site is placed as the last site
   counter = 0;
-  for(i=0;i<EnergyMatrixGetSiteCount(pEnergyMatrix);i++){
-    if(i==unifySite[0] || i==unifySite[1]){
+  for (i = 0;i < EnergyMatrixGetSiteCount(pEnergyMatrix);i++)
+  {
+    if (i == unifySite[0] || i == unifySite[1])
+    {
       continue;
     }
     pRecord->oldSiteIndexOfNewSites[counter++] = i;
   }
-  pRecord->oldSiteIndexOfNewSites[pRecord->newSiteCount-1] = -1;
-  pRecord->rotCountOfUnifiedNewSite = EnergyMatrixGetRotamerCount(pEnergyMatrix,unifySite[0]) *
-                    EnergyMatrixGetRotamerCount(pEnergyMatrix,unifySite[1]);
-  pRecord->oldRotIndexFromSite1 = (int*)malloc(sizeof(int)*pRecord->rotCountOfUnifiedNewSite);
-  pRecord->oldRotIndexFromSite2 = (int*)malloc(sizeof(int)*pRecord->rotCountOfUnifiedNewSite);
+  pRecord->oldSiteIndexOfNewSites[pRecord->newSiteCount - 1] = -1;
+  pRecord->rotCountOfUnifiedNewSite = EnergyMatrixGetRotamerCount(pEnergyMatrix, unifySite[0]) *
+    EnergyMatrixGetRotamerCount(pEnergyMatrix, unifySite[1]);
+  pRecord->oldRotIndexFromSite1 = (int*)malloc(sizeof(int) * pRecord->rotCountOfUnifiedNewSite);
+  pRecord->oldRotIndexFromSite2 = (int*)malloc(sizeof(int) * pRecord->rotCountOfUnifiedNewSite);
 
   counter = 0;
-  for(i=0;i<pList->rotamerCount[unifySite[0]];i++){
-    if(pList->remainFlag[unifySite[0]][i]==FALSE){
+  for (i = 0;i < pList->rotamerCount[unifySite[0]];i++)
+  {
+    if (pList->remainFlag[unifySite[0]][i] == FALSE)
+    {
       continue;
     }
-    for(j=0;j<pList->rotamerCount[unifySite[1]];j++){
-      if(pList->remainFlag[unifySite[1]][j]==FALSE){
+    for (j = 0;j < pList->rotamerCount[unifySite[1]];j++)
+    {
+      if (pList->remainFlag[unifySite[1]][j] == FALSE)
+      {
         continue;
       }
       pRecord->oldRotIndexFromSite1[counter] = i;
@@ -643,136 +754,156 @@ int DEENodeUnify(EnergyMatrix* pEnergyMatrix,EnergyMatrix* pRemainFlag,RotamerLi
   }
 
   //Unify these two sites
-  DEENodeUnifyUpdateRotamerList(pList,pRecord);
-  DEENodeUnifyUpdateEnergyMatrix(pEnergyMatrix,pRecord);
-  DEENodeUnifyUpdateRemainFlag(pRemainFlag,pRecord);
+  DEENodeUnifyUpdateRotamerList(pList, pRecord);
+  DEENodeUnifyUpdateEnergyMatrix(pEnergyMatrix, pRecord);
+  DEENodeUnifyUpdateRemainFlag(pRemainFlag, pRecord);
 
   return Success;
 }
 
 
-int DEENodeDeUnify(RotamerList* pList,DEENodeUnifyRecord* pRecord){
-  int i,j;
+int DEENodeDeUnify(RotamerList* pList, DEENodeUnifyRecord* pRecord)
+{
+  int i, j;
   int unifySite[2];
   RotamerList listBeforeUnify;
-  listBeforeUnify.designSiteCount = pList->designSiteCount+1;
-  listBeforeUnify.rotamerCount = (int*)malloc(sizeof(int)*listBeforeUnify.designSiteCount);
-  listBeforeUnify.remainFlag = (BOOL**)malloc(sizeof(BOOL*)*listBeforeUnify.designSiteCount);
+  listBeforeUnify.desSiteCount = pList->desSiteCount + 1;
+  listBeforeUnify.rotamerCount = (int*)malloc(sizeof(int) * listBeforeUnify.desSiteCount);
+  listBeforeUnify.remainFlag = (BOOL**)malloc(sizeof(BOOL*) * listBeforeUnify.desSiteCount);
 
-  for(i=0;i<pList->designSiteCount-1;i++){
+  for (i = 0;i < pList->desSiteCount - 1;i++)
+  {
     int indexBeforeUnify = pRecord->oldSiteIndexOfNewSites[i];
     listBeforeUnify.rotamerCount[indexBeforeUnify] = pList->rotamerCount[i];
     listBeforeUnify.remainFlag[indexBeforeUnify] = (BOOL*)malloc(
-      sizeof(BOOL)*pList->rotamerCount[i]);
+      sizeof(BOOL) * pList->rotamerCount[i]);
     memcpy(listBeforeUnify.remainFlag[indexBeforeUnify],
-      pList->remainFlag[i],sizeof(BOOL)*pList->rotamerCount[i]);
+      pList->remainFlag[i], sizeof(BOOL) * pList->rotamerCount[i]);
   }
 
-  for(i=0;i<2;i++){
+  for (i = 0;i < 2;i++)
+  {
     unifySite[i] = pRecord->whichTwoOldSitesHaveBeenUnified[i];
     listBeforeUnify.rotamerCount[unifySite[i]] = pRecord->totalRotCountOnOldSites[i];
-    listBeforeUnify.remainFlag[unifySite[i]] = (BOOL*)malloc(sizeof(BOOL)*pRecord->totalRotCountOnOldSites[i]);
-    for(j=0;j<pRecord->totalRotCountOnOldSites[i];j++){
+    listBeforeUnify.remainFlag[unifySite[i]] = (BOOL*)malloc(sizeof(BOOL) * pRecord->totalRotCountOnOldSites[i]);
+    for (j = 0;j < pRecord->totalRotCountOnOldSites[i];j++)
+    {
       listBeforeUnify.remainFlag[unifySite[i]][j] = FALSE;
     }
-    for(j=0;j<pRecord->rotCountOfUnifiedNewSite;j++){
-      int oldRotIndex = i==0? pRecord->oldRotIndexFromSite1[j] : pRecord->oldRotIndexFromSite2[j];
-      if(pList->remainFlag[pList->designSiteCount-1][j]){
-        listBeforeUnify.remainFlag[unifySite[i]][ oldRotIndex ] = TRUE;
+    for (j = 0;j < pRecord->rotCountOfUnifiedNewSite;j++)
+    {
+      int oldRotIndex = i == 0 ? pRecord->oldRotIndexFromSite1[j] : pRecord->oldRotIndexFromSite2[j];
+      if (pList->remainFlag[pList->desSiteCount - 1][j])
+      {
+        listBeforeUnify.remainFlag[unifySite[i]][oldRotIndex] = TRUE;
       }
     }
   }
 
   RotamerListDestroy(pList);
-  pList->designSiteCount = listBeforeUnify.designSiteCount;
+  pList->desSiteCount = listBeforeUnify.desSiteCount;
   pList->remainFlag = listBeforeUnify.remainFlag;
   pList->rotamerCount = listBeforeUnify.rotamerCount;
   return Success;
 }
 
 
-int DEE(EnergyMatrix* pEnergyMatrix,RotamerList* pRotamerList,double deeTreshold){
+int DEE(EnergyMatrix* pEnergyMatrix, RotamerList* pRotamerList, double deeTreshold)
+{
   int i;
   DEENodeUnifyRecord* unifyRecords;
   int unifyTimes;
   EnergyMatrix remainFlag;
   IntArray deleteRotamerList;
-  IntArrayCreate(&deleteRotamerList,0);
-  
+  IntArrayCreate(&deleteRotamerList, 0);
+
   EnergyMatrixCreate(&remainFlag);
-  EnergyMatrixCopy(&remainFlag,pEnergyMatrix);
-  for(i=0;i<EnergyMatrixGetSiteCount(&remainFlag);i++){
+  EnergyMatrixCopy(&remainFlag, pEnergyMatrix);
+  for (i = 0;i < EnergyMatrixGetSiteCount(&remainFlag);i++)
+  {
     int k;
-    for(k=0;k<EnergyMatrixGetSiteCount(&remainFlag);k++){
-      int j,s;
-      for(j=0;j<EnergyMatrixGetRotamerCount(&remainFlag,i);j++){
-        for(s=0;s<EnergyMatrixGetRotamerCount(&remainFlag,k);s++){
-          *EnergyMatrixGet(&remainFlag,i,k,j,s) = 1.0;
+    for (k = 0;k < EnergyMatrixGetSiteCount(&remainFlag);k++)
+    {
+      int j, s;
+      for (j = 0;j < EnergyMatrixGetRotamerCount(&remainFlag, i);j++)
+      {
+        for (s = 0;s < EnergyMatrixGetRotamerCount(&remainFlag, k);s++)
+        {
+          *EnergyMatrixGet(&remainFlag, i, k, j, s) = 1.0;
         }
       }
     }
   }
 
   unifyTimes = 0;
-  unifyRecords = (DEENodeUnifyRecord*)malloc(sizeof(DEENodeUnifyRecord)*pRotamerList->designSiteCount);
-  for(i=0;i<pRotamerList->designSiteCount;i++){
+  unifyRecords = (DEENodeUnifyRecord*)malloc(sizeof(DEENodeUnifyRecord) * pRotamerList->desSiteCount);
+  for (i = 0;i < pRotamerList->desSiteCount;i++)
+  {
     DEENodeUnifyRecordCreate(&unifyRecords[i]);
   }
 
-  do{
+  do
+  {
     int eliminatedCountThisLoop;
-    do{
+    do
+    {
       eliminatedCountThisLoop = 0;
-      do{
+      do
+      {
         //EnergyMatrixShow(pEnergyMatrix);
         printf("DEEGoldstein...");
-        DEEGoldstein(pEnergyMatrix,&deleteRotamerList,DEE_PARA_THRESHOLD,&remainFlag);
-        DEERotamerListAndEnergyMatrixDelete(pRotamerList,pEnergyMatrix,&remainFlag,&deleteRotamerList);
-        printf("%d\n",IntArrayGetLength(&deleteRotamerList)/2);
-        eliminatedCountThisLoop += IntArrayGetLength(&deleteRotamerList)/2;
-      }while(IntArrayGetLength(&deleteRotamerList)>0);
+        DEEGoldstein(pEnergyMatrix, &deleteRotamerList, DEE_PARA_THRESHOLD, &remainFlag);
+        DEERotamerListAndEnergyMatrixDelete(pRotamerList, pEnergyMatrix, &remainFlag, &deleteRotamerList);
+        printf("%d\n", IntArrayGetLength(&deleteRotamerList) / 2);
+        eliminatedCountThisLoop += IntArrayGetLength(&deleteRotamerList) / 2;
+      } while (IntArrayGetLength(&deleteRotamerList) > 0);
 
-      do{
+      do
+      {
         //EnergyMatrixShow(pEnergyMatrix);
         printf("DEESplit...");
-        DEESplit(pEnergyMatrix,&deleteRotamerList,DEE_PARA_THRESHOLD,&remainFlag);
-        DEERotamerListAndEnergyMatrixDelete(pRotamerList,pEnergyMatrix,&remainFlag,&deleteRotamerList);
-        printf("%d\n",IntArrayGetLength(&deleteRotamerList)/2);
-        eliminatedCountThisLoop += IntArrayGetLength(&deleteRotamerList)/2;
+        DEESplit(pEnergyMatrix, &deleteRotamerList, DEE_PARA_THRESHOLD, &remainFlag);
+        DEERotamerListAndEnergyMatrixDelete(pRotamerList, pEnergyMatrix, &remainFlag, &deleteRotamerList);
+        printf("%d\n", IntArrayGetLength(&deleteRotamerList) / 2);
+        eliminatedCountThisLoop += IntArrayGetLength(&deleteRotamerList) / 2;
 
-      }while(IntArrayGetLength(&deleteRotamerList)>0);
-      
-      if(eliminatedCountThisLoop < 10){
+      } while (IntArrayGetLength(&deleteRotamerList) > 0);
+
+      if (eliminatedCountThisLoop < 10)
+      {
         break;
       }
 
       //EnergyMatrixShow(pEnergyMatrix);
       printf("DEEDouble...");
-      i = DEEDouble(pEnergyMatrix,deeTreshold,&remainFlag);
-      printf("%d\n",i);
+      i = DEEDouble(pEnergyMatrix, deeTreshold, &remainFlag);
+      printf("%d\n", i);
 
-    }while(TRUE);
+    } while (TRUE);
 
-    if(pRotamerList->designSiteCount>1){
+    if (pRotamerList->desSiteCount > 1)
+    {
       printf("Node Unifying...");
-      DEENodeUnify(pEnergyMatrix,&remainFlag,pRotamerList,&unifyRecords[unifyTimes++]);
+      DEENodeUnify(pEnergyMatrix, &remainFlag, pRotamerList, &unifyRecords[unifyTimes++]);
       printf(" Site %d and %d -> %d\n",
-        unifyRecords[unifyTimes-1].whichTwoOldSitesHaveBeenUnified[0],
-        unifyRecords[unifyTimes-1].whichTwoOldSitesHaveBeenUnified[1],
-        pRotamerList->designSiteCount-1);
+        unifyRecords[unifyTimes - 1].whichTwoOldSitesHaveBeenUnified[0],
+        unifyRecords[unifyTimes - 1].whichTwoOldSitesHaveBeenUnified[1],
+        pRotamerList->desSiteCount - 1);
     }
-  }while(EnergyMatrixGetSiteCount(pEnergyMatrix)>1 || EnergyMatrixGetRotamerCount(pEnergyMatrix,0)>1 );
+  } while (EnergyMatrixGetSiteCount(pEnergyMatrix) > 1 || EnergyMatrixGetRotamerCount(pEnergyMatrix, 0) > 1);
 
 
-  while(unifyTimes>0){
-    DEENodeDeUnify(pRotamerList,&unifyRecords[--unifyTimes]);
+  while (unifyTimes > 0)
+  {
+    DEENodeDeUnify(pRotamerList, &unifyRecords[--unifyTimes]);
   }
 
   RotamerListShow(pRotamerList);
-  printf("Min Energy : %f\n",DEECalcMinEnergy(pEnergyMatrix,pRotamerList));
+  printf("Min Energy : %f\n", DEECalcMinEnergy(pEnergyMatrix, pRotamerList));
 
   IntArrayDestroy(&deleteRotamerList);
-  for(i=0;i<pRotamerList->designSiteCount;i++){
+  for (i = 0;i < pRotamerList->desSiteCount;i++)
+  {
     DEENodeUnifyRecordDestroy(&unifyRecords[i]);
   }
   free(unifyRecords);
@@ -782,32 +913,38 @@ int DEE(EnergyMatrix* pEnergyMatrix,RotamerList* pRotamerList,double deeTreshold
 }
 
 
-int DEEShowDesignedStructure(Structure* pStructure, RotamerList* pRotamerList, char* structureFile){
+int DEEShowDesignedStructure(Structure* pStructure, RotamerList* pRotamerList, char* structureFile)
+{
   int result = Success;
-  char errMsg[MAX_LENGTH_ERR_MSG+1];
+  char errMsg[MAX_LEN_ERR_MSG + 1];
   FILE* pFile = fopen(structureFile, "w");
-  if(!pFile){
-    sprintf(errMsg,"in file %s line %d, cannot write to file %s\n", __FILE__,__LINE__,structureFile);
-    result=IOError;
-    TraceError(errMsg,result);
+  if (!pFile)
+  {
+    sprintf(errMsg, "in file %s line %d, cannot write to file %s\n", __FILE__, __LINE__, structureFile);
+    result = IOError;
+    TraceError(errMsg, result);
     return result;
   }
   int atomIndex = 1;
-  for(int i=0; i<StructureGetDesignSiteCount(pStructure); i++){
-    DesignSite* pDesignSite = StructureGetDesignSite(pStructure,i);
+  for (int i = 0; i < StructureGetDesignSiteCount(pStructure); i++)
+  {
+    DesignSite* pDesignSite = StructureGetDesignSite(pStructure, i);
     RotamerSet* pRotamerSet = DesignSiteGetRotamers(pDesignSite);
-    for(int j = 0; j < pRotamerList->rotamerCount[i]; j++){
-      if(pRotamerList->remainFlag[i][j]){
+    for (int j = 0; j < pRotamerList->rotamerCount[i]; j++)
+    {
+      if (pRotamerList->remainFlag[i][j])
+      {
         Rotamer* pRotamer = RotamerSetGet(pRotamerSet, j);
         RotamerRestore(pRotamer, pRotamerSet);
-        RotamerShowInPDBFormat(pRotamer, "ATOM", RotamerGetChainName(pRotamer),atomIndex,RotamerGetPosInChain(pRotamer),pFile);
+        RotamerShowInPDBFormat(pRotamer, "ATOM", RotamerGetChainName(pRotamer), atomIndex, RotamerGetPosInChain(pRotamer), pFile);
         atomIndex += RotamerGetAtomCount(pRotamer);
         RotamerExtract(pRotamer);
       }
     }
-    
+
   }
-  if(pFile!=NULL){
+  if (pFile != NULL)
+  {
     fclose(pFile);
   }
   return Success;

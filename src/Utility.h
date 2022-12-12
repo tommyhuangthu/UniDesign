@@ -1,16 +1,16 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com, xiaoqiah@umich.edu)
+Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
-files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, 
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE 
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
 
@@ -22,22 +22,23 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <math.h>
 #include <time.h>
 
-#define MAX_LENGTH_ATOM_NAME         10
-#define MAX_LENGTH_ATOM_TYPE         10
-#define MAX_LENGTH_ATOM_HYBRIDTYPE   10
-#define MAX_LENGTH_ATOM_DONOR        10
-#define MAX_LENGTH_ATOM_ACCEPTOR     10
-#define MAX_LENGTH_RESIDUE_NAME      10
-#define MAX_LENGTH_CHAIN_NAME        10
-#define MAX_LENGTH_STRUCTURE_NAME    10
+#define MAX_LEN_ATOM_NAME         10
+#define MAX_LEN_ATOM_TYPE         10
+#define MAX_LEN_ATOM_HYBRID       10
+#define MAX_LEN_ATOM_DONOR        10
+#define MAX_LEN_ATOM_ACCEPTOR     10
+#define MAX_LEN_RES_NAME          10
+#define MAX_LEN_CHAIN_NAME        10
+#define MAX_LEN_STRUCTURE_NAME    10
 
-#define MAX_LENGTH_ONE_LINE_IN_FILE  1024
-#define MAX_LENGTH_FILE_NAME         100
+#define MAX_LEN_ONE_LINE_CONTENT  1024
+#define MAX_LEN_FILE_NAME         100
 
 #define COMMENT_LINE_SYMBOL1         '!'
 #define COMMENT_LINE_SYMBOL2         '#'
 
-typedef struct _StringArray{
+typedef struct _StringArray
+{
   char** strings;
   int stringCount;
   int capacity;
@@ -57,13 +58,15 @@ int StringArraySplitString(StringArray* pThis, char* srcStr, char splitter);
 int StringArrayShow(StringArray* pThis);
 
 
-typedef enum _Type_CoordinateFile{
-  Type_CoordinateFile_PDB, 
-  Type_CoordinateFile_MOL2, 
+typedef enum _Type_CoordinateFile
+{
+  Type_CoordinateFile_PDB,
+  Type_CoordinateFile_MOL2,
   Type_CoordinateFile_Unrecognized
-} Type_CoordinateFile ;
+} Type_CoordinateFile;
 
-typedef struct _FileReader{
+typedef struct _FileReader
+{
   StringArray lines;
   int position;
 } FileReader;
@@ -78,7 +81,8 @@ int FileReaderGetNextLine(FileReader* pThis, char* dest);
 BOOL FileReaderEndOfFile(FileReader* pThis);
 Type_CoordinateFile FileReaderRecognizeCoordinateFileType(FileReader* pThis);
 
-typedef struct _IntArray{
+typedef struct _IntArray
+{
   int* content;
   int length;
   int capacity;
@@ -97,9 +101,10 @@ int IntArrayInsert(IntArray* pThis, int index, int newValue);
 int IntArrayRemove(IntArray* pThis, int index);
 int IntArrayAppend(IntArray* pThis, int newValue);
 int IntArrayShow(IntArray* pThis);
-int IntArrayFind(IntArray *pThis, int num);
+int IntArrayFind(IntArray* pThis, int num);
 
-typedef struct _DoubleArray{
+typedef struct _DoubleArray
+{
   double* content;
   int length;
   int capacity;
@@ -117,10 +122,10 @@ int DoubleArraySetAll(DoubleArray* pThis, double* pNewContent);
 int DoubleArrayInsert(DoubleArray* pThis, int index, double newValue);
 int DoubleArrayRemove(DoubleArray* pThis, int index);
 int DoubleArrayAppend(DoubleArray* pThis, double newValue);
-double DoubleArrayInnerProduct(DoubleArray *pThis, DoubleArray *pOther);
-int DoubleArrayScale(DoubleArray *pThis, double scale);
-double DoubleArrayNorm(DoubleArray *pThis);
-int  DoubleArrayMinus(DoubleArray *pThis, DoubleArray *pOther);
+double DoubleArrayInnerProduct(DoubleArray* pThis, DoubleArray* pOther);
+int DoubleArrayScale(DoubleArray* pThis, double scale);
+double DoubleArrayNorm(DoubleArray* pThis);
+int  DoubleArrayMinus(DoubleArray* pThis, DoubleArray* pOther);
 int DoubleArrayShow(DoubleArray* pThis);
 
 
@@ -134,15 +139,16 @@ int AddChainTER(FILE* pFile);
 int ShowProgress(int width, double percentage);
 int SpentTimeShow(time_t ts, time_t te);
 
-typedef enum _Type_Residue{
+typedef enum _Type_Residue
+{
   Type_Residue_Ala,
   Type_Residue_Cys,
 }Type_Residue;
 
 
-int OneLetterAAToThreeLetterAA(char name1, char name3[MAX_LENGTH_RESIDUE_NAME]);
-char ThreeLetterAAToOneLetterAA(char name3[MAX_LENGTH_RESIDUE_NAME]);
-BOOL AminoAcidIsPolar(char* resiName);
-int AminoAcidGetIndex(char name1);
-int ThreeLetterAAGetIndex(char name3[MAX_LENGTH_RESIDUE_NAME]);
+int AA1ToAA3(char name1, char name3[MAX_LEN_RES_NAME]);
+char AA3ToAA1(char name3[MAX_LEN_RES_NAME]);
+BOOL IsAAPolar(char* resiName);
+int AA1GetIndex(char name1);
+int AA3GetIndex(char name3[MAX_LEN_RES_NAME]);
 #endif // UTILITY_H

@@ -1,16 +1,16 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com, xiaoqiah@umich.edu)
+Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation 
-files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, 
-modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the 
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
-OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE 
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
 
@@ -20,16 +20,18 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Utility.h"
 #include "Atom.h"
 
-typedef enum _Type_Bond{
-  Type_Bond_Single, 
-  Type_Bond_double, 
-  Type_Bond_Triple, 
+typedef enum _Type_Bond
+{
+  Type_Bond_Single,
+  Type_Bond_double,
+  Type_Bond_Triple,
   Type_Bond_None
-}Type_Bond ;
+}Type_Bond;
 
-typedef struct _Bond{
-  char atomFromName[MAX_LENGTH_ATOM_NAME+1];
-  char atomToName[MAX_LENGTH_ATOM_NAME+1];
+typedef struct _Bond
+{
+  char atomFromName[MAX_LEN_ATOM_NAME + 1];
+  char atomToName[MAX_LEN_ATOM_NAME + 1];
   Type_Bond type;
 } Bond;
 
@@ -44,7 +46,8 @@ Type_Bond BondGetType(Bond* pThis);
 int BondSetType(Bond* pThis, Type_Bond newType);
 int BondShow(Bond* pThis);
 
-typedef struct _BondSet{
+typedef struct _BondSet
+{
   int count;
   Bond* bonds;
 } BondSet;
@@ -59,9 +62,10 @@ Type_Bond BondSetFind(BondSet* pThis, char* atom1, char* atom2);
 Bond* BondSetGet(BondSet* pThis, int index);
 int BondSetShow(BondSet* pThis);
 
-typedef struct _CharmmIC{
+typedef struct _CharmmIC
+{
   double icParam[5];
-  char atomNames[4][MAX_LENGTH_ATOM_NAME+1];
+  char atomNames[4][MAX_LEN_ATOM_NAME + 1];
   BOOL torsionProperFlag;                    // 1 byte
   // Proper dihedral angle (A, B, C, D): five parameters are R(AB), Theta(ABC), Phi(ABCD), Theta(BCD), R(CD)
   // Improper dihedral angle (A, B, *C, D); five parameters are R(AC), Theta(ACB), Phi(ABCD), Theta(BCD), R(CD)
@@ -81,12 +85,13 @@ BOOL CharmmICGetTorsionProperFlag(CharmmIC* pThis);
 int CharmmICCalcXYZ(CharmmIC* pThis, AtomArray* atomArray, XYZ* pDestXYZ);
 int CharmmICShow(CharmmIC* pThis);
 
-typedef struct _ResidueTopology{
+typedef struct _ResidueTopology
+{
   StringArray atoms;
   StringArray deletes;
   BondSet bonds;
   CharmmIC* ics;
-  char residueName[MAX_LENGTH_RESIDUE_NAME+1];
+  char residueName[MAX_LEN_RES_NAME + 1];
   int icCount;
 } ResidueTopology;
 
@@ -105,12 +110,14 @@ BondSet* ResidueTopologyGetBonds(ResidueTopology* pThis);
 int ResidueTopologyGetCharmmICCount(ResidueTopology* pThis);
 int ResidueTopologyGetCharmmIC(ResidueTopology* pThis, int index, CharmmIC* pDestIC);
 int ResidueTopologyFindCharmmIC(ResidueTopology* pThis, char* atomDName, CharmmIC* pDestIC);
+int ResidueTopologyFindCharmmICIndex(ResidueTopology* pThis, char* atomDName, int* index);
 int ResidueTopologyAddCharmmIC(ResidueTopology* pThis, CharmmIC* pNewIC);
 int ResidueTopologyShow(ResidueTopology* pThis);
 
 
 
-typedef struct _ResiTopoSet{
+typedef struct _ResiTopoSet
+{
   int count;
   ResidueTopology* topos;
 } ResiTopoSet;
@@ -119,6 +126,7 @@ int ResiTopoSetCreate(ResiTopoSet* pThis);
 int ResiTopoSetDestroy(ResiTopoSet* pThis);
 int ResiTopoSetCopy(ResiTopoSet* pThis, ResiTopoSet* pOther);
 int ResiTopoSetGet(ResiTopoSet* pThis, char* resiName, ResidueTopology* pDestTopo);
+int ResiTopoSetGetTopologyIndex(ResiTopoSet* pThis, char* resiName, int* index);
 int ResiTopoSetAdd(ResiTopoSet* pThis, ResidueTopology* pNewTopo);
 int ResiTopoSetAddFromFile(ResiTopoSet* pThis, char* filepath);
 int ResiTopoSetRead(ResiTopoSet* pResiTopo, char* filePath);
