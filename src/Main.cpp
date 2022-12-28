@@ -351,7 +351,8 @@ int main(int argc, char* argv[])
   //char* cmdname = "ComputeResiEnergy";
   //char* cmdname = "ComputeStability";
   //char* cmdname = "ComputeResiPairEnergy";
-  char* cmdname = "FindInterfaceResidue";
+  //char* cmdname = "FindInterfaceResidue";
+  char* cmdname = "";
 
   clock_t timestart = clock();
   setvbuf(stdout, NULL, _IONBF, 0);
