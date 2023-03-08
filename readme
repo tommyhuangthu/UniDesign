@@ -1,6 +1,6 @@
 1. Overview
 ----------
-UniDesign is a command-line-based Unified platform for protein Design, aiming at all kinds of protein design and engineering tasks, as well as for protein structure modeling and scoring. UniDesign is mainly extended from EvoEF2 (https://zhanglab.ccmb.med.umich.edu/EvoEF/) and in part from EvoDesign (https://zhanglab.ccmb.med.umich.edu/EvoDesign/) but has many new features. Please refer to manual.docx for more details about UniDesign.
+UniDesign is a universal framework for physics-based computational protein engineering, protein design, and sequence optimization. It is designed to target a diversity of functional protein design/engineering tasks, as well as for protein structure modeling and scoring. UniDesign is a strong extension of my previous computational protein design programs EvoEF2 (https://zhanggroup.org/EvoEF/) and EvoDesign (https://zhanggroup/EvoDesign/) with many more new features. Please refer to manual.docx for more details about UniDesign.
 
 
 2. Brief Applications
