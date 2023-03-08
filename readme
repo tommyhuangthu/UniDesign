@@ -46,18 +46,18 @@ UniDesign is free to all users.
 
 Citations
 ----------
-The UniDesign paper is in preparation and has not been published 
-formally in a peer-reviewed journal. If UniDesign is useful to 
-your work, please cite the following papers:
+Xiaoqiang Huang, Jun Zhou, Dongshan Yang, Jifeng Zhang, Xiaofeng Xia, Yuqing Eugene Chen, Jie Xu. 
+Decoding CRISPR-Cas9 PAM recognition with UniDesign. bioRxiv (2023). doi:10.1101/2023.01.08.523136
 
-Xiaoqiang Huang, Robin Pearce, Yang Zhang. EvoEF2: accurate and fast 
-energy function for computational protein design. Bioinformatics 
-(2020), 36: 1135-1142.
 
-Robin Pearce, Xiaoqiang Huang, Dani Setiawan, Yang Zhang. EvoDesign: 
-Designing protein-protein binding interactions using evolutionary 
+xiaoqiang huang, robin pearce, yang zhang. evoef2: accurate and fast 
+energy function for computational protein design. bioinformatics 
+(2020), 36: 1135-1142
+
+robin pearce, xiaoqiang huang, dani setiawan, yang zhang. evodesign: 
+designing protein-protein binding interactions using evolutionary 
 interface profiles in conjunction with an optimized physical energy 
-function. Journal of Molecular Biology (2019), 431: 2467-2476.
+function. journal of molecular biology (2019), 431: 2467-2476
 
 
 Reporting bugs, comments, and suggestions
