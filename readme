@@ -39,12 +39,12 @@ UniDesign is free to all non-commercial users.
 
 5. References
 ----------
-If you use UniDesign, please refer to the following paper:
+If you use UniDesign, please cite:
 
-Xiaoqiang Huang, Jun Zhou, Dongshan Yang, Jifeng Zhang, Xiaofeng Xia, Yuqing Eugene Chen, Jie Xu. 
-Decoding CRISPR-Cas9 PAM recognition with UniDesign. bioRxiv (2023). doi:10.1101/2023.01.08.523136
+Huang, X., Zhou, J., Yang, D., Zhang, J., Xia, X., Chen, Y. E., and Xu, J. (2023) Decoding CRISPR–Cas PAM recognition with UniDesign. Briefings in Bioinformatics. DOI: 10.1093/bib/bbad133.
 
 
 6. Contact 
 ------------
-Please report to Dr Xiaoqiang Huang (xiaoqiah@umich.edu or xiaoqiah@outlook.com) for bugs/suggestions.
+For suggestions or bug reporting, please contact
+xiaoqiah@outlook.com or xiaoqiah@umich.edu
