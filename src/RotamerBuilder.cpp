@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -21,6 +21,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "RotamerBuilder.h"
 #include "EnergyFunction.h"
 #include <string.h>
+#include <ctype.h>
 
 extern double CUT_PPI_DIST_SHELL1;
 extern double CUT_PPI_DIST_SHELL2;
@@ -426,6 +427,27 @@ int StructureGetTruncatedBackbone(Structure* pThis, Residue* pSmallMol, double a
   return Success;
 }
 
+int StructureGetTruncatedBackboneNew(Structure* pThis, Residue* pSmallMol, BOOL withHydrogen, AtomArray* pBackboneAtoms)
+{
+  for (int chainIndex = 0; chainIndex < StructureGetChainCount(pThis); chainIndex++)
+  {
+    Chain* pChain = StructureGetChain(pThis, chainIndex);
+    for (int resiIndex = 0; resiIndex < ChainGetResidueCount(pChain); resiIndex++)
+    {
+      Residue* pResi = ChainGetResidue(pChain, resiIndex);
+      if (strcmp(ResidueGetChainName(pResi), ResidueGetChainName(pSmallMol)) == 0 && ResidueGetPosInChain(pResi) == ResidueGetPosInChain(pSmallMol)) continue;
+      for (int atomIndex = 0;atomIndex < ResidueGetAtomCount(pResi);atomIndex++)
+      {
+        Atom* pAtom = ResidueGetAtom(pResi, atomIndex);
+        if (AtomIsHydrogen(pAtom) == TRUE && withHydrogen == FALSE) continue;
+        if (pAtom->isBBAtom == FALSE && strcmp(AtomGetName(pAtom), "CB") != 0) continue;
+        AtomArrayAppend(pBackboneAtoms, pAtom);
+      }
+    }
+  }
+  return Success;
+}
+
 
 int StructureDeployCataConsSitePair(Structure* pThis, CataConsSitePair* pCataConsSitePair)
 {
@@ -524,7 +546,7 @@ int StructurePlaceSmallMol(Structure* pThis, PlacingRule* pRule, CataConsSitePai
   if (FAILED(result))
   {
     result = DataNotExistError;
-    sprintf(errMsg, "in file %s line %d, failed to place ligand rotamers", __FILE__, __LINE__);
+    sprintf(errMsg, "in file %s line %d, failed to place ligand poses", __FILE__, __LINE__);
     TraceError(errMsg, result);
     return result;
   }
@@ -538,7 +560,7 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
   int result = Success;
   char errMsg[MAX_LEN_ERR_MSG + 1];
 
-  printf("make ligand conformers for ligand pose sampling in enzyme design\n");
+  printf("make ligand poses for ligand pose sampling in enzyme design\n");
 
   printf("1. read and deploy catalytic constraints ...\n");
   CataConsSitePairArray cataCons;
@@ -582,7 +604,8 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
   }
   AtomArray truncBackbone;
   AtomArrayCreate(&truncBackbone);
-  StructureGetTruncatedBackbone(pThis, pSmallMol, PlacingRuleGetTruncatedBackboneRange(&placingRule), TRUE, &truncBackbone);
+  //StructureGetTruncatedBackbone(pThis, pSmallMol, PlacingRuleGetTruncatedBackboneRange(&placingRule), TRUE, &truncBackbone);
+  StructureGetTruncatedBackboneNew(pThis, pSmallMol, TRUE, &truncBackbone);
 
   int nRelatedSites = 0;
   DesignSite** ppRelatedSites = NULL;
@@ -643,13 +666,13 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
     return result;
   }
 
-  printf("3. start placing ligand rotamers ...\n");
+  printf("3. start placing ligand poses ...\n");
   RotamerSet ligRots;
   RotamerSetCreate(&ligRots);
   result = StructurePlaceSmallMol(pThis, &placingRule, &cataCons, nRelatedSites, ppRelatedSites, &ligRots);
   if (FAILED(result))
   {
-    sprintf(errMsg, "in file %s line %d, failed to placing ligand rotamers", __FILE__, __LINE__);
+    sprintf(errMsg, "in file %s line %d, failed to place ligand poses", __FILE__, __LINE__);
     result = ValueError;
     return result;
   }
@@ -738,7 +761,7 @@ int StructureWriteSmallMolRotamers(Structure* pThis, char* fileSmallMol)
     RotamerRestore(&newRot, pSmallSet);
     RotamerShowInPDBFormat(&newRot, "ATOM", ResidueGetChainName(pSmallMol), 1, 1, outputFile);
     RotamerExtract(&newRot);
-    // write energy into ligand conformers file
+    // save energy to the ligand pose file
     fprintf(outputFile, "ENERGY INTERNAL: %f BACKBONE: %f\n", newRot.vdwInternal, newRot.vdwBackbone);
     EndModel(outputFile);
     RotamerDestroy(&newRot);
@@ -749,7 +772,7 @@ int StructureWriteSmallMolRotamers(Structure* pThis, char* fileSmallMol)
 }
 
 
-int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char* smallMolFileName)
+int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char* smallMolFile)
 {
   char errMsg[MAX_LEN_ERR_MSG + 1];
   Residue* pSmallMol = NULL;
@@ -773,10 +796,10 @@ int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char
   ResidueSetDesignType(pSmallMol, Type_DesType_SmallMol);
 
   FileReader fr;
-  result = FileReaderCreate(&fr, smallMolFileName);
+  result = FileReaderCreate(&fr, smallMolFile);
   if (FAILED(result))
   {
-    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, smallMolFileName);
+    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, smallMolFile);
     TraceError(errMsg, result);
     FileReaderDestroy(&fr);
     return result;
@@ -798,7 +821,7 @@ int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char
     }
     if (FAILED(ResidueReadXYZFromPDB(&tmpRes, &fr)))
     {
-      sprintf(errMsg, "in file %s line %d, error when reading small-molecule conformers file", __FILE__, __LINE__);
+      sprintf(errMsg, "in file %s line %d, error encountered when reading the ligand pose file", __FILE__, __LINE__);
       result = FormatError;
       TraceError(errMsg, result);
       return result;
@@ -837,10 +860,13 @@ int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char
 }
 
 
-// this function is used to delete or screen small molecules with correct direct orientation;
-// oriFileName is small molecule library file by combining the tmpPDB files together;
-// newFileName is the reserved library file after screening;
-// screenFileName is the screening rule file;
+////////////////////////////////////////////////////////////////////////////////////////
+// This function is used to screen out ligand poses with bad (meaningless) orientations
+////////////////////////////////////////////////////////////////////////////////////////
+// oldConfsFile records the ligand poses to be screened
+// newConfsFile records the ligand poses to be saved
+// orntRuleFile records the ligand pose screening rule
+////////////////////////////////////////////////////////////////////////////////////////
 // the following information is needed in the screening rule file:
 // two atoms on small molecule: a catalytic atom and a binding atom;
 // a set of residues in protein scaffold;
@@ -855,10 +881,12 @@ int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char
 // BIND_SITE  CHAINB SER 66
 // BIND_SITE_GROUP
 // BIND_SITE  CHAINB TRP 153
-// in each BIND_SITE_GROUP, all the distances between the binding atom and the CA atoms of the residues must be are 
-// larger than those between the catalytic atom and the CA atoms of the residues;
-// and at least one binding site group must satisfy the above relationship.
-int StructureSmallmolOrientationScreen(Structure* pStructure, ResiTopoSet* pResiTopo, char* oriFileName, char* newFileName, char* screenRuleFileName)
+////////////////////////////////////////////////////////////////////////////////////////
+// CRITERIA:
+// (1) in one BIND_SITE_GROUP, all BIND_SITEs must satisfy dist(CATA_ATOM, CA_ATOM_OF_BIND_SITE) <= dist(BIND_ATOM, CA_ATOM_OF_BIND_SITE)
+// (2) if multi BIND_SITE_GROUPs, it is okay to have any one satisfy (1)
+//////////////////////////////////////////////////////////////////////////////////////////
+int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTopo, char* oldConfsFile, char* newConfsFile, char* orntRuleFile)
 {
   typedef struct _BindSite
   {
@@ -873,28 +901,20 @@ int StructureSmallmolOrientationScreen(Structure* pStructure, ResiTopoSet* pResi
     BindSite* pSites;
   } BindSiteGroup;
 
-  int            totalRotamerCounter, acceptedRotamerCounter;
   char           cataAtomName[MAX_LEN_ATOM_NAME + 1];
   char           bindAtomName[MAX_LEN_ATOM_NAME + 1];
   int            groupCounter;
-  char           line[MAX_LEN_ONE_LINE_CONTENT + 1];
   BindSiteGroup* pGroups = NULL;
-  FILE* pOutputFile = NULL;
-  FILE* pInputFile = NULL;
-  StringArray    buffer;
-  XYZ            xyzCataAtom;
-  XYZ            xyzBindAtom;
-  BOOL           cataAtomExist = FALSE;
-  BOOL           bindAtomExist = FALSE;
-  BOOL           curRotamerAccepted = FALSE;
+  double         MIN_DELTA_DIST = 0;
 
   FileReader     file;
-  FileReaderCreate(&file, screenRuleFileName);
+  FileReaderCreate(&file, orntRuleFile);
   groupCounter = 0;
   while (!FileReaderEndOfFile(&file))
   {
     BOOL doneInThisGroup = FALSE;
     int siteNum;
+    char           line[MAX_LEN_ONE_LINE_CONTENT + 1];
     while (!FAILED(FileReaderGetNextLine(&file, line)))
     {
       StringArray wordsInLine;
@@ -933,30 +953,52 @@ int StructureSmallmolOrientationScreen(Structure* pStructure, ResiTopoSet* pResi
         pGroups[groupCounter - 1].pSites[siteNum - 1].posInChain = atoi(StringArrayGet(&wordsInLine, 3));
         pGroups[groupCounter - 1].siteNum = siteNum;
       }
+      else if (strcmp(StringArrayGet(&wordsInLine, 0), "MIN_DELTA_DIST") == 0)
+      {
+        MIN_DELTA_DIST = atof(StringArrayGet(&wordsInLine, 1));
+      }
     }
   }
+  FileReaderDestroy(&file);
 
   char errMsg[MAX_LEN_ERR_MSG + 1];
-  printf("reading small-molecule rotamers from file %s\n", oriFileName);
-  pInputFile = fopen(oriFileName, "r");
-  if (pInputFile == NULL)
+  printf("reading ligand poses from file %s\n", oldConfsFile);
+  FILE* pIn = fopen(oldConfsFile, "r");
+  if (pIn == NULL)
   {
-    sprintf(errMsg, "in file %s line %d, can not open file %s for reading", __FILE__, __LINE__, oriFileName);
+    sprintf(errMsg, "in file %s line %d, can not open file %s for reading", __FILE__, __LINE__, oldConfsFile);
     TraceError(errMsg, IOError);
     return IOError;
   }
-  pOutputFile = fopen(newFileName, "w");
-  if (pOutputFile == NULL)
+  FILE* pOut = fopen(newConfsFile, "w");
+  if (pOut == NULL)
   {
-    sprintf(errMsg, "in file %s line %d, can not open file %s for reading", __FILE__, __LINE__, newFileName);
+    sprintf(errMsg, "in file %s line %d, can not open file %s for reading", __FILE__, __LINE__, newConfsFile);
     TraceError(errMsg, IOError);
     return IOError;
   }
 
-  totalRotamerCounter = 0;
-  acceptedRotamerCounter = 0;
+  char badOrntPoseFile[MAX_LEN_FILE_NAME+1];
+  sprintf(badOrntPoseFile, "%s_BAD_ORNT.pdb",newConfsFile);
+  FILE* pOutBad = fopen(badOrntPoseFile, "w");
+  if (pOutBad == NULL)
+  {
+    sprintf(errMsg, "in file %s line %d, can not open file %s for reading", __FILE__, __LINE__, badOrntPoseFile);
+    TraceError(errMsg, IOError);
+    return IOError;
+  }
+
+  int totalRotamerCounter = 0;
+  int acceptedRotamerNdx = 0;
+  int rejectedRotamerNdx = 0;
+  XYZ xyzCataAtom;
+  XYZ xyzBindAtom;
+  BOOL cataAtomExist = FALSE;
+  BOOL bindAtomExist = FALSE;
+  StringArray buffer;
   StringArrayCreate(&buffer);
-  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pInputFile))
+  char           line[MAX_LEN_ONE_LINE_CONTENT + 1];
+  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
     char keyword[10] = "";
     ExtractTargetStringFromSourceString(keyword, line, 0, 4);
@@ -964,19 +1006,31 @@ int StructureSmallmolOrientationScreen(Structure* pStructure, ResiTopoSet* pResi
     {
       if (cataAtomExist == FALSE || bindAtomExist == FALSE)
       {
-        sprintf(errMsg, "in file %s line %d, CataAtom or BindAtom does not exist in file %s", __FILE__, __LINE__, oriFileName);
+        sprintf(errMsg, "in file %s line %d, CataAtom or BindAtom does not exist in file %s", __FILE__, __LINE__, oldConfsFile);
         TraceError(errMsg, FormatError);
         return FormatError;
       }
 
+      BOOL curRotamerAccepted = FALSE;
       for (int i = 0; i < groupCounter; i++)
       {
         curRotamerAccepted = TRUE;
         for (int j = 0; j < pGroups[i].siteNum; j++)
         {
-          Residue* pResidue = ChainGetResidue(StructureFindChainByName(pStructure, pGroups[i].pSites[j].chainName), pGroups[i].pSites[j].posInChain);
+          //05/09/2023, fix the bug for finding the binding residues
+          int resNdx = -1;
+          Chain* pChain = StructureFindChainByName(pStruct, pGroups[i].pSites[j].chainName);
+          ChainFindResidueByPosInChain(pChain, pGroups[i].pSites[j].posInChain, &resNdx);
+          if (resNdx == -1)
+          {
+            sprintf(errMsg, "in file %s line %d, can not find binding site pos %d on chain %s", __FILE__, __LINE__, pGroups[i].pSites[j].posInChain, pGroups[i].pSites[j].chainName);
+            TraceError(errMsg, ValueError);
+            exit(ValueError);
+          }
+          Residue* pResidue = ChainGetResidue(pChain, resNdx);
           XYZ* pXyzCA = &ResidueGetAtomByName(pResidue, "CA")->xyz;
-          if (XYZDistance(&xyzBindAtom, pXyzCA) > XYZDistance(&xyzCataAtom, pXyzCA))
+          // check the distance criterion
+          if ( XYZDistance(&xyzCataAtom, pXyzCA) - XYZDistance(&xyzBindAtom, pXyzCA) < MIN_DELTA_DIST)
           {
             curRotamerAccepted = FALSE;
             break;
@@ -984,18 +1038,29 @@ int StructureSmallmolOrientationScreen(Structure* pStructure, ResiTopoSet* pResi
         }
         if (curRotamerAccepted == TRUE)
         {
-          fprintf(pOutputFile, "MODEL     %d\n", acceptedRotamerCounter);
-          for (int j = 0;j < StringArrayGetCount(&buffer);j++)
+          fprintf(pOut, "MODEL     %d\n", acceptedRotamerNdx + 1);
+          for (int j = 0; j < StringArrayGetCount(&buffer); j++)
           {
-            fprintf(pOutputFile, "%s", StringArrayGet(&buffer, j));
+            fprintf(pOut, "%s", StringArrayGet(&buffer, j));
           }
-          fprintf(pOutputFile, "ENDMDL\n");
-          acceptedRotamerCounter++;
+          fprintf(pOut, "ENDMDL\n");
+          acceptedRotamerNdx++;
           break;
         }
       }
 
-      printf("%d / %d rotamers have been processed      \r", acceptedRotamerCounter, totalRotamerCounter);
+      if (curRotamerAccepted == FALSE)
+      {
+        fprintf(pOutBad, "MODEL     %d\n", rejectedRotamerNdx + 1);
+        for (int j = 0; j < StringArrayGetCount(&buffer); j++)
+        {
+          fprintf(pOutBad, "%s", StringArrayGet(&buffer, j));
+        }
+        fprintf(pOutBad, "ENDMDL\n");
+        rejectedRotamerNdx++;
+      }
+
+      printf("%d / %d rotamers have been processed      \r", acceptedRotamerNdx, totalRotamerCounter);
       //fflush(stdout);
     }
     else if (strcmp(keyword, "MODE") == 0)
@@ -1007,40 +1072,52 @@ int StructureSmallmolOrientationScreen(Structure* pStructure, ResiTopoSet* pResi
     else if (strcmp(keyword, "ATOM") == 0)
     {
       char atomName[MAX_LEN_ATOM_NAME + 1];
+      char strX[MAX_LEN_ONE_LINE_CONTENT + 1];
+      char strY[MAX_LEN_ONE_LINE_CONTENT + 1];
+      char strZ[MAX_LEN_ONE_LINE_CONTENT + 1];
       ExtractTargetStringFromSourceString(atomName, line, 12, 4);
+      // 05/08/2023: add this if(){} to reformat the atom name
+      if (isdigit(atomName[0]) && isalpha(atomName[1]))
+      {
+        char tempName[MAX_LEN_ATOM_NAME + 1];
+        strcpy(tempName, atomName + 1);
+        tempName[strlen(atomName) - 1] = atomName[0];
+        tempName[strlen(atomName)] = '\0';
+        strcpy(atomName, tempName);
+      }
       if (strcmp(atomName, cataAtomName) == 0)
       {
         cataAtomExist = TRUE;
-        ExtractTargetStringFromSourceString(keyword, line, 31, 7);
-        xyzCataAtom.X = atof(keyword);
-        ExtractTargetStringFromSourceString(keyword, line, 39, 7);
-        xyzCataAtom.Y = atof(keyword);
-        ExtractTargetStringFromSourceString(keyword, line, 47, 7);
-        xyzCataAtom.Z = atof(keyword);
+        ExtractTargetStringFromSourceString(strX, line, 30, 8);
+        xyzCataAtom.X = atof(strX);
+        ExtractTargetStringFromSourceString(strY, line, 38, 8);
+        xyzCataAtom.Y = atof(strY);
+        ExtractTargetStringFromSourceString(strZ, line, 46, 8);
+        xyzCataAtom.Z = atof(strZ);
       }
 
       if (strcmp(atomName, bindAtomName) == 0)
       {
         bindAtomExist = TRUE;
-        ExtractTargetStringFromSourceString(keyword, line, 31, 7);
-        xyzBindAtom.X = atof(keyword);
-        ExtractTargetStringFromSourceString(keyword, line, 39, 7);
-        xyzBindAtom.Y = atof(keyword);
-        ExtractTargetStringFromSourceString(keyword, line, 47, 7);
-        xyzBindAtom.Z = atof(keyword);
+        ExtractTargetStringFromSourceString(strX, line, 30, 8);
+        xyzBindAtom.X = atof(strX);
+        ExtractTargetStringFromSourceString(strY, line, 38, 8);
+        xyzBindAtom.Y = atof(strY);
+        ExtractTargetStringFromSourceString(strZ, line, 46, 8);
+        xyzBindAtom.Z = atof(strZ);
       }
       StringArrayAppend(&buffer, line);
     }
-    else if (strcmp(keyword, "ENER") == 0 && curRotamerAccepted)
+    else if (strcmp(keyword, "ENER") == 0)
     {
-      fprintf(pOutputFile, "%s", line);
+      StringArrayAppend(&buffer, line);
     }
   }
   printf("\n");
-  fclose(pInputFile);
-  fclose(pOutputFile);
+  fclose(pIn);
+  fclose(pOut);
+  fclose(pOutBad);
 
-  FileReaderDestroy(&file);
   StringArrayDestroy(&buffer);
   for (int j = 0; j < groupCounter; j++)
   {
@@ -1509,7 +1586,7 @@ int StructureBuildResfileRotamersByBBdepRotLib(Structure* pStructure, BBdepRotam
           {
             if (StringArrayGetCount(&strings) == 3)
             {
-              // deal with native rotameric conformer for catalytic design sites
+              // deal with native rotamer (NATROT) for catalytic design sites
               if (strcmp(StringArrayGet(&strings, 2), "NATROT") == 0)
               {
                 ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_NatRot;

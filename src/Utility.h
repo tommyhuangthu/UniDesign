@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -22,14 +22,14 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <math.h>
 #include <time.h>
 
-#define MAX_LEN_ATOM_NAME         10
-#define MAX_LEN_ATOM_TYPE         10
-#define MAX_LEN_ATOM_HYBRID       10
-#define MAX_LEN_ATOM_DONOR        10
-#define MAX_LEN_ATOM_ACCEPTOR     10
-#define MAX_LEN_RES_NAME          10
-#define MAX_LEN_CHAIN_NAME        10
-#define MAX_LEN_STRUCTURE_NAME    10
+#define MAX_LEN_ATOM_NAME         5
+#define MAX_LEN_ATOM_TYPE         5
+#define MAX_LEN_ATOM_HYBRID       5
+#define MAX_LEN_ATOM_DONOR        5
+#define MAX_LEN_ATOM_ACCEPTOR     5
+#define MAX_LEN_RES_NAME          5
+#define MAX_LEN_CHAIN_NAME        3
+#define MAX_LEN_STRUCTURE_NAME    5
 
 #define MAX_LEN_ONE_LINE_CONTENT  1024
 #define MAX_LEN_FILE_NAME         100

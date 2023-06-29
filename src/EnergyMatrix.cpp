@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -681,13 +681,13 @@ int EnergyMatrixGenerate(Structure* pStructure, char* energyMatrixFilePath, int 
     char errMsg[MAX_LEN_ERR_MSG + 1];
     Job curJob = slots[slotIndex].jobs[i];
     EnergyMatrixBlock energyBlock;
-    char energyBlockFileName[MAX_LEN_ONE_LINE_CONTENT + 1];
-    sprintf(energyBlockFileName, "%s_%3.3d_%3.3d.txt", energyMatrixFilePath, curJob.designSiteI, curJob.designSiteK);
-    printf("%s\n", energyBlockFileName);
-    FILE* pFile = fopen(energyBlockFileName, "w");
+    char energyBlockFile[MAX_LEN_ONE_LINE_CONTENT + 1];
+    sprintf(energyBlockFile, "%s_%3.3d_%3.3d.txt", energyMatrixFilePath, curJob.designSiteI, curJob.designSiteK);
+    printf("%s\n", energyBlockFile);
+    FILE* pFile = fopen(energyBlockFile, "w");
     if (!pFile)
     {
-      sprintf(errMsg, "int file %s line %d, cannot write to file %s", __FILE__, __LINE__, energyBlockFileName);
+      sprintf(errMsg, "int file %s line %d, cannot write to file %s", __FILE__, __LINE__, energyBlockFile);
       result = IOError;
       TraceError(errMsg, result);
       return result;
@@ -744,8 +744,7 @@ int EnergyMatrixGenerateBasedOnPartition(Structure* pStructure, RotamerList* pLi
 
   int* remainRotamerCount = (int*)malloc(sizeof(int) * pList->desSiteCount);
   double* energyInMemory = NULL;
-  FILE* slotEnergyFile = NULL;
-  char slotEnergyFileName[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char slotEnergyFile[MAX_LEN_ONE_LINE_CONTENT + 1];
 
   for (i = 0; i < pList->desSiteCount; i++)
   {
@@ -947,11 +946,11 @@ int EnergyMatrixGenerateBasedOnPartition(Structure* pStructure, RotamerList* pLi
     time_t end;
     int elapsed;
     Job curJob = slots[slotIndex].jobs[i];
-    char energyBlockFileName[MAX_LEN_ONE_LINE_CONTENT + 1];
+    char energyBlockFile[MAX_LEN_ONE_LINE_CONTENT + 1];
     begin = time(NULL);
-    sprintf(energyBlockFileName, "%s_%3.3d_%3.3d_%4.4d_%4.4d.txt", energyMatrixFilePath,
+    sprintf(energyBlockFile, "%s_%3.3d_%3.3d_%4.4d_%4.4d.txt", energyMatrixFilePath,
       curJob.designSiteI, curJob.designSiteK, curJob.rotamerPartitionIndexOnSiteI, curJob.rotamerPartitionIndexOnSiteK);
-    printf("%s, ", energyBlockFileName);
+    printf("%s, ", energyBlockFile);
 
     designSiteI = curJob.designSiteI;
     designSiteK = curJob.designSiteK;
@@ -975,11 +974,11 @@ int EnergyMatrixGenerateBasedOnPartition(Structure* pStructure, RotamerList* pLi
 
   // output energy values from memories to files;
   counter = 0;
-  sprintf(slotEnergyFileName, "%s_CPU%03d.txt", energyMatrixFilePath, slotIndex + 1);
-  slotEnergyFile = fopen(slotEnergyFileName, "w");
-  if (slotEnergyFile == NULL)
+  sprintf(slotEnergyFile, "%s_CPU%03d.txt", energyMatrixFilePath, slotIndex + 1);
+  FILE* fse = fopen(slotEnergyFile, "w");
+  if (fse == NULL)
   {
-    printf("cannot open file %s for writing\n", slotEnergyFileName);
+    printf("cannot open file %s for writing\n", slotEnergyFile);
     return IOError;
   }
   for (i = slots[slotIndex].jobCount - 1; i >= 0; i--)
@@ -999,14 +998,14 @@ int EnergyMatrixGenerateBasedOnPartition(Structure* pStructure, RotamerList* pLi
     result = EnergyMatrixPartitionPairWriteEnergyToFile(pStructure, designSiteI, designSiteK,
       &sitePartitions[designSiteI].rotamerIndexOld[partitionIndexOnSiteI], &sitePartitions[designSiteK].rotamerIndexOld[partitionIndexOnSiteK],
       &sitePartitions[designSiteI].rotamerIndexNew[partitionIndexOnSiteI], &sitePartitions[designSiteK].rotamerIndexNew[partitionIndexOnSiteK],
-      energyInMemory, counter, slotEnergyFile);
+      energyInMemory, counter, fse);
     counter += sitePartitions[designSiteI].rotamerCount[partitionIndexOnSiteI] * sitePartitions[designSiteK].rotamerCount[partitionIndexOnSiteK];
     if (FAILED(result))
     {
       return result;
     }
   }
-  fclose(slotEnergyFile);
+  fclose(fse);
 
   totalTimeCurrent = time(NULL);
   totalTimeElapsed = (int)(totalTimeCurrent - totalTimeStart);

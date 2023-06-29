@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -23,7 +23,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 int PrintHelp();
 int PrintVersion();
-int PrintAdvertisement();
+int PrintOutProgramInformation();
 
 int ComputeStructureStability(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, double energyTerms[MAX_ENERGY_TERM]);
 int ComputeStructureStabilityByBBdepRotLib(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, BBdepRotamerLib* pRotLib, double energyTerms[MAX_ENERGY_TERM]);
@@ -48,7 +48,7 @@ int ComputeWildtypeRotamersEnergy(Structure* pStructure, BBindRotamerLib* rotlib
 int ComputeRotamersEnergyByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
 int ComputeWildtypeRotamersEnergyByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
 
-int ShowPhiPsi(Structure* pStructure, char* phipsifile);
+int ShowPhiPsi(Structure* pStructure, char* file);
 
 int CheckRotamerInBBindRotLib(Structure* pStructure, BBindRotamerLib* pRotLib, ResiTopoSet* pTopos, double cutoff, char* pdbid);
 int CheckRotamerInBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pRotLib, ResiTopoSet* pTopos, double cutoff, char* pdbid);
@@ -67,7 +67,7 @@ int FindIntermediateResidues(Structure* pStructure);
 
 int StructureGetAminoAcidComposition(Structure* pStructure, int* aas);
 
-int SelectResiduesWithin(Structure* pStructure);
+int SelectResiduesInRange(Structure* pStructure);
 
 
 #endif //PROGRAM_FUNCTION_H

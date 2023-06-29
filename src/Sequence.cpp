@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -16,7 +16,6 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Sequence.h"
 #include "Structure.h"
-//#include "EnergyMatrix.h"
 #include "EnergyFunction.h"
 #include <time.h>
 #include <string.h>
@@ -275,6 +274,37 @@ int DesignShowMinEnergyDesignSites(Structure* pStructure, Sequence* sequence, ch
   fclose(pFile);
   return result;
 }
+
+
+int DesignShowMinEnergyDesignMutableSites(Structure* pStructure, Sequence* sequence, char* pdbfile)
+{
+  int result = Success;
+  char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
+  FILE* pFile = fopen(pdbfile, "w");
+  if (pFile == NULL)
+  {
+    result = IOError;
+    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, pdbfile);
+    TraceError(errMsg, result);
+    return result;
+  }
+  for (int i = 0;i < StructureGetDesignSiteCount(pStructure);i++)
+  {
+    DesignSite* pSite = StructureGetDesignSite(pStructure, i);
+    if (pSite->pRes->desType == Type_DesType_Mutable || pSite->pRes->desType == Type_DesType_SmallMol)
+    {
+      RotamerSet* pSet = DesignSiteGetRotamers(pSite);
+      int rotIdx = IntArrayGet(&sequence->rotNdxs, i);
+      Rotamer* pRotamer = RotamerSetGet(pSet, rotIdx);
+      RotamerRestore(pRotamer, pSet);
+      RotamerShowInPDBFormat(pRotamer, "ATOM", RotamerGetChainName(pRotamer), 1, RotamerGetPosInChain(pRotamer), pFile);
+      RotamerExtract(pRotamer);
+    }
+  }
+  fclose(pFile);
+  return result;
+}
+
 
 
 int DesignShowMinEnergyDesignLigand(Structure* pStructure, Sequence* sequence, char* mol2file)

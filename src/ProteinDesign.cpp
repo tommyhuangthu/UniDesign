@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -35,12 +35,13 @@ extern BOOL FLAG_MOL2;
 extern BOOL FLAG_EVOPHIPSI;
 extern BOOL FLAG_DESIGN_FROM_NATAA;
 
-extern char BEST_SEQ[MAX_LEN_FILE_NAME + 1];
-extern char BEST_STRUCT[MAX_LEN_FILE_NAME + 1];
-extern char BEST_DESSITE[MAX_LEN_FILE_NAME + 1];
-extern char BEST_MOL2[MAX_LEN_FILE_NAME + 1];
-extern char ROT_INDEX_FILE[MAX_LEN_FILE_NAME + 1];
-extern char SEQ_FILE[MAX_LEN_FILE_NAME + 1];
+extern char FILE_BESTSEQS[MAX_LEN_FILE_NAME + 1];
+extern char FILE_BESTSTRUCT[MAX_LEN_FILE_NAME + 1];
+extern char FILE_BEST_ALL_SITES[MAX_LEN_FILE_NAME + 1];
+extern char FILE_BEST_MUT_SITES[MAX_LEN_FILE_NAME + 1];
+extern char FILE_BEST_LIG_MOL2[MAX_LEN_FILE_NAME + 1];
+extern char FILE_DESROT_NDX[MAX_LEN_FILE_NAME + 1];
+extern char FILE_DESSEQS[MAX_LEN_FILE_NAME + 1];
 extern char FILE_CATACONS[MAX_LEN_FILE_NAME + 1];
 
 extern int PROT_LEN_NORM;
@@ -62,7 +63,7 @@ extern char TGT_SS[MAX_LEN_FILE_NAME + 1];
 extern char TGT_SEQ[MAX_LEN_FILE_NAME + 1];
 extern char TGT_PHIPSI[MAX_LEN_FILE_NAME + 1];
 
-#define WGT_CATA_CONS  1000.0
+#define WGT_CATA_CONS  5.0
 
 
 int SitePairConsDeploy(CataConsSitePairArray* pSitePairArray, Structure* pStructure)
@@ -448,15 +449,15 @@ int SequenceEnergy(Structure* pStruct, Sequence* pSeq)
     }
     else
     {
-      pSeq->eevo += EvolutionEnergyFromPSSMWithoutAlignment(seq);
+      pSeq->eevo += EvolutionScoreFromPSSMWithoutAlignment(seq);
     }
   }
 
   if (FLAG_PHYSICS == TRUE)
   {
-    double energyTerms[MAX_ENERGY_TERM] = { 0 };
+    double energyTermsExBind[MAX_ENERGY_TERM] = { 0 };
     double energyTermsBind[MAX_ENERGY_TERM] = { 0 };
-    SequenceTemplateEnergy(pStruct, pSeq, energyTerms, energyTermsBind);
+    SequenceTemplateEnergy(pStruct, pSeq, energyTermsExBind, energyTermsBind);
     for (int i = 0; i < StructureGetDesignSiteCount(pStruct); i++)
     {
       DesignSite* pSiteI = StructureGetDesignSite(pStruct, i);
@@ -482,7 +483,7 @@ int SequenceEnergy(Structure* pStruct, Sequence* pSeq)
           {// from the same chain
             if (ChainGetType(pChainI) == Type_Chain_Protein)
             {
-              EnergyRotamerAndRotamerSameChain(pRotI, pRotK, energyTerms);
+              EnergyRotamerAndRotamerSameChain(pRotI, pRotK, energyTermsExBind);
             }
           }
           else
@@ -491,10 +492,10 @@ int SequenceEnergy(Structure* pStruct, Sequence* pSeq)
             {
               double energyTermsPL[MAX_ENERGY_TERM] = { 0 };
               EnergyRotamerAndLigandRotamer(pRotI, pRotK, energyTermsPL);
-              for (int index = 0; index < MAX_ENERGY_TERM; index++)
-              {
-                energyTerms[index] += energyTermsPL[index];
-              }
+              //for (int index = 0; index < MAX_ENERGY_TERM; index++)
+              //{
+              //  energyTermsExBind[index] += energyTermsPL[index];
+              //}
               if ((strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL && strstr(DES_CHAINS, ChainGetName(pChainK)) == NULL)
                 || (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL && strstr(DES_CHAINS, ChainGetName(pChainK)) != NULL))
               {
@@ -513,10 +514,10 @@ int SequenceEnergy(Structure* pStruct, Sequence* pSeq)
             {
               double energyTermsDC[MAX_ENERGY_TERM] = { 0 };
               EnergyRotamerAndRotamerDiffChain(pRotI, pRotK, energyTermsDC);
-              for (int index = 0; index < MAX_ENERGY_TERM; index++)
-              {
-                energyTerms[index] += energyTermsDC[index];
-              }
+              //for (int index = 0; index < MAX_ENERGY_TERM; index++)
+              //{
+              //  energyTermsExBind[index] += energyTermsDC[index];
+              //}
               if ((strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL && strstr(DES_CHAINS, ChainGetName(pChainK)) == NULL)
                 || (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL && strstr(DES_CHAINS, ChainGetName(pChainK)) != NULL))
               {
@@ -536,13 +537,13 @@ int SequenceEnergy(Structure* pStruct, Sequence* pSeq)
       RotamerExtract(pRotI);
     }
 
-    EnergyTermWeighting(energyTerms);
-    pSeq->ephy += energyTerms[0];
+    EnergyTermWeighting(energyTermsExBind);
+    pSeq->ephy += energyTermsExBind[0];
     EnergyTermWeighting(energyTermsBind);
     pSeq->ebin += energyTermsBind[0];
   }
 
-  pSeq->etot = WGT_PROFILE * pSeq->eevo + pSeq->ephy + (WGT_BIND - 1.0) * pSeq->ebin;
+  pSeq->etot = WGT_PROFILE * pSeq->eevo + pSeq->ephy + WGT_BIND * pSeq->ebin;
 
   return Success;
 }
@@ -571,8 +572,8 @@ int EnergyDifferenceUponSingleMutation(Structure* pStruct, Sequence* pSeq, int m
       binBefore += pCurRot->selfEnergyBin;
       binAfter += pNewRot->selfEnergyBin;
     }
-    double energyTerms1[MAX_ENERGY_TERM] = { 0 };
-    double energyTerms2[MAX_ENERGY_TERM] = { 0 };
+    double energyTermsExBind1[MAX_ENERGY_TERM] = { 0 };
+    double energyTermsExBind2[MAX_ENERGY_TERM] = { 0 };
     double energyTermsBind1[MAX_ENERGY_TERM] = { 0 };
     double energyTermsBind2[MAX_ENERGY_TERM] = { 0 };
     for (int i = 0; i < StructureGetDesignSiteCount(pStruct); i++)
@@ -590,8 +591,8 @@ int EnergyDifferenceUponSingleMutation(Structure* pStruct, Sequence* pSeq, int m
       {
         if (ChainGetType(pChainI) == Type_Chain_Protein)
         {
-          EnergyRotamerAndRotamerSameChain(pRotI, pCurRot, energyTerms1);
-          EnergyRotamerAndRotamerSameChain(pRotI, pNewRot, energyTerms2);
+          EnergyRotamerAndRotamerSameChain(pRotI, pCurRot, energyTermsExBind1);
+          EnergyRotamerAndRotamerSameChain(pRotI, pNewRot, energyTermsExBind2);
         }
       }
       else
@@ -602,11 +603,11 @@ int EnergyDifferenceUponSingleMutation(Structure* pStruct, Sequence* pSeq, int m
           double energyTermsPL2[MAX_ENERGY_TERM] = { 0 };
           EnergyRotamerAndLigandRotamer(pCurRot, pRotI, energyTermsPL1);
           EnergyRotamerAndLigandRotamer(pNewRot, pRotI, energyTermsPL2);
-          for (int index = 0; index < MAX_ENERGY_TERM; index++)
-          {
-            energyTerms1[index] += energyTermsPL1[index];
-            energyTerms2[index] += energyTermsPL2[index];
-          }
+          //for (int index = 0; index < MAX_ENERGY_TERM; index++)
+          //{
+          //  energyTermsExBind1[index] += energyTermsPL1[index];
+          //  energyTermsExBind2[index] += energyTermsPL2[index];
+          //}
           if ((strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) == NULL)
             || (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) != NULL))
           {
@@ -626,11 +627,11 @@ int EnergyDifferenceUponSingleMutation(Structure* pStruct, Sequence* pSeq, int m
           double energyTermsPL2[MAX_ENERGY_TERM] = { 0 };
           EnergyRotamerAndLigandRotamer(pRotI, pCurRot, energyTermsPL1);
           EnergyRotamerAndLigandRotamer(pRotI, pNewRot, energyTermsPL2);
-          for (int index = 0; index < MAX_ENERGY_TERM; index++)
-          {
-            energyTerms1[index] += energyTermsPL1[index];
-            energyTerms2[index] += energyTermsPL2[index];
-          }
+          //for (int index = 0; index < MAX_ENERGY_TERM; index++)
+          //{
+          //  energyTermsExBind1[index] += energyTermsPL1[index];
+          //  energyTermsExBind2[index] += energyTermsPL2[index];
+          //}
           if ((strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) == NULL)
             || (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) != NULL))
           {
@@ -652,11 +653,11 @@ int EnergyDifferenceUponSingleMutation(Structure* pStruct, Sequence* pSeq, int m
           double energyTermsDC2[MAX_ENERGY_TERM] = { 0 };
           EnergyRotamerAndRotamerDiffChain(pRotI, pCurRot, energyTermsDC1);
           EnergyRotamerAndRotamerDiffChain(pRotI, pNewRot, energyTermsDC2);
-          for (int index = 0; index < MAX_ENERGY_TERM; index++)
-          {
-            energyTerms1[index] += energyTermsDC1[index];
-            energyTerms2[index] += energyTermsDC2[index];
-          }
+          //for (int index = 0; index < MAX_ENERGY_TERM; index++)
+          //{
+          //  energyTermsExBind1[index] += energyTermsDC1[index];
+          //  energyTermsExBind2[index] += energyTermsDC2[index];
+          //}
           if ((strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) == NULL)
             || (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) != NULL))
           {
@@ -673,10 +674,10 @@ int EnergyDifferenceUponSingleMutation(Structure* pStruct, Sequence* pSeq, int m
       }
       RotamerExtract(pRotI);
     }
-    EnergyTermWeighting(energyTerms1);
-    EnergyTermWeighting(energyTerms2);
-    phyBefore += energyTerms1[0];
-    phyAfter += energyTerms2[0];
+    EnergyTermWeighting(energyTermsExBind1);
+    EnergyTermWeighting(energyTermsExBind2);
+    phyBefore += energyTermsExBind1[0];
+    phyAfter += energyTermsExBind2[0];
     *dphy = phyAfter - phyBefore;
 
     if (FLAG_MONOMER == FALSE)
@@ -717,15 +718,15 @@ int EnergyDifferenceUponSingleMutation(Structure* pStruct, Sequence* pSeq, int m
       }
       else
       {
-        evoBefore += EvolutionEnergyFromPSSMWithoutAlignment(seq1);
-        evoAfter += EvolutionEnergyFromPSSMWithoutAlignment(seq2);
+        evoBefore += EvolutionScoreFromPSSMWithoutAlignment(seq1);
+        evoAfter += EvolutionScoreFromPSSMWithoutAlignment(seq2);
       }
       SequenceDestroy(&newSeq);
     }
     *devo = evoAfter - evoBefore;
   }
 
-  *dtot = WGT_PROFILE * (*devo) + *dphy + (WGT_BIND - 1.0) * (*dbin);
+  *dtot = WGT_PROFILE * (*devo) + *dphy + WGT_BIND * (*dbin);
 
   return Success;
 }
@@ -772,7 +773,7 @@ int Metropolis(Sequence* pSeq, Sequence* pBest, Structure* pStruct, RotamerList*
 }
 
 
-int SequenceEnergyWithCons(Structure* pStruct, Sequence* pSeq, CataConsSitePairArray* pConsArray)
+int SequenceEnergyWithCataCons(Structure* pStruct, Sequence* pSeq, CataConsSitePairArray* pConsArray)
 {
   pSeq->etot = 0;
   pSeq->eevo = 0;
@@ -788,15 +789,15 @@ int SequenceEnergyWithCons(Structure* pStruct, Sequence* pSeq, CataConsSitePairA
     }
     else
     {
-      pSeq->eevo += EvolutionEnergyFromPSSMWithoutAlignment(seq);
+      pSeq->eevo += EvolutionScoreFromPSSMWithoutAlignment(seq);
     }
   }
 
   if (FLAG_PHYSICS == TRUE)
   {
-    double energyTerms[MAX_ENERGY_TERM] = { 0 };
+    double energyTermsExBind[MAX_ENERGY_TERM] = { 0 };
     double energyTermsBind[MAX_ENERGY_TERM] = { 0 };
-    SequenceTemplateEnergy(pStruct, pSeq, energyTerms, energyTermsBind);
+    SequenceTemplateEnergy(pStruct, pSeq, energyTermsExBind, energyTermsBind);
     for (int i = 0; i < StructureGetDesignSiteCount(pStruct); i++)
     {
       DesignSite* pSiteI = StructureGetDesignSite(pStruct, i);
@@ -822,7 +823,7 @@ int SequenceEnergyWithCons(Structure* pStruct, Sequence* pSeq, CataConsSitePairA
           { // from the same chain
             if (ChainGetType(pChainI) == Type_Chain_Protein)
             {
-              EnergyRotamerAndRotamerSameChain(pRotI, pRotK, energyTerms);
+              EnergyRotamerAndRotamerSameChain(pRotI, pRotK, energyTermsExBind);
             }
           }
           else
@@ -842,10 +843,10 @@ int SequenceEnergyWithCons(Structure* pStruct, Sequence* pSeq, CataConsSitePairA
               }
               double energyTermsPL[MAX_ENERGY_TERM] = { 0 };
               EnergyRotamerAndLigandRotamer(pRotI, pRotK, energyTermsPL);
-              for (int index = 0; index < MAX_ENERGY_TERM; index++)
-              {
-                energyTerms[index] += energyTermsPL[index];
-              }
+              //for (int index = 0; index < MAX_ENERGY_TERM; index++)
+              //{
+              //  energyTermsExBind[index] += energyTermsPL[index];
+              //}
               if ((strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL && strstr(DES_CHAINS, ChainGetName(pChainK)) == NULL)
                 || (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL && strstr(DES_CHAINS, ChainGetName(pChainK)) != NULL))
               {
@@ -864,10 +865,10 @@ int SequenceEnergyWithCons(Structure* pStruct, Sequence* pSeq, CataConsSitePairA
             {
               double energyTermsDC[MAX_ENERGY_TERM] = { 0 };
               EnergyRotamerAndRotamerDiffChain(pRotI, pRotK, energyTermsDC);
-              for (int index = 0; index < MAX_ENERGY_TERM; index++)
-              {
-                energyTerms[index] += energyTermsDC[index];
-              }
+              //for (int index = 0; index < MAX_ENERGY_TERM; index++)
+              //{
+              //  energyTermsExBind[index] += energyTermsDC[index];
+              //}
               if ((strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL && strstr(DES_CHAINS, ChainGetName(pChainK)) == NULL)
                 || (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL && strstr(DES_CHAINS, ChainGetName(pChainK)) != NULL))
               {
@@ -887,8 +888,8 @@ int SequenceEnergyWithCons(Structure* pStruct, Sequence* pSeq, CataConsSitePairA
       RotamerExtract(pRotI);
     }
 
-    EnergyTermWeighting(energyTerms);
-    pSeq->ephy += energyTerms[0];
+    EnergyTermWeighting(energyTermsExBind);
+    pSeq->ephy += energyTermsExBind[0];
     EnergyTermWeighting(energyTermsBind);
     pSeq->ebin += energyTermsBind[0];
   }
@@ -936,7 +937,7 @@ int SequenceEnergyWithCons(Structure* pStruct, Sequence* pSeq, CataConsSitePairA
     }
   }
 
-  pSeq->etot = WGT_PROFILE * pSeq->eevo + pSeq->ephy + (WGT_BIND - 1.0) * pSeq->ebin + WGT_CATA_CONS * pSeq->numOfUnsatisfiedCons;
+  pSeq->etot = WGT_PROFILE * pSeq->eevo + pSeq->ephy + WGT_BIND * pSeq->ebin + WGT_CATA_CONS * pSeq->numOfUnsatisfiedCons;
   return Success;
 }
 
@@ -975,8 +976,8 @@ int EnergyChangeUponSingleMutationWithCataCons(Structure* pStruct, Sequence* pSe
       }
       else
       {
-        evoBefore += EvolutionEnergyFromPSSMWithoutAlignment(seq1);
-        evoAfter += EvolutionEnergyFromPSSMWithoutAlignment(seq2);
+        evoBefore += EvolutionScoreFromPSSMWithoutAlignment(seq1);
+        evoAfter += EvolutionScoreFromPSSMWithoutAlignment(seq2);
       }
       SequenceDestroy(&newSeq);
     }
@@ -998,8 +999,8 @@ int EnergyChangeUponSingleMutationWithCataCons(Structure* pStruct, Sequence* pSe
     binBefore += pCurRot->selfEnergyBin;
     binAfter += pNewRot->selfEnergyBin;
 
-    double energyTerms1[MAX_ENERGY_TERM] = { 0 };
-    double energyTerms2[MAX_ENERGY_TERM] = { 0 };
+    double energyTermsExBind1[MAX_ENERGY_TERM] = { 0 };
+    double energyTermsExBind2[MAX_ENERGY_TERM] = { 0 };
     double energyTermsBind1[MAX_ENERGY_TERM] = { 0 };
     double energyTermsBind2[MAX_ENERGY_TERM] = { 0 };
 
@@ -1018,8 +1019,8 @@ int EnergyChangeUponSingleMutationWithCataCons(Structure* pStruct, Sequence* pSe
       {
         if (ChainGetType(pChainI) == Type_Chain_Protein)
         {
-          EnergyRotamerAndRotamerSameChain(pRotamerI, pCurRot, energyTerms1);
-          EnergyRotamerAndRotamerSameChain(pRotamerI, pNewRot, energyTerms2);
+          EnergyRotamerAndRotamerSameChain(pRotamerI, pCurRot, energyTermsExBind1);
+          EnergyRotamerAndRotamerSameChain(pRotamerI, pNewRot, energyTermsExBind2);
         }
       }
       else
@@ -1030,11 +1031,11 @@ int EnergyChangeUponSingleMutationWithCataCons(Structure* pStruct, Sequence* pSe
           double energyTermsPL2[MAX_ENERGY_TERM] = { 0 };
           EnergyRotamerAndLigandRotamer(pRotamerI, pCurRot, energyTermsPL1);
           EnergyRotamerAndLigandRotamer(pRotamerI, pNewRot, energyTermsPL2);
-          for (int index = 0; index < MAX_ENERGY_TERM; index++)
-          {
-            energyTerms1[index] += energyTermsPL1[index];
-            energyTerms2[index] += energyTermsPL2[index];
-          }
+          //for (int index = 0; index < MAX_ENERGY_TERM; index++)
+          //{
+          //  energyTermsExBind1[index] += energyTermsPL1[index];
+          //  energyTermsExBind2[index] += energyTermsPL2[index];
+          //}
           if ((strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) == NULL)
             || (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) != NULL))
           {
@@ -1056,11 +1057,11 @@ int EnergyChangeUponSingleMutationWithCataCons(Structure* pStruct, Sequence* pSe
           double energyTermsDC2[MAX_ENERGY_TERM] = { 0 };
           EnergyRotamerAndRotamerDiffChain(pRotamerI, pCurRot, energyTermsDC1);
           EnergyRotamerAndRotamerDiffChain(pRotamerI, pNewRot, energyTermsDC2);
-          for (int index = 0; index < MAX_ENERGY_TERM; index++)
-          {
-            energyTerms1[index] += energyTermsDC1[index];
-            energyTerms2[index] += energyTermsDC2[index];
-          }
+          //for (int index = 0; index < MAX_ENERGY_TERM; index++)
+          //{
+          //  energyTermsExBind1[index] += energyTermsDC1[index];
+          //  energyTermsExBind2[index] += energyTermsDC2[index];
+          //}
           if ((strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) == NULL)
             || (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL && strstr(DES_CHAINS, ChainGetName(pCurChain)) != NULL))
           {
@@ -1077,12 +1078,12 @@ int EnergyChangeUponSingleMutationWithCataCons(Structure* pStruct, Sequence* pSe
       }
       RotamerExtract(pRotamerI);
     }
-    EnergyTermWeighting(energyTerms1);
-    EnergyTermWeighting(energyTerms2);
+    EnergyTermWeighting(energyTermsExBind1);
+    EnergyTermWeighting(energyTermsExBind2);
     EnergyTermWeighting(energyTermsBind1);
     EnergyTermWeighting(energyTermsBind2);
-    phyBefore += energyTerms1[0];
-    phyAfter += energyTerms2[0];
+    phyBefore += energyTermsExBind1[0];
+    phyAfter += energyTermsExBind2[0];
     *dphy = phyAfter - phyBefore;
     binBefore += energyTermsBind1[0];
     binAfter += energyTermsBind2[0];
@@ -1163,7 +1164,7 @@ int EnergyChangeUponSingleMutationWithCataCons(Structure* pStruct, Sequence* pSe
     *dcons = nConsAfter - nConsBefore;
   }
 
-  *dtot = WGT_PROFILE * (*devo) + *dphy + (WGT_BIND - 1.0) * (*dbin) + WGT_CATA_CONS * (*dcons);
+  *dtot = WGT_PROFILE * (*devo) + *dphy + WGT_BIND * (*dbin) + WGT_CATA_CONS * (*dcons);
   return Success;
 }
 
@@ -1248,7 +1249,7 @@ int SimulatedAnnealing(Structure* pStruct, RotamerList* pList)
 
   printf("searching sequences using monte-carlo simulated annealing optimization\n");
   char BEST_SEQ_IDX[MAX_LEN_FILE_NAME + 1];
-  sprintf(BEST_SEQ_IDX, "%s.txt", BEST_SEQ);
+  sprintf(BEST_SEQ_IDX, "%s.txt", FILE_BESTSEQS);
   FILE* pFileBestSeq = NULL;
   if (NTRAJ_START_NDX > 1)
   {
@@ -1257,15 +1258,17 @@ int SimulatedAnnealing(Structure* pStruct, RotamerList* pList)
   else
   {
     pFileBestSeq = fopen(BEST_SEQ_IDX, "w");
-    fprintf(pFileBestSeq, "# Comment lines start with the '#' symbol. Each designed sequence is written in one line with a few columns.\n"
+    fprintf(pFileBestSeq,
+      "# Comment lines start with '#'. Each designer sequence is recorded in one line with a few columns\n"
       "# 1st column: the lowest-energy sequence\n"
       "# 2nd column: the index of the independent trajectory\n"
       "# 3rd column: the ratio of designable positions recapitulated to be the native amino acid\n"
-      "# 4th column: the weighted total energy\n"
-      "# 5th column: the unweighted evolutionary-profile energy calculated based on PSSM\n"
-      "# 6th column: the unweighted physical energy\n"
-      "# 7th column: the unweighted binding energy. This energy value is a part of the physical energy in the 5th column, and it is zero for non-interaction design)\n"
-      "# 8th column: the number of unsatisfied catalytic constriants for enzyme design. For non-enzyme design, this value equals to zero\n"
+      "# 4th column: the weighted total energy (= sum of Columns 5-7)\n"
+      "# 5th column: the unweighted evolutionary energy; weight = %.2f\n"
+      "# 6th column: the unweighted physical energy without binding; weight = 1.00\n"
+      "# 7th column: the unweighted binding energy; weight = %.2f\n"
+      "# 8th column: the number of unsatisfied catalytic constriants for enzyme design (for non-enzyme design, number = 0); weight = %.2f\n",
+      WGT_PROFILE, WGT_BIND, WGT_CATA_CONS
     );
   }
 
@@ -1286,7 +1289,7 @@ int SimulatedAnnealing(Structure* pStruct, RotamerList* pList)
     }
     if (FLAG_ENZYME == TRUE)
     {
-      SequenceEnergyWithCons(pStruct, &oldSeq, &consArray);
+      SequenceEnergyWithCataCons(pStruct, &oldSeq, &consArray);
     }
     else
     {
@@ -1300,9 +1303,9 @@ int SimulatedAnnealing(Structure* pStruct, RotamerList* pList)
     FILE* pFileSeqDecoys = NULL;
     //char ROT_FILE_ITER[MAX_LEN_FILE_NAME+1];
     //char SEQ_FILE_ITER[MAX_LEN_FILE_NAME+1];
-    //sprintf(ROT_FILE_ITER,"%s%04d.txt",ROT_INDEX_FILE,i);
+    //sprintf(ROT_FILE_ITER,"%s%04d.txt",FILE_DESROT_NDX,i);
     //FILE* pFileRotDecoys=fopen(ROT_FILE_ITER,"w");
-    //sprintf(SEQ_FILE_ITER,"%s%04d.txt",SEQ_FILE,i);
+    //sprintf(SEQ_FILE_ITER,"%s%04d.txt",FILE_DESSEQS,i);
     //FILE* pFileSeqDecoys=fopen(SEQ_FILE_ITER,"w");
     //SequenceCopy(&bestSeq,&oldSeq);
     //SequenceWriteDesignRotamer(&bestSeq,pStruct,seqNdx,pFileRotDecoys);
@@ -1341,20 +1344,25 @@ int SimulatedAnnealing(Structure* pStruct, RotamerList* pList)
 
     // write the lowest-energy sequence
     char BEST_STRUCT_ITER[MAX_LEN_FILE_NAME + 1];
-    sprintf(BEST_STRUCT_ITER, "%s%04d.pdb", BEST_STRUCT, i);
+    sprintf(BEST_STRUCT_ITER, "%s%04d.pdb", FILE_BESTSTRUCT, i);
     strcpy(bestSeq.fileToSaveThisSeq, BEST_STRUCT_ITER);
     SequenceWriteDesignFasta(&bestSeq, pStruct, i, pFileBestSeq);
     fflush(pFileBestSeq);
 
-    // write the lowest-energy protein structure, protein design sites, and corresponding ligand conformer
+    // write the lowest-energy protein structure, protein design sites, and corresponding ligand pose
     DesignShowMinEnergyDesignStructure(pStruct, &bestSeq, BEST_STRUCT_ITER);
     char BEST_DESSITE_ITER[MAX_LEN_FILE_NAME + 1];
-    sprintf(BEST_DESSITE_ITER, "%s%04d.pdb", BEST_DESSITE, i);
+    sprintf(BEST_DESSITE_ITER, "%s%04d.pdb", FILE_BEST_ALL_SITES, i);
     DesignShowMinEnergyDesignSites(pStruct, &bestSeq, BEST_DESSITE_ITER);
+
+    char BEST_MUTSITE_ITER[MAX_LEN_FILE_NAME + 1];
+    sprintf(BEST_MUTSITE_ITER, "%s%04d.pdb", FILE_BEST_MUT_SITES, i);
+    DesignShowMinEnergyDesignMutableSites(pStruct, &bestSeq, BEST_MUTSITE_ITER);
+
     if (FLAG_MOL2 == TRUE)
     {
       char BEST_MOL2_ITER[MAX_LEN_FILE_NAME + 1];
-      sprintf(BEST_MOL2_ITER, "%s%04d.mol2", BEST_MOL2, i);
+      sprintf(BEST_MOL2_ITER, "%s%04d.mol2", FILE_BEST_LIG_MOL2, i);
       DesignShowMinEnergyDesignLigand(pStruct, &bestSeq, BEST_MOL2_ITER);
     }
 

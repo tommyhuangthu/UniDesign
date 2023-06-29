@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -28,7 +28,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 // a maximum of energy weights
-#define MAX_ENERGY_TERM                  100
+#define MAX_ENERGY_TERM                    100
 
 #define ENERGY_DISTANCE_CUTOFF             6.0
 // scale for 1-2, 1-3, 1-4 and >=1-5 interactions

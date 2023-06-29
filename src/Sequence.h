@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -18,7 +18,6 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SEQUENCE_H
 
 #include "Structure.h"
-#include "EnergyMatrix.h"
 #include "EnergyFunction.h"
 
 #define  MAX_SEQ_LEN  2000
@@ -44,6 +43,7 @@ int SequenceWriteDesignFasta(Sequence* pThis, Structure* pStructure, int index, 
 
 int DesignShowMinEnergyDesignStructure(Structure* pStructure, Sequence* pSeq, char* pdbfile);
 int DesignShowMinEnergyDesignSites(Structure* pStructure, Sequence* pSeq, char* pdbfile);
+int DesignShowMinEnergyDesignMutableSites(Structure* pStructure, Sequence* sequence, char* pdbfile);
 int DesignShowMinEnergyDesignLigand(Structure* pStructure, Sequence* sequence, char* mol2file);
 int StructureGetWholeSequence(Structure* pStructure, Sequence* sequence, char* seq);
 int StructureWriteFirstLigandRotamerIntoMol2(Structure* pStructure, char* mol2file);

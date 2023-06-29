@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -507,15 +507,15 @@ int CataConsSitePairArrayShow(CataConsSitePairArray* pThis)
 }
 
 
-int CataConsSitePairArrayTester(char* filename)
+int CataConsSitePairArrayTester(char* file)
 {
   CataConsSitePairArray cataCons;
-  CataConsSitePairArrayCreate(&cataCons, filename);
+  CataConsSitePairArrayCreate(&cataCons, file);
   CataConsSitePairArrayShow(&cataCons);
   for (int i = 0;i < 100;i++)
   {
     CataConsSitePairArrayDestroy(&cataCons);
-    CataConsSitePairArrayCreate(&cataCons, filename);
+    CataConsSitePairArrayCreate(&cataCons, file);
   }
 
   CataConsSitePairArrayShow(&cataCons);
@@ -1273,14 +1273,14 @@ int    PlacingRuleReadFile(PlacingRule* pThis, FileReader* pFileReader)
   return Success;
 }
 
-int PlacingRuleCreate(PlacingRule* pThis, char* fileName)
+int PlacingRuleCreate(PlacingRule* pThis, char* file)
 {
   FileReader fr;
   char errMsg[MAX_LEN_ERR_MSG + 1];
-  int result = FileReaderCreate(&fr, fileName);
+  int result = FileReaderCreate(&fr, file);
   if (FAILED(result))
   {
-    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, fileName);
+    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, file);
     TraceError(errMsg, result);
     return result;
   }
@@ -1306,7 +1306,7 @@ int PlacingRuleCreate(PlacingRule* pThis, char* fileName)
   result = PlacingRuleReadFile(pThis, &fr);
   if (FAILED(result))
   {
-    sprintf(errMsg, "in file %s line %d, failed to read ligand placement file %s", __FILE__, __LINE__, fileName);
+    sprintf(errMsg, "in file %s line %d, failed to read ligand placement file %s", __FILE__, __LINE__, file);
     TraceError(errMsg, result);
     return result;
   }
@@ -2794,10 +2794,10 @@ int PlacingRuleShow(PlacingRule* pThis)
 }
 
 
-int PlacingRuleTester(char* filename)
+int PlacingRuleTester(char* file)
 {
   PlacingRule rule;
-  int result = PlacingRuleCreate(&rule, filename);
+  int result = PlacingRuleCreate(&rule, file);
   if (FAILED(result))
   {
     return result;
@@ -2891,9 +2891,8 @@ int ScreenSmallmolRotamersByRMSD(char* oldFile, char* newFile, double rmsdcut)
       StringArrayAppend(&buffer, line);
       atomCounter++;
     }
-    else if (strcmp(keyword, "ENER") == 0/* && lastAccepted*/)
+    else if (strcmp(keyword, "ENER") == 0)
     {
-      //fprintf(pOut,"%s",line);
       StringArrayAppend(&buffer, line);
     }
   }
@@ -2935,6 +2934,15 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
     {
       atomCounter++;
       ExtractTargetStringFromSourceString(atomName, line, 12, 4);
+      // 05/08/2023: add this if(){} to reformat the atom name
+      if (isdigit(atomName[0]) && isalpha(atomName[1]))
+      {
+        char tempName[MAX_LEN_ATOM_NAME + 1];
+        strcpy(tempName, atomName + 1);
+        tempName[strlen(atomName) - 1] = atomName[0];
+        tempName[strlen(atomName)] = '\0';
+        strcpy(atomName, tempName);
+      }
       int posOnNativeSmallMol = -1;
       ResidueFindAtom(pSmallMol, atomName, &posOnNativeSmallMol);
       if (posOnNativeSmallMol == -1)
@@ -2950,17 +2958,32 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
   XYZArrayResize(&currentRotamerXYZ, atomCounter);
   fseek(pIn, 0, SEEK_SET);
 
-  int rotamerCounter = 0;
+  int poseCounter = 0;
+  // minRMSD rotamer
   double minRMSD = 1e8;
   int indexOfMinRMSD = -1;
   double internalVDWOfMinRMSD = 1e8;
   double backboneVDWOfMinRMSD = 1e8;
+  // minInternalVDW rotamer
   double minInternalVDW = 1e8;
-  int indexOfMinBackboneVDW = -1;
-  double internalVDWOfMinBackboneVDW = 1e8;
-  double minBackboneVDW = 1e8;
   int indexOfMinInternalVDW = -1;
   double backboneVDWOfMinInternalVDW = 1e8;
+  double rmsdOfMinInternalVDW = 1e8;
+
+  //minBackboneVDW rotamer
+  double minBackboneVDW = 1e8;
+  int indexOfMinBackboneVDW = -1;
+  double internalVDWOfMinBackboneVDW = 1e8;
+  double rmsdOfMinBackboneVDW = 1e8;
+
+  //number of rotamers below 0.5, 1, 1.5, 2.0, 2.5, and 3.0 angstroms;
+  int numOfPoseBelow0_5A = 0;
+  int numOfPoseBelow1_0A = 0;
+  int numOfPoseBelow1_5A = 0;
+  int numOfPoseBelow2_0A = 0;
+  int numOfPoseBelow2_5A = 0;
+  int numOfPoseBelow3_0A = 0;
+
   double internalVDW = 1e8;
   double backboneVDW = 1e8;
   while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
@@ -2981,15 +3004,40 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
       if (rmsd < minRMSD)
       {
         minRMSD = rmsd;
-        indexOfMinRMSD = rotamerCounter;
+        indexOfMinRMSD = poseCounter;
         internalVDWOfMinRMSD = internalVDW;
         backboneVDWOfMinRMSD = backboneVDW;
+      }
+
+      if (rmsd < 0.5)
+      {
+        numOfPoseBelow0_5A++;
+      }
+      else if (rmsd < 1.0)
+      {
+        numOfPoseBelow1_0A++;
+      }
+      else if (rmsd < 1.5)
+      {
+        numOfPoseBelow1_5A++;
+      }
+      else if (rmsd < 2.0)
+      {
+        numOfPoseBelow2_0A++;
+      }
+      else if (rmsd < 2.5)
+      {
+        numOfPoseBelow2_5A++;
+      }
+      else if (rmsd < 3.0)
+      {
+        numOfPoseBelow3_0A++;
       }
     }
     else if (strcmp(keyword, "MODE") == 0)
     {
       atomCounter = 0;
-      rotamerCounter++;
+      poseCounter++;
     }
     else if (strcmp(keyword, "ATOM") == 0)
     {
@@ -3008,29 +3056,40 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
       if (internalVDW < minInternalVDW)
       {
         minInternalVDW = internalVDW;
-        indexOfMinInternalVDW = rotamerCounter;
+        indexOfMinInternalVDW = poseCounter;
         backboneVDWOfMinInternalVDW = backboneVDW;
       }
       if (backboneVDW < minBackboneVDW)
       {
         minBackboneVDW = backboneVDW;
-        indexOfMinBackboneVDW = rotamerCounter;
+        indexOfMinBackboneVDW = poseCounter;
         internalVDWOfMinBackboneVDW = internalVDW;
       }
     }
   }
 
-  printf("Total Rotamer Count                  : %d\n", rotamerCounter);
-  printf("minRMSD (angstroms)                  : %f\n", minRMSD);
-  printf("Index of minRMSD Rotamer (from 1)    : %d\n", indexOfMinRMSD);
-  printf("InternalVDW of minRMSD Rotamer       : %f\n", internalVDWOfMinRMSD);
-  printf("BackboneVDW of minRMSD Rotamer       : %f\n", backboneVDWOfMinRMSD);
-  printf("minInternalVDW                       : %f\n", minInternalVDW);
-  printf("Index of MinInternalVDW Rotamer      : %d\n", indexOfMinInternalVDW);
-  printf("BackboneVDW of MinInternalVDW Rotamer: %f\n", backboneVDWOfMinInternalVDW);
-  printf("minBackboneVDW                       : %f\n", minBackboneVDW);
-  printf("Index of MinBackboneVDW Rotamer      : %d\n", indexOfMinBackboneVDW);
-  printf("InternalVDW of MinBackboneVDW Rotamer: %f\n", internalVDWOfMinBackboneVDW);
+  printf("Summary of ligand pose analysis:\n");
+  printf("----------------------------------------------\n");
+  printf("No. of total poses                : %d\n", poseCounter);
+  printf("No. of poses < 0.5 A              : %d\n", numOfPoseBelow0_5A);
+  printf("No. of poses < 1.0 A              : %d\n", numOfPoseBelow1_0A);
+  printf("No. of poses < 1.5 A              : %d\n", numOfPoseBelow1_5A);
+  printf("No. of poses < 2.0 A              : %d\n", numOfPoseBelow2_0A);
+  printf("No. of poses < 2.5 A              : %d\n", numOfPoseBelow2_5A);
+  printf("No. of poses < 3.0 A              : %d\n", numOfPoseBelow3_0A);
+  printf("----------------------------------------------\n");
+  printf("minRMSD (angstroms)               : %f\n", minRMSD);
+  printf("Index of minRMSD pose (from 1)    : %d\n", indexOfMinRMSD);
+  printf("InternalVDW of minRMSD pose       : %f\n", internalVDWOfMinRMSD);
+  printf("BackboneVDW of minRMSD pose       : %f\n", backboneVDWOfMinRMSD);
+  printf("----------------------------------------------\n");
+  printf("minInternalVDW                    : %f\n", minInternalVDW);
+  printf("Index of MinInternalVDW pose      : %d\n", indexOfMinInternalVDW);
+  printf("BackboneVDW of MinInternalVDW pose: %f\n", backboneVDWOfMinInternalVDW);
+  printf("----------------------------------------------\n");
+  printf("minBackboneVDW                    : %f\n", minBackboneVDW);
+  printf("Index of MinBackboneVDW pose      : %d\n", indexOfMinBackboneVDW);
+  printf("InternalVDW of MinBackboneVDW pose: %f\n", internalVDWOfMinBackboneVDW);
 
   fclose(pIn);
   XYZArrayDestroy(&currentRotamerXYZ);
@@ -3040,7 +3099,7 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
 }
 
 
-int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* oriFileName, Residue* pNativeSmallMol, char* specificAtomFile)
+int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* poseFile, Residue* pNativeSmallMol, char* specificAtomFile)
 {
   int atomCounter;
   int rotamerCounter;
@@ -3058,10 +3117,10 @@ int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* oriFileName, Residue* pNative
 
   XYZArray currentRotamerXYZ;
   IntArray atomPosOnNativeSmallMol;
-  FILE* fin = fopen(oriFileName, "r");
+  FILE* fin = fopen(poseFile, "r");
   if (fin == NULL)
   {
-    sprintf(errMsg, "in file %s line %d, cannot open file %s", __FILE__, __LINE__, oriFileName);
+    sprintf(errMsg, "in file %s line %d, cannot open file %s", __FILE__, __LINE__, poseFile);
     TraceError(errMsg, IOError);
     return IOError;
   }
@@ -3102,6 +3161,15 @@ int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* oriFileName, Residue* pNative
       int posOnNativeSmallMol;
 
       ExtractTargetStringFromSourceString(atomName, line, 12, 4);
+      // 05/08/2023: add this if(){} to reformat the atom name
+      if (isdigit(atomName[0]) && isalpha(atomName[1]))
+      {
+        char tempName[MAX_LEN_ATOM_NAME + 1];
+        strcpy(tempName, atomName + 1);
+        tempName[strlen(atomName) - 1] = atomName[0];
+        tempName[strlen(atomName)] = '\0';
+        strcpy(atomName, tempName);
+      }
       for (int i = 0; i < StringArrayGetCount(&specificAtomNames); i++)
       {
         if (strcmp(atomName, StringArrayGet(&specificAtomNames, i)) == 0)
@@ -3256,7 +3324,7 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
 {
   int result = Success;
   char errMsg[MAX_LEN_ERR_MSG + 1];
-  printf("select smallmol rotamers that have good internal and backbone VDW energy\n");
+  printf("select smallmol rotamers that have internal and backbone VDW energy ranked in top %.0f%% among all smallmol rotamers\n", percent*100);
   FILE* pIn = fopen(oldRotamersFile, "r");
   if (pIn == NULL)
   {
@@ -3272,16 +3340,22 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
   {
     char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
     ExtractFirstStringFromSourceString(keyword, line);
-    if (strcmp(keyword, "MODEL") == 0) rotCount++;
+    if (strcmp(keyword, "MODEL") == 0)
+    {
+      rotCount++;
+    }
   }
   printf("total smallmol rotamer count: %d\n", rotCount);
 
   RotamerEnergy* pRotamerEnergy = (RotamerEnergy*)malloc(sizeof(RotamerEnergy) * rotCount);
   BOOL* flagRotamerWithinRank = (BOOL*)malloc(sizeof(BOOL) * rotCount);
-  for (int i = 0;i < rotCount;i++) flagRotamerWithinRank[i] = FALSE;
+  for (int i = 0;i < rotCount;i++)
+  {
+    flagRotamerWithinRank[i] = FALSE;
+  }
 
   fseek(pIn, 0, SEEK_SET);
-  int rotIdx = 0;
+  int rotNdx = 0;
   while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
     char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
@@ -3293,10 +3367,10 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
     ExtractFirstStringFromSourceString(keyword, line);
     ExtractFirstStringFromSourceString(keyword, line);
     double vdwBackbone = atof(keyword);
-    pRotamerEnergy[rotIdx].vdwInternal = vdwInternal;
-    pRotamerEnergy[rotIdx].vdwBackbone = vdwBackbone;
-    pRotamerEnergy[rotIdx].index = rotIdx;
-    rotIdx++;
+    pRotamerEnergy[rotNdx].vdwInternal = vdwInternal;
+    pRotamerEnergy[rotNdx].vdwBackbone = vdwBackbone;
+    pRotamerEnergy[rotNdx].index = rotNdx;
+    rotNdx++;
   }
 
   printf("rank smallmol rotamers by vdwInternal and vdwBackbone energy\n");
@@ -3305,22 +3379,22 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
   IntArray highRankIndexByInternal;
   IntArrayCreate(&highRankIndexByInternal, rankThreshold);
   qsort(pRotamerEnergy, rotCount, sizeof(RotamerEnergy), CompareByInternalEnergy);
-  rotIdx = 0;
-  while (rotIdx < rankThreshold)
+  rotNdx = 0;
+  while (rotNdx < rankThreshold)
   {
-    IntArraySet(&highRankIndexByInternal, rotIdx, pRotamerEnergy[rotIdx].index);
-    rotIdx++;
+    IntArraySet(&highRankIndexByInternal, rotNdx, pRotamerEnergy[rotNdx].index);
+    rotNdx++;
   }
 
   // rank by backboneVDW;
   IntArray highRankIndexByBackbone;
   IntArrayCreate(&highRankIndexByBackbone, rankThreshold);
   qsort(pRotamerEnergy, rotCount, sizeof(RotamerEnergy), CompareByBackboneEnergy);
-  rotIdx = 0;
-  while (rotIdx < rankThreshold)
+  rotNdx = 0;
+  while (rotNdx < rankThreshold)
   {
-    IntArraySet(&highRankIndexByBackbone, rotIdx, pRotamerEnergy[rotIdx].index);
-    rotIdx++;
+    IntArraySet(&highRankIndexByBackbone, rotNdx, pRotamerEnergy[rotNdx].index);
+    rotNdx++;
   }
 
   // find out the rots that are ranked in top 'highRank' by internalVDW as well as backboneVDW;
@@ -3339,7 +3413,7 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
     }
   }
 
-  //write top rots to a new file
+  //write top ranked smallmol rotamers to a new file
   FILE* pOut = fopen(newRotamersFile, "w");
   if (pOut == NULL)
   {
@@ -3350,18 +3424,44 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
   }
 
   fseek(pIn, 0, SEEK_SET);
-  rotIdx = 0;
+  rotNdx = 0;
+  int accRotNdx = 0;
+  StringArray buffer;
+  StringArrayCreate(&buffer);
   while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
     char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
     ExtractTargetStringFromSourceString(keyword, line, 0, 4);
-    if (strcmp(keyword, "MODE") == 0) rotIdx++;
-    if (flagRotamerWithinRank[rotIdx - 1])
+    if (strcmp(keyword, "MODE") == 0)
     {
-      fprintf(pOut, "%s", line);
+      rotNdx++;
+      StringArrayDestroy(&buffer);
+      StringArrayCreate(&buffer);
+    }
+    else if (strcmp(keyword, "ATOM") == 0)
+    {
+      StringArrayAppend(&buffer, line);
+    }
+    else if(strcmp(keyword, "ENER") == 0)
+    {
+      StringArrayAppend(&buffer, line);
+    }
+    else if (strcmp(keyword, "ENDM") == 0)
+    {
+      if (flagRotamerWithinRank[rotNdx - 1] == TRUE)
+      {
+        fprintf(pOut, "MODEL     %d\n", accRotNdx + 1);
+        for (int j = 0;j < StringArrayGetCount(&buffer);j++)
+        {
+          fprintf(pOut, "%s", StringArrayGet(&buffer, j));
+        }
+        fprintf(pOut, "ENDMDL\n");
+        accRotNdx++;
+      }
     }
   }
   fclose(pOut);
+  StringArrayDestroy(&buffer);
 
   IntArrayDestroy(&highRankIndexByBackbone);
   IntArrayDestroy(&highRankIndexByInternal);

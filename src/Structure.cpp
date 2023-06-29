@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -755,19 +755,29 @@ int StructureCalcProteinResidueSidechainTorsion(Structure* pThis, ResiTopoSet* p
 
 int StructureCalcPhiPsi(Structure* pStructure)
 {
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
   {
     Chain* pChain = StructureGetChain(pStructure, i);
     if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
     {
       Residue* pResi0 = ChainGetResidue(pChain, j - 1);
       Residue* pResi1 = ChainGetResidue(pChain, j);
       Residue* pResi2 = ChainGetResidue(pChain, j + 1);
 
-      if (pResi0 != NULL && AA3GetIndex(ResidueGetName(pResi0)) < 0)  continue;
-      if (pResi1 != NULL && AA3GetIndex(ResidueGetName(pResi1)) < 0)  continue;
-      if (pResi2 != NULL && AA3GetIndex(ResidueGetName(pResi2)) < 0)  continue;
+      if (pResi0 != NULL && AA3GetIndex(ResidueGetName(pResi0)) < 0)
+      {
+        pResi0 = NULL;
+      }
+      if (pResi1 != NULL && AA3GetIndex(ResidueGetName(pResi1)) < 0)
+      {
+        pResi1 = NULL;
+        continue;
+      }
+      if (pResi2 != NULL && AA3GetIndex(ResidueGetName(pResi2)) < 0)
+      {
+        pResi2 = NULL;
+      }
 
 
       Atom* pC0 = NULL;
@@ -801,7 +811,7 @@ int StructureCalcPhiPsi(Structure* pStructure)
       if (pC0 != NULL)
       {
         double dist_C0N1 = XYZDistance(&pC0->xyz, &pN1->xyz);
-        if (dist_C0N1 < 1.45 && dist_C0N1>1.25)
+        if (dist_C0N1 < 1.45 && dist_C0N1 > 1.25)
         {// indicative of an amide bond
           phi = RadToDeg(GetTorsionAngle(&pC0->xyz, &pN1->xyz, &pCA1->xyz, &pC1->xyz));
         }
@@ -814,7 +824,7 @@ int StructureCalcPhiPsi(Structure* pStructure)
       if (pN2 != NULL)
       {
         double dist_C1N2 = XYZDistance(&pC1->xyz, &pN2->xyz);
-        if (dist_C1N2 < 1.45 && dist_C1N2>1.25)
+        if (dist_C1N2 < 1.45 && dist_C1N2 > 1.25)
         {// indicative of an amide bond
           psi = RadToDeg(GetTorsionAngle(&pN1->xyz, &pCA1->xyz, &pC1->xyz, &pN2->xyz));
         }

@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -116,7 +116,7 @@ CataConsSitePair* CataConsSitePairArrayGet(CataConsSitePairArray* pThis, int ind
 CataConsSitePair* CataConsSitePairArrayFind(CataConsSitePairArray* pThis, char* chnName1, int pos1, char* resiName1, char* chnName2, int pos2, char* resiName2);
 
 int CataConsSitePairArrayShow(CataConsSitePairArray* pThis);
-int CataConsSitePairArrayTester(char* filename);
+int CataConsSitePairArrayTester(char* file);
 
 BOOL CataConsItemCheck(CataConsItem* pThis, XYZArray* pOnFirstSite, XYZArray* pOnSecondSite, XYZ* pseudoAtoms);
 BOOL CataConsGroupCheck(CataConsGroup* pThis, Rotamer* pOnFirstSite, Rotamer* pOnSecondSite);
@@ -265,7 +265,7 @@ typedef struct _PlacingRule
   double vdwInternal;
 } PlacingRule;
 
-int PlacingRuleCreate(PlacingRule* pThis, char* fileName);
+int PlacingRuleCreate(PlacingRule* pThis, char* file);
 void PlacingRuleDestroy(PlacingRule* pThis);
 BOOL PlacingRuleGetDeployedFlag(PlacingRule* pThis);
 char* PlacingRuleGetResiName(PlacingRule* pThis);
@@ -361,15 +361,15 @@ int PlacingRuleShowAtomDistances(PlacingRule* pThis);
 int PlacingRuleShowParam(PlacingRule* pThis, int index);
 int PlacingRuleShowAction(PlacingRule* pThis, int index);
 int PlacingRuleShow(PlacingRule* pThis);
-int PlacingRuleTester(char* filename);
+int PlacingRuleTester(char* file);
 
 
 // functions for screening and analyzing small-molecule rots
-int ScreenSmallmolRotamersByRMSD(char* oriFileName, char* outputFileName, double rmsdThresold);
-int AnalyzeSmallMolRotamers(char* oriFileName, Residue* pOriginalSmallMol);
-int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* oriFileName, Residue* pNativeSmallMol, char* specificAtomFile);
+int ScreenSmallmolRotamersByRMSD(char* initialPoseFile, char* newPoseFile, double rmsdThresold);
+int AnalyzeSmallMolRotamers(char* poseFile, Residue* pSmallMol);
+int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* poseFile, Residue* pSmallMol, char* specificAtomFile);
 int CompareByInternalEnergy(const void* a, const void* b);
 int CompareByBackboneEnergy(const void* a, const void* b);
-int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamersFile, char* newRotamersFile, double percent);
+int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* initialPoseFile, char* newPoseFile, double percent);
 
 #endif  //SMALL_MOL_H 

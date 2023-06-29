@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -19,7 +19,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <ctype.h>
 
 
-extern double CUT_EXCL_LOW_ROT_PROB;
+extern double CUT_EXCL_LOW_PROB_ROT;
 
 
 int Type_ProteinAtomOrder_ToInt(Type_ProteinAtomOrder order)
@@ -1975,7 +1975,7 @@ int RotamerSetOfProteinGenerateByBBdepRotLib(RotamerSet* pThis, Residue* pResi, 
     for (int rotamerIndex = 1; rotamerIndex < rotamerCount; ++rotamerIndex)
     {
       RotLibPhiPsiGet(pRotLibPhiPsi, typeName, rotamerIndex, &torsions, &probability);
-      if (probability < CUT_EXCL_LOW_ROT_PROB) break;
+      if (probability < CUT_EXCL_LOW_PROB_ROT) break;
       // set the coordinates of side-chain atoms to be false
       for (int i = 0; i < RotamerGetAtomCount(&newRot); i++)
       {

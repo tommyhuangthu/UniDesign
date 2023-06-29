@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -21,7 +21,9 @@ extern BOOL FLAG_WRITE_HYDROGEN;
 int AtomCreate(Atom* pThis)
 {
   strcpy(pThis->name, "");
-  pThis->xyz.X = pThis->xyz.Y = pThis->xyz.Z = 0.0;
+  pThis->xyz.X = -1e3;
+  pThis->xyz.Y = -1e3;
+  pThis->xyz.Z = -1e3;
   pThis->isXyzValid = FALSE;
   strcpy(pThis->chainName, "");
   pThis->posInChain = -1;
@@ -36,9 +38,9 @@ int AtomCreate(Atom* pThis)
 int AtomDestroy(Atom* pThis)
 {
   strcpy(pThis->name, "");
-  pThis->xyz.X = 0;
-  pThis->xyz.Y = 0;
-  pThis->xyz.Z = 0;
+  pThis->xyz.X = -1e3;
+  pThis->xyz.Y = -1e3;
+  pThis->xyz.Z = -1e3;
   pThis->isXyzValid = FALSE;
   return Success;
 }

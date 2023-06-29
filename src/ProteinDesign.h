@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -18,8 +18,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define ENERGY_OPTIMIZATION_H
 
 #include "ProteinDesign.h"
-//#include "DEE.h"
-//#include "EnergyMatrix.h"
+#include "EnergyMatrix.h"
 #include "SmallMol.h"
 #include "Sequence.h"
 
@@ -47,7 +46,7 @@ int SequenceTemplateEnergy(Structure* pStructure, Sequence* pSequence, double en
 int SequenceEnergy(Structure* pStructure, Sequence* pSequence);
 int EnergyDifferenceUponSingleMutation(Structure* pStructure, Sequence* pSequence, int mutSiteIndex, int mutRotIndex, double* dtot, double* dphy, double* dbin, double* devo);
 int Metropolis(Sequence* pOld, Sequence* pBest, Structure* pStructure, RotamerList* pList, StringArray** ppRotamerType, IntArray** ppRotamerCount, int* seqIndex, double temp, int stepCount, FILE* fp, FILE* fp2);
-int SequenceEnergyWithCons(Structure* pStructure, Sequence* pSequence, CataConsSitePairArray* pConsArray);
+int SequenceEnergyWithCataCons(Structure* pStructure, Sequence* pSequence, CataConsSitePairArray* pConsArray);
 int EnergyChangeUponSingleMutationWithCataCons(Structure* pStruct, Sequence* pSeq, int mutSiteIndex, int mutRotIndex, double* dtot, double* dphy, double* dbin, double* devo, int* dcons, CataConsSitePairArray* pConsArray);
 int MetropolisWithCataCons(Sequence* pOld, Sequence* pBest, Structure* pStructure, RotamerList* pList, StringArray** ppRotamerType, IntArray** ppRotamerCount, int* seqIndex, double temp, int stepCount, FILE* pFileRot, FILE* pFileSeq, CataConsSitePairArray* pConsArray);
 

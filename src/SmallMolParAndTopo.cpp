@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -87,8 +87,18 @@ int FindAtomB(Atom* pAtomC, Atom* pAtomD, AtomArray* pAtoms, IntArray* icFlags, 
 
 int GetAttachedAtomTypeNum(AtomArray* pAtoms, int bonds[][2], int bondNum, int atomIndex, int attachAtomTypeNum[10], int* attachCount, int attachIndex[10])
 {
-  //attach[ 0]:C  attach[ 1]:H   attach[ 2]:O   attach[ 3]:N  attach[ 4]:P  attach[ 5]:S
-  //attach[ 6];F  attach[ 7]:Cl  attach[ 8]:Br  attach[ 9]:I  attach[10]:B  attach[11]:Fe/Zn/X,metal
+  // attach[ 0]:C attached
+  // attach[ 1]:H
+  // attach[ 2]:O
+  // attach[ 3]:N
+  // attach[ 4]:P
+  // attach[ 5]:S
+  // attach[ 6]:F
+  // attach[ 7]:Cl
+  // attach[ 8]:Br
+  // attach[ 9]:I
+  // attach[10]:B
+  // attach[11]:Fe/Zn/X,metal
   for (int i = 0;i < bondNum;i++)
   {
     if (atomIndex == bonds[i][0] - 1)
@@ -159,11 +169,12 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
       readingAtom = readingBond = FALSE;
       continue;
     }
-    if (readingAtom)
+    if (readingAtom == TRUE)
     {
       int atomId;
-      char mol2Resi[MAX_LEN_RES_NAME + 1];
-      int count = sscanf(line, "%d %s %lf %lf %lf %s %d %s %lf", &atomId, atom.name, &atom.xyz.X, &atom.xyz.Y, &atom.xyz.Z, atom.type, &atom.posInChain, mol2Resi, &atom.charge);
+      char subst_name[MAX_LEN_RES_NAME + 1];
+      // the subst_id in field 7 of TRIPOS mol2 is used as the posInChain of the ligand
+      int count = sscanf(line, "%d %s %lf %lf %lf %s %d %s %lf", &atomId, atom.name, &atom.xyz.X, &atom.xyz.Y, &atom.xyz.Z, atom.type, &atom.posInChain, subst_name, &atom.charge);
       if (count < 9)
       {
         char errMsg[MAX_LEN_ERR_MSG + 1];
@@ -173,7 +184,7 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
       }
       if (strcmp(resiName, "") == 0)
       {
-        strcpy(resiName, mol2Resi);
+        strcpy(resiName, subst_name);
         if (strlen(resiName) > 3) resiName[3] = '\0';
         if (strcmp(resiName, "***") == 0) strcpy(resiName, "LIG");
         if (LigandResidueNameConflictWithAminoAcid(resiName)) strcpy(resiName, "LIG");
@@ -193,7 +204,7 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
         }
       }
     }
-    if (readingBond)
+    if (readingBond == TRUE)
     {
       int id;
       char type[5];
@@ -201,9 +212,6 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
       IntArrayAppend(&bondsFromToAndType, bonds[bondNum][0] - 1);
       IntArrayAppend(&bondsFromToAndType, bonds[bondNum][1] - 1);
       bondNum++;
-      //int id, from, to;
-      //char type[5];
-      //sscanf(line, "%d %d %d %s", &id, &from, &to, type);
     }
   }
   AtomDestroy(&atom);
@@ -238,10 +246,16 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
     if (pAtom->name[0] == 'C' && strstr(pAtom->type, "C.") != NULL)
     {
       GetAttachedAtomTypeNum(&atoms, bonds, bondNum, i, attachAtomTypeNum, &attachCount, attachIndex);
-      if (attachAtomTypeNum[1] >= 3) pAtom->EEF1_atType = EEF1_AtomType_CH3E;
-      else if (attachAtomTypeNum[1] == 2) pAtom->EEF1_atType = EEF1_AtomType_CH2E;
+      if (attachAtomTypeNum[1] >= 3)
+      { // atom i has >= 3 hydrogen atoms attached
+        pAtom->EEF1_atType = EEF1_AtomType_CH3E;
+      }
+      else if (attachAtomTypeNum[1] == 2)
+      { // atom i has 2 hydrogen atoms attached
+        pAtom->EEF1_atType = EEF1_AtomType_CH2E;
+      }
       else if (attachAtomTypeNum[1] == 1)
-      {
+      { // atom i has 1 hydrogen atoms attached
         pAtom->EEF1_atType = EEF1_AtomType_CH1E;
         if (strcmp(pAtom->type, "C.ar") == 0)
         {
@@ -250,8 +264,14 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
       }
       else
       {
-        if (strcmp(pAtom->type, "C.ar") == 0) pAtom->EEF1_atType = EEF1_AtomType_CR;
-        else if (strcmp(pAtom->type, "C.cat") == 0) pAtom->EEF1_atType = EEF1_AtomType_Carg;
+        if (strcmp(pAtom->type, "C.ar") == 0)
+        {
+          pAtom->EEF1_atType = EEF1_AtomType_CR;
+        }
+        else if (strcmp(pAtom->type, "C.cat") == 0)
+        {
+          pAtom->EEF1_atType = EEF1_AtomType_Carg;
+        }
         else if (strcmp(pAtom->type, "C.2") == 0)
         {
           pAtom->EEF1_atType = EEF1_AtomType_CR;
@@ -490,7 +510,9 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
   }
   fclose(pFilePara);
 
+  //////////////////////////////////////////////////////////////////////////////////////
   // output the topology file
+  //////////////////////////////////////////////////////////////////////////////////////
   // write atoms and bonds
   FILE* pFileTopo = fopen(topfile, "w");
   if (pFileTopo == NULL)
@@ -512,9 +534,9 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
   }
   // write ICs
   fprintf(pFileTopo, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-  fprintf(pFileTopo, "! Internal Coordinate correlates with small-molecule placement for enzyme design\n");
-  fprintf(pFileTopo, "! The ICs' order depend on 3 initial placing atoms from small molecule. If the 3 atoms\n");
-  fprintf(pFileTopo, "! were not provided by user, they will be automatically selected based on bond connection\n");
+  fprintf(pFileTopo, "! Internal Coordinates (ICs) are associated with ligand placement for enzyme design\n");
+  fprintf(pFileTopo, "! The IC orders depend on three initial atoms on the ligand. If the three atoms\n");
+  fprintf(pFileTopo, "! were not provided by user, they will be chosen automatically based on bond connection\n");
   fprintf(pFileTopo, "! Anyway, it is very important to check the ICs manually!\n");
   fprintf(pFileTopo, "! The format of an IC entry is: \n");
   fprintf(pFileTopo, "! IC atomA atomB  atomC atomD distAB angleABC angleABCD angleBCD distCD    or:\n");
@@ -555,6 +577,8 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
       }
     }
     printf("The three initial atoms used for generating ligand topology are: %s, %s, and %s\n", AtomGetName(pIniAtomA), AtomGetName(pIniAtomB), AtomGetName(pIniAtomC));
+    fprintf(pFileTopo, "The three initial atoms used for generating ligand topology are: %s, %s, and %s\n", AtomGetName(pIniAtomA), AtomGetName(pIniAtomB), AtomGetName(pIniAtomC));
+    fprintf(pFileTopo, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
   }
 
 
@@ -569,30 +593,24 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
 
   BOOL allICsCalculated = FALSE;
   int maxIter = 0;
-  while (!allICsCalculated && maxIter < AtomArrayGetCount(&atoms) + 1)
+  while (allICsCalculated == FALSE && maxIter < AtomArrayGetCount(&atoms) + 1)
   {
     allICsCalculated = TRUE;
     for (int i = 0; i < AtomArrayGetCount(&atoms); i++)
     {
-      if (IntArrayGet(&icFlags, i) == 1) continue;
+      if (IntArrayGet(&icFlags, i) == 1)
+      {
+        continue;
+      }
       BOOL icFoundFlag = FALSE;
       Atom* pAtomD = AtomArrayGet(&atoms, i);
       AtomArray atomCArray;
       AtomArrayCreate(&atomCArray);
       // find atomCs bonded with atomD, where atomC's IC should have been calculated
       FindAtomC(pAtomD, &atoms, &icFlags, &bondsFromToAndType, &atomCArray);
-      //if (AtomArrayGetCount(&atomCArray) == 0) { // current atom is not connected by other atoms, ignore IC
-      //  fprintf(pFileTopo, "! Atom %s's IC cannot be calculated because it is not connected to other atoms; its IC is ignored\n",
-      //    AtomGetName(pAtomD));
-      //  IntArraySet(&icFlags, i, 1);
-      //  icFoundFlag = TRUE;
-      //}
       for (int j = 0; j < AtomArrayGetCount(&atomCArray); j++)
       {
         Atom* pAtomC = AtomArrayGet(&atomCArray, j);
-        //int posC = -1;
-        //AtomArrayFind(&atoms, AtomGetName(pAtomC), &posC);
-        //if (IntArrayGet(&icFlags, posC) == 0) continue;
         AtomArray atomBArray;
         AtomArrayCreate(&atomBArray);
         FindAtomB(pAtomC, pAtomD, &atoms, &icFlags, &bondsFromToAndType, &atomBArray);
@@ -600,6 +618,15 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
         { // improper IC
           Atom* pAtomA = AtomArrayGet(&atomBArray, 0);
           Atom* pAtomB = AtomArrayGet(&atomBArray, 1);
+          Atom* pAtomX = NULL;
+          if (strcmp(AtomGetName(pAtomB), AtomGetName(pIniAtomA)) == 0 ||
+              strcmp(AtomGetName(pAtomB), AtomGetName(pIniAtomB)) == 0 ||
+              strcmp(AtomGetName(pAtomB), AtomGetName(pIniAtomC)) == 0)
+          {
+            pAtomX = pAtomA;
+            pAtomA = pAtomB;
+            pAtomB = pAtomX;
+          }
           XYZ AB = XYZDifference(&pAtomA->xyz, &pAtomB->xyz);
           XYZ BC = XYZDifference(&pAtomB->xyz, &pAtomC->xyz);
           XYZ CD = XYZDifference(&pAtomC->xyz, &pAtomD->xyz);
@@ -625,12 +652,7 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
             FindAtomB(pAtomB, pAtomC, &atoms, &icFlags, &bondsFromToAndType, &atomAArray);
             if (AtomArrayGetCount(&atomAArray) == 0)
             {
-              //sprintf(errMsg, "in file %s line %d, cannot find proper IC for atom %s", __FILE__, __LINE__, AtomGetName(pAtomD));
-              //result = DataNotExistError;
-              //TraceError(errMsg, result);
-              //return result;
-              fprintf(pFileTopo, "! Atom %s's IC cannot be calculated because atomA cannot be found; its IC is ignored\n",
-                AtomGetName(pAtomD));
+              fprintf(pFileTopo, "! Atom %s's IC cannot be calculated because atomA cannot be found; its IC is ignored\n", AtomGetName(pAtomD));
               IntArraySet(&icFlags, i, 1);
               icFoundFlag = TRUE;
             }
@@ -660,7 +682,7 @@ int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, 
       } // for j
       AtomArrayDestroy(&atomCArray);
       if (icFoundFlag == TRUE) break;
-    }
+    } // for i
 
     for (int i = 0; i < IntArrayGetLength(&icFlags); i++)
     {

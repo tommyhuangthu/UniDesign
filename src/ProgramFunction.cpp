@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -34,7 +34,7 @@ extern BOOL FLAG_USE_INPUT_SC;
 extern BOOL FLAG_ROTATE_HYDROXYL;
 extern double CUT_TORSION_DEVIATION;
 
-extern double CUT_EXCL_LOW_ROT_PROB;
+extern double CUT_EXCL_LOW_PROB_ROT;
 extern char PROGRAM_NAME[MAX_LEN_FILE_NAME + 1];
 extern char PROGRAM_VERSION[MAX_LEN_FILE_NAME + 1];
 
@@ -45,10 +45,10 @@ extern double CUT_PPI_DIST_SHELL1;
 
 extern int MAX_NUM_OF_RUNS;
 
-extern char WITHIN_RESIDUES[MAX_LEN_ONE_LINE_CONTENT + 1];
-extern double WITHIN_RANGE;
+extern char REFERENCE_RESIDUES[MAX_LEN_ONE_LINE_CONTENT + 1];
+extern double DIST_RANGE_TO_REFERENCE;
 
-extern char EXCLUDE_RESI[MAX_LEN_ONE_LINE_CONTENT + 1];
+extern char EXCL_RESI[MAX_LEN_ONE_LINE_CONTENT + 1];
 
 int PrintHelp()
 {
@@ -81,10 +81,10 @@ int PrintHelp()
     "                     enzyme design : ProteinDesign --enzyme\n"
     "                     packing       : ProteinDesign --wildtype_only\n"
     "                   [Enzyme and PLI design module]\n"
-    "                     GenLigParamAndTopo\n"
-    "                     MakeLigConformers\n"
-    "                     AnalyzeLigConformers\n"
-    "                     ScreenLigConformers\n"
+    "                     MakeLigParamAndTopo\n"
+    "                     MakeLigPoses\n"
+    "                     AnalyzeLigPoses\n"
+    "                     ScreenLigPoses\n"
     "                   [Structure checking and assessment module]\n"
     "                     CheckClash0\n"
     "                     CheckClash1\n"
@@ -142,17 +142,17 @@ int PrintHelp()
     "   --resfile=arg             arg is the name of residue-restriction file\n"
     "   --seed_from_nat           turn on the flag for using native sequence as a starting point for protein design\n"
     "   --excl_rot_cys            exclude the Cystenine rotamers for protein design\n"
-    "   --show_hydrogen=arg       arg = yes, write polar hydrogen's coordinates into PDB\n"
+    "   --show_hydrogen=arg       arg = yes, save the coordinates of polar hydrogens to PDB file\n"
     "                             arg = no, do not write hydrogens into PDB\n"
     "   --ncut_cb_core=arg        arg is an integer cutoff value for the number of CB atoms for a CORE (buried) residue (default: 20)\n"
     "   --ncut_cb_surf=arg        arg is an integer cutoff value for the number of CB atoms for a SURFACE (exposed) residue (default: 15)\n"
     "   --init_3atoms=arg         arg is the name of three atoms divided by commas (e.g. C1,C2,C3)\n"
     "                             this option is only used with the command GenLigParamAndTopo\n"
-    "   --read_lig_conformers=arg   read ligand poses from the file arg, a PDB file recording multiple ligand poses\n"
-    "   --write_lig_conformers=arg  write ligand poses to the file arg, a PDB file for recording multiple ligand poses\n"
-    "   --scrn_by_orientation=arg        screen ligand conformers using the rule defined in the arg file\n"
-    "   --scrn_by_vdw=arg      screen ligand conformers with both internalVDW and backboneVDW ranked in a low percentile, e.g. 25%\n"
-    "   --scrn_by_rmsd=arg        screen ligand conformers using an RMSD cutoff value (default: 1.0)\n"
+    "   --read_lig_poses=arg      read ligand poses from the file arg, a PDB file recording multiple ligand poses\n"
+    "   --write_lig_poses=arg     write ligand poses to the file arg, a PDB file for recording multiple ligand poses\n"
+    "   --scrn_by_orientation=arg        screen ligand poses using the rule defined in the arg file\n"
+    "   --scrn_by_vdw=arg      screen ligand poses with both internalVDW and backboneVDW ranked in a low percentile, e.g. 25%\n"
+    "   --scrn_by_rmsd=arg        screen ligand poses using an RMSD cutoff value (default: 1.0)\n"
     "\n\n", PROGRAM_NAME);
   return Success;
 }
@@ -164,11 +164,11 @@ int PrintVersion()
 }
 
 
-int PrintAdvertisement()
+int PrintOutProgramInformation()
 {
   printf(
     "#############################################################################################################\n"
-    "                                       %s v%s\n"
+    "                                       %s (Version %s)\n"
     "  A command-line-based tool featuring protein structure modeling and protein design, including:\n\n"
     "    *) de novo protein sequence design and protein sequence redesign (ProteinDesign)\n"
     "       can be used to design monomer proteins, protein-protein interactions, protein-ligand interactions, \n"
@@ -182,8 +182,8 @@ int PrintAdvertisement()
     "    *) add polar hydrogen atoms (AddPolarHydrogen)\n"
     "    *) optimize hydrogen's position to maximize hydrogen bonding networks (OptimizeHydrogen)\n"
     "\n"
-    "  Copyright (c) 2020 Xiaoqiang Huang\n"
-    "  contact: tommyhuangthu@foxmail.com\n"
+    "  Copyright (c) Xiaoqiang Huang\n"
+    "  Contact: xiaoqiah@outlook.com\n"
     "############################################################################################################\n\n",
     PROGRAM_NAME, PROGRAM_VERSION);
   return Success;
@@ -341,7 +341,7 @@ int ComputeStructureStabilityByBBdepRotLib2(Structure* pStructure, AAppTable* pA
           {
             float p = 0.;
             fread((char*)&p, sizeof(char), 4, pFileLib);
-            if (p < CUT_EXCL_LOW_ROT_PROB)
+            if (p < CUT_EXCL_LOW_PROB_ROT)
             {
               break;
             }
@@ -1251,9 +1251,9 @@ int ComputeResidueInteractionWithFixedEnvironment(Structure* pStruct, int chnNdx
 
   StringArray resStrs;
   StringArrayCreate(&resStrs);
-  if (strcmp(EXCLUDE_RESI, "") != 0)
+  if (strcmp(EXCL_RESI, "") != 0)
   {
-    StringArraySplitString(&resStrs, EXCLUDE_RESI, ',');
+    StringArraySplitString(&resStrs, EXCL_RESI, ',');
   }
   for (int i = 0; i < StructureGetChainCount(pStruct); i++)
   {
@@ -1262,7 +1262,7 @@ int ComputeResidueInteractionWithFixedEnvironment(Structure* pStruct, int chnNdx
     {
       Residue* pResi2 = ChainGetResidue(pChainI, j);
       if ( strcmp(ResidueGetName(pResIR), ResidueGetName(pResi2)) == 0 
-        && ResidueGetPosInChain(pResIR) == ResidueGetPosInChain(pResi2))
+        && ResidueGetPosInChain(pResIR) == ResidueGetPosInChain(pResi2) )
       {
         continue;
       }
@@ -1655,11 +1655,11 @@ int FindIntermediateResidues(Structure* pStructure)
 }
 
 
-int ShowPhiPsi(Structure* pStructure, char* phipsifile)
+int ShowPhiPsi(Structure* pStructure, char* file)
 {
   FILE* fout = NULL;
-  if (phipsifile == NULL) fout = stdout;
-  else fout = fopen(phipsifile, "w");
+  if (file == NULL) fout = stdout;
+  else fout = fopen(file, "w");
   fprintf(fout, "#phi-psi angles of protein residues: \n");
   for (int i = 0;i < StructureGetChainCount(pStructure);i++)
   {
@@ -2324,11 +2324,11 @@ int StructureGetAminoAcidComposition(Structure* pStructure, int* aas)
 }
 
 
-int SelectResiduesWithin(Structure* pStructure)
+int SelectResiduesInRange(Structure* pStructure)
 {
   StringArray chain_and_positions;
   StringArrayCreate(&chain_and_positions);
-  StringArraySplitString(&chain_and_positions, WITHIN_RESIDUES, ',');
+  StringArraySplitString(&chain_and_positions, REFERENCE_RESIDUES, ',');
 
   Residue** pResiduesWithin = (Residue**)malloc(sizeof(Residue*) * StringArrayGetCount(&chain_and_positions));
   for (int res = 0; res < StringArrayGetCount(&chain_and_positions); res++)
@@ -2364,7 +2364,7 @@ int SelectResiduesWithin(Structure* pStructure)
         }
         else
         {
-          if (AtomArrayCalcMinDistance(&pResi->atoms, &pResiWith->atoms) < WITHIN_RANGE)
+          if (AtomArrayCalcMinDistance(&pResi->atoms, &pResiWith->atoms) < DIST_RANGE_TO_REFERENCE)
           {
             resIsWithinRange = TRUE;
             break;

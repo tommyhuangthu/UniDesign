@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -52,12 +52,13 @@ BOOL IsNativeRotamerInBBdepRotLib(Structure* pThis, int chainIndex, int resiInde
 
 //deal with small molecule
 int StructureGetTruncatedBackbone(Structure* pThis, Residue* pSmallMol, double activeSiteRange, BOOL withHydrogen, AtomArray* pBackboneAtoms);
+int StructureGetTruncatedBackboneNew(Structure* pThis, Residue* pSmallMol, BOOL withHydrogen, AtomArray* pBackboneAtoms);
 int StructureDeployCataConsSitePair(Structure* pThis, CataConsSitePair* pCataConsSitePair);
 int StructurePlaceSmallMol(Structure* pThis, PlacingRule* pPlacingRule, CataConsSitePairArray* pCataConsCollection, int relatedProteinSiteCount, DesignSite** relatedProteinSites, RotamerSet* pSmallMolRotSet);
-int StructureGenerateSmallMolRotamers(Structure* pThis, char* cataConsFileName, char* placingRuleFileName);
-int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char* smallMolFileName);
+int StructureGenerateSmallMolRotamers(Structure* pThis, char* cataConsFile, char* placingRuleFile);
+int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char* smallMolFile);
 int StructureWriteSmallMolRotamers(Structure* pThis, char* smallMolFile);
-int StructureSmallmolOrientationScreen(Structure* pStructure, ResiTopoSet* pResiTopo, char* oriFileName, char* newFileName, char* screenRuleFileName);
+int StructureSmallmolOrientationScreen(Structure* pStructure, ResiTopoSet* pResiTopo, char* initialPoseFile, char* newPoseFile, char* screenRuleFile);
 
 // general function for BBdep and BBind protein rots, and ligand rots
 int ProteinSiteWriteRotamers(Structure* pStructure, int chainIndex, int resiIndex, char* rotamerFilePath);

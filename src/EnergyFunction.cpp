@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -22,7 +22,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <time.h>
 
 
-extern double CUT_EXCL_LOW_ROT_PROB;
+extern double CUT_EXCL_LOW_PROB_ROT;
 
 double WEIGHTS[MAX_ENERGY_TERM];
 
@@ -2626,7 +2626,7 @@ int AminoAcidDunbrackEnergy(Residue* pThis, BBdepRotamerLib* pBBdepRotLib)
     for (int i = 0;i < IntArrayGet(&pRotLibPhiPsi->rotamerCounts, rotTypeIdx);i++)
     {
       double p = DoubleArrayGet(&pRotLibPhiPsi->probability[rotTypeIdx], i);
-      if (p < CUT_EXCL_LOW_ROT_PROB) break;
+      if (p < CUT_EXCL_LOW_PROB_ROT) break;
       if (p < pMin) pMin = p;
       DoubleArray* pTorsions = &pTorsionsArray[i];
       DoubleArray* pDeviations = &pDeviationsArray[i];

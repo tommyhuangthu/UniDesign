@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -28,7 +28,7 @@ SSPrediction::getSeq2SS::getSeq2SS(char prdA2[MAX_LEN], char fasta[MAX_LEN], cha
   FILE* fp = NULL;
   int i, j;
   float pout[MAX_LEN][NLAYER3] = { 0 };
-  char filename[500] = "";
+  char file[500] = "";
 
   SEG = 21;
   NLAYER1 = SEG * 25;
@@ -143,9 +143,9 @@ SSPrediction::getSeq2SS::getSeq2SS(char prdA2[MAX_LEN], char fasta[MAX_LEN], cha
 
   if (FLAG_EVOPHIPSI)
   {
-    //sprintf(filename,"%s/protein.ss2",path);
-    sprintf(filename, "./protein.ss2");
-    fp = fopen(filename, "w");
+    //sprintf(file,"%s/protein.ss2",path);
+    sprintf(file, "./protein.ss2");
+    fp = fopen(file, "w");
     fprintf(fp, "# SS prediction from single sequence developed by Pralay Mitra\n\n");
     for (i = 1;i <= Len;i++)
     {

@@ -1,5 +1,5 @@
 /*******************************************************************************************************************************
-Copyright (c) 2020 Xiaoqiang Huang (tommyhuangthu@foxmail.com)
+Copyright (c) Xiaoqiang Huang
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -37,7 +37,7 @@ PhiPsiPrediction::getPhiPsi::getPhiPsi(SequenceData dsInfo, char evolutionpath[5
 {
   FILE* fpwb = NULL;
   int i, j, k;
-  char filename[500] = "";
+  char file[500] = "";
 
   static char aad1[] =
   {
@@ -79,8 +79,8 @@ PhiPsiPrediction::getPhiPsi::getPhiPsi(SequenceData dsInfo, char evolutionpath[5
   };
 
   //strcpy(pwd,evolutionpath);
-  sprintf(filename, "./psitmp.chk");
-  fpwb = fopen(filename, "wb");
+  sprintf(file, "./psitmp.chk");
+  fpwb = fopen(file, "wb");
   fwrite(&dsInfo.len, sizeof(int), 1, fpwb);
   for (i = 0;i < dsInfo.len;i++) fwrite(&dsInfo.seq[i], sizeof(char), 1, fpwb);
   for (i = 0;i < dsInfo.len;i++)
