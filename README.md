@@ -1,7 +1,7 @@
 # UniDesign
 
 ## Introduction
-UniDesign is a computational framework for protein design, targeting a diversity of protein design and engineering tasks, and it can also be used for protein structure modeling and scoring. UniDesign is extended mainly from the EvoEF2 protein design program with the evolutionary feature taken from EvoDesign, but it has many new features. More details can be found in manual.docx within this package.
+UniDesign is a computational framework for protein design, targeting a diversity of protein design and engineering tasks, and it can also be used for protein structure modeling and scoring. UniDesign is extended mainly from the EvoEF2 protein design program with the evolutionary feature taken from EvoDesign, but it has many new features. More details can be found in <a href=https://github.com/tommyhuangthu/UniDesign/blob/master/manual.docx>manual.docx</a> within this package.
 
 ## Main Applications
 
@@ -29,7 +29,7 @@ UniDesign is a computational framework for protein design, targeting a diversity
 
 
 ## Installation, Usage and Tutorial
-Please refer to the manual.docx for details.
+Please refer to the <a href=https://github.com/tommyhuangthu/UniDesign/blob/master/manual.docx>manual.docx</a> for details.
 
 ## Copyright
 Copyright (c) Xiaoqiang Huang. UniDesign is free to academic users. For suggestions, please contact xiaoqiah@umich.edu or xiaoqiah@outlook.com.
