@@ -29,12 +29,11 @@ All protein design tasks are conducted with UniDesign command <i><b>ProteinDesig
 • Compute protein stability (command <i><b>ComputeStability</b></i>) <br>
 • Compute protein interchain binding interaction (command <i><b>ComputeBinding</b></i>) <br>
 
-
 ## Installation, Usage and Tutorial
 Please refer to the <a href=https://github.com/tommyhuangthu/UniDesign/blob/master/manual.docx>manual.docx</a> for details.
 
-## Copyright
-Copyright (c) Xiaoqiang Huang. UniDesign is free to academic users. For suggestions, please contact xiaoqiah@umich.edu or xiaoqiah@outlook.com.
+## Contact
+For suggestions, please contact xiaoqiah@umich.edu or xiaoqiah@outlook.com.
 
 ## References
 Huang, X., Zhou, J., Yang, D., Zhang, J., Xia, X., Chen, Y. E., and Xu, J. Decoding CRISPR–Cas PAM recognition with UniDesign. Briefings in Bioinformatics. 2023, 24(3):bbad133. doi: 10.1093/bib/bbad133.
