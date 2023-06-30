@@ -19,7 +19,7 @@ All protein design tasks are conducted with UniDesign command <i><b>ProteinDesig
 
 • Protein side-chain packing  (command <i><b>ProteinDesign</b></i> with option <i><b>--wildtype</b></i>) <br>
 • Repair incomplete protein sidechains  (command <i><b>RepairStructure</b></i>) <br>
-• Protein minimization to remove sidechain clashes  (command <i><b>Minimize</b></i> <br>
+• Protein minimization to remove sidechain clashes  (command <i><b>Minimize</b></i>) <br>
 • Build mutant structural models  (command <i><b>BuildMutant</b></i>) <br>
 • Add polar hydrogen atoms  (command <i><b>AddPolarHydrogen</b></i>) <br>
 • Optimize hydrogen atom's position  (command <i><b>OptimizeHydrogen</b></i>) <br>
