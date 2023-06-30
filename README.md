@@ -5,27 +5,29 @@ UniDesign is a computational framework for protein design, targeting a diversity
 
 ## Main Applications
 
-#### ProteinDesign
+#### Protein Design
 
 • Design monomer protein <br>
 • Design protein-protein interaction <br>
 • Design protein-ligand interaction <br>
 • Design protein-nucleic acid interaction <br>
 • Design enzymes <br>
+<br>
+All protein design tasks are conducted with UniDesign command <i>ProteinDesign</i> with specific options. See <a href=https://github.com/tommyhuangthu/UniDesign/blob/master/manual.docx>manual.docx</a> for details and examples.
 
 #### Protein Structure Modeling
 
-• Protein side-chain packing (PSCP) <br>
-• Repair incomplete protein sidechains <br>
-• Protein minimization to remove sidechain clashes <br>
-• Build mutant structural models <br>
-• Add polar hydrogen atoms <br>
-• Optimize hydrogen atom's position <br>
+• Protein side-chain packing (command <i>ProteinDesign</i> with option --wildtype) <br>
+• Repair incomplete protein sidechains (command <i>RepairStructure</i>) <br>
+• Protein minimization to remove sidechain clashes (command <i>Minimize</i> <br>
+• Build mutant structural models (command <i>BuildMutant</i>) <br>
+• Add polar hydrogen atoms (command <i>AddPolarHydrogen</i>) <br>
+• Optimize hydrogen atom's position (command <i>OptimizeHydrogen</i>) <br>
 
 #### Protein Scoring
 
-• Compute protein stability <br>
-• Compute protein interchain binding interaction <br>
+• Compute protein stability (command <i>ComputeStability</i>) <br>
+• Compute protein interchain binding interaction (command <i>ComputeBinding</i>) <br>
 
 
 ## Installation, Usage and Tutorial
