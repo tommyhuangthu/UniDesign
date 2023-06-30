@@ -3,29 +3,29 @@
 ## Introduction
 UniDesign is a computational framework for protein design, targeting a diversity of protein design and engineering tasks, and it can also be used for protein structure modeling and scoring. UniDesign is extended mainly from the EvoEF2 protein design program with the evolutionary feature taken from EvoDesign, but it has many new features. More details can be found in manual.docx within this package.
 
-## Applications
+## Main Applications
 
 #### ProteinDesign
 
-•	Design monomer proteins
-•       Design protein-protein interactions
-#### Design protein-ligand interactions
-#### Design protein-nucleic acid interactions
-#### Design enzymes
+• Design monomer protein <br>
+• Design protein-protein interaction <br>
+• Design protein-ligand interaction <br>
+• Design protein-nucleic acid interaction <br>
+• Design enzymes <br>
 
-### Protein Structure Modeling
+#### Protein Structure Modeling
 
-#### Protein side-chain packing
-#### Repair incomplete protein sidechains
-#### Protein minimization to remove sidechain clashes
-#### Build mutant structural models
-#### Add polar hydrogen atoms
-#### Optimize hydrogen atom's position
+• Protein side-chain packing (PSCP) <br>
+• Repair incomplete protein sidechains <br>
+• Protein minimization to remove sidechain clashes <br>
+• Build mutant structural models <br>
+• Add polar hydrogen atoms <br>
+• Optimize hydrogen atom's position <br>
 
-### Protein Scoring
+#### Protein Scoring
 
-#### Compute protein stability
-#### Compute protein interchain binding interaction
+• Compute protein stability <br>
+• Compute protein interchain binding interaction <br>
 
 
 ## Installation, Usage and Tutorial
