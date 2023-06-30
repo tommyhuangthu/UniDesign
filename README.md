@@ -13,21 +13,21 @@ UniDesign is a computational framework for protein design, targeting a diversity
 • Design protein-nucleic acid interaction <br>
 • Design enzymes <br>
 <br>
-All protein design tasks are conducted with UniDesign command <i>ProteinDesign</i> with specific options. See <a href=https://github.com/tommyhuangthu/UniDesign/blob/master/manual.docx>manual.docx</a> for details and examples.
+All protein design tasks are conducted with UniDesign command <i><b>ProteinDesign</b></i> with specific options. See <a href=https://github.com/tommyhuangthu/UniDesign/blob/master/manual.docx>manual.docx</a> for details and examples.
 
 #### Protein Structure Modeling
 
-• Protein side-chain packing (command <i>ProteinDesign</i> with option --wildtype) <br>
-• Repair incomplete protein sidechains (command <i>RepairStructure</i>) <br>
-• Protein minimization to remove sidechain clashes (command <i>Minimize</i> <br>
-• Build mutant structural models (command <i>BuildMutant</i>) <br>
-• Add polar hydrogen atoms (command <i>AddPolarHydrogen</i>) <br>
-• Optimize hydrogen atom's position (command <i>OptimizeHydrogen</i>) <br>
+• Protein side-chain packing  (command <i><b>ProteinDesign</b></i> with option <i><b>--wildtype</b></i>) <br>
+• Repair incomplete protein sidechains  (command <i><b>RepairStructure</b></i>) <br>
+• Protein minimization to remove sidechain clashes  (command <i><b>Minimize</b></i> <br>
+• Build mutant structural models  (command <i><b>BuildMutant</b></i>) <br>
+• Add polar hydrogen atoms  (command <i><b>AddPolarHydrogen</b></i>) <br>
+• Optimize hydrogen atom's position  (command <i><b>OptimizeHydrogen</b></i>) <br>
 
 #### Protein Scoring
 
-• Compute protein stability (command <i>ComputeStability</i>) <br>
-• Compute protein interchain binding interaction (command <i>ComputeBinding</i>) <br>
+• Compute protein stability (command <i><b>ComputeStability</b></i>) <br>
+• Compute protein interchain binding interaction (command <i><b>ComputeBinding</b></i>) <br>
 
 
 ## Installation, Usage and Tutorial
