@@ -5,10 +5,10 @@ UniDesign is a computational framework for protein design, targeting a diversity
 
 ## Applications
 
-### ProteinDesign
+#### ProteinDesign
 
-#### Design monomer proteins
-#### Design protein-protein interactions
+•	Design monomer proteins
+•       Design protein-protein interactions
 #### Design protein-ligand interactions
 #### Design protein-nucleic acid interactions
 #### Design enzymes
