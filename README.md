@@ -5,7 +5,8 @@ UniDesign is a computational framework for protein design, targeting a diversity
 <br>
 <p align="center">
   <img src="img/EnzymeDesign.png" width="80%" height="80%">
-  UniDesign's capacities and its workflow for enzyme design
+  <br>
+  Fig 1. UniDesign's capacities and its workflow for enzyme design
 </p>
 
 ## Main Applications
