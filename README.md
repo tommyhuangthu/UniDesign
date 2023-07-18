@@ -37,3 +37,4 @@ For suggestions, please contact xiaoqiah@umich.edu or xiaoqiah@outlook.com.
 
 ## References
 Huang, X., Zhou, J., Yang, D., Zhang, J., Xia, X., Chen, Y. E., and Xu, J. Decoding CRISPR–Cas PAM recognition with UniDesign. Briefings in Bioinformatics. 2023, 24(3):bbad133. doi: 10.1093/bib/bbad133.
+Huang, X., Sun, Y., Osawa, Y., Chen, Y. E., and Zhang, H. Computational Redesign of Cytochrome P450 CYP102A1 for Highly Stereoselective Omeprazole Hydroxylation by UniDesign. Journal of Biological Chemistry. 2023. doi: 10.1016/j.jbc.2023.105050.
