@@ -176,10 +176,10 @@ int PROT_LEN_NORM = 100;
 BOOL FLAG_PDB = FALSE;
 BOOL FLAG_MOL2 = FALSE;
 
-BOOL FLAG_MONOMER = FALSE;
+BOOL FLAG_MONOMER = TRUE;
 BOOL FLAG_PPI = FALSE;
 BOOL FLAG_PROT_LIG = FALSE;
-BOOL FLAG_ENZYME = TRUE;
+BOOL FLAG_ENZYME = FALSE;
 
 // score function (default: physics)
 BOOL FLAG_PHYSICS = TRUE;
@@ -195,7 +195,7 @@ BOOL FLAG_INTERFACE_ONLY = FALSE; // design interface residues only
 BOOL FLAG_EXCL_CYS_ROTS = FALSE; // Cysteine rots excluded (default: FALSE)
 // designate design sites and optional amino-acid types using a resfile
 char FILE_RESFILE[MAX_LEN_FILE_NAME + 1] = "RESFILE.txt";
-BOOL FLAG_RESFILE = TRUE;
+BOOL FLAG_RESFILE = FALSE;
 
 // start a protein design job from the native sequence (input from the given PDB)
 BOOL FLAG_DESIGN_FROM_NATAA = FALSE; // default: start from random; thus this flag is set to FALSE
