@@ -39,7 +39,7 @@ All protein design tasks are conducted with UniDesign command <i><b>ProteinDesig
 Please refer to the <a href=https://github.com/tommyhuangthu/UniDesign/blob/main/doc/UniDesign_manual.docx>UniDesign manual</a> for details.
 
 ## Contact
-For suggestions, please contact xiaoqiah@umich.edu or xiaoqiah@outlook.com.
+For questions or suggestions, please contact the UniDesign developers through the [GitHub issue tracker](https://github.com/tommyhuangthu/UniDesign/issues).
 
 ## References
 Huang, X., Zhou, J., Yang, D., Zhang, J., Xia, X., Chen, Y. E., and Xu, J. Decoding CRISPR–Cas PAM recognition with UniDesign. Briefings in Bioinformatics. 2023, 24(3):bbad133. doi: 10.1093/bib/bbad133 <br><br>
