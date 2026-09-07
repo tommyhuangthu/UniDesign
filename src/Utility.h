@@ -31,7 +31,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define MAX_LEN_CHAIN_NAME        3
 #define MAX_LEN_STRUCTURE_NAME    5
 
-#define MAX_LEN_ONE_LINE_CONTENT  1024
+#define MAX_LEN_ONE_LINE_CONTENT  4096
 #define MAX_LEN_FILE_NAME         100
 
 #define COMMENT_LINE_SYMBOL1         '!'
@@ -39,15 +39,15 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 typedef struct _StringArray
 {
-  char** strings;
-  int stringCount;
+  char** strs;
+  int strNum;
   int capacity;
 } StringArray;
 
 int StringArrayCreate(StringArray* pThis);
 int StringArrayDestroy(StringArray* pThis);
 int StringArrayCopy(StringArray* pThis, StringArray* pOther);
-int StringArrayGetCount(StringArray* pThis);
+int StringArrayGetNum(StringArray* pThis);
 int StringArraySet(StringArray* pThis, int index, char* srcString);
 char* StringArrayGet(StringArray* pThis, int index);
 int StringArrayFind(StringArray* pThis, char* srcString, int* pos);
@@ -73,13 +73,12 @@ typedef struct _FileReader
 
 int FileReaderCreate(FileReader* pThis, char* path);
 int FileReaderDestroy(FileReader* pThis);
-int FileReaderGetLineCount(FileReader* pThis);
+int FileReaderGetLineNum(FileReader* pThis);
 int FileReaderGetLine(FileReader* pThis, int index, char* dest);
 int FileReaderGetCurrentPos(FileReader* pThis);
 int FileReaderSetCurrentPos(FileReader* pThis, int index);
 int FileReaderGetNextLine(FileReader* pThis, char* dest);
 BOOL FileReaderEndOfFile(FileReader* pThis);
-Type_CoordinateFile FileReaderRecognizeCoordinateFileType(FileReader* pThis);
 
 typedef struct _IntArray
 {

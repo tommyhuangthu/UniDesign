@@ -42,7 +42,7 @@ int XYZAdd(XYZ* pThis, XYZ* pOther)
   return Success;
 }
 
-int XYZMinus(XYZ* pThis, XYZ* pOther)
+int XYZSubtract(XYZ* pThis, XYZ* pOther)
 {
   pThis->X -= pOther->X;
   pThis->Y -= pOther->Y;
@@ -59,7 +59,7 @@ XYZ XYZSum(XYZ* pThis, XYZ* pOther)
   return xyz;
 }
 
-XYZ XYZDifference(XYZ* pThis, XYZ* pOther)
+XYZ XYZDiff(XYZ* pThis, XYZ* pOther)
 {
   XYZ xyz;
   xyz.X = pOther->X - pThis->X;
@@ -68,12 +68,12 @@ XYZ XYZDifference(XYZ* pThis, XYZ* pOther)
   return xyz;
 }
 
-double XYZNormalization(XYZ* pThis)
+double XYZNorm(XYZ* pThis)
 {
   return sqrt(XYZDotProduct(pThis, pThis));
 }
 
-double XYZDistance(XYZ* pThis, XYZ* pOther)
+double XYZDist(XYZ* pThis, XYZ* pOther)
 {
   double distX = pThis->X - pOther->X;
   double distY = pThis->Y - pOther->Y;
@@ -105,9 +105,9 @@ double XYZAngle(XYZ* pThis, XYZ* pOther)
   {
     printf("pThis: [%f, %f, %f]\n", pThis->X, pThis->Y, pThis->Z);
     printf("pOther: [%f, %f, %f]\n", pOther->X, pOther->Y, pOther->Z);
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = ZeroDivisonError;
-    sprintf(errMsg, "in file %s line %d, zero vector encountered", __FILE__, __LINE__);
+    sprintf(errMsg, "in file %s line %d, zero vector identified", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
     return 1000.0;
   }
@@ -120,12 +120,12 @@ XYZ XYZRotateAround(XYZ* pThis, XYZ* axisFrom, XYZ* axisTo, double angle)
   double s = sin(angle);
   double c = cos(angle);
   XYZ result = *pThis;
-  XYZ n = XYZDifference(axisFrom, axisTo);
-  double normOfAxis = XYZNormalization(&n);
+  XYZ n = XYZDiff(axisFrom, axisTo);
+  double normOfAxis = XYZNorm(&n);
   n.X /= normOfAxis;
   n.Y /= normOfAxis;
   n.Z /= normOfAxis;
-  XYZMinus(&result, axisFrom);
+  XYZSubtract(&result, axisFrom);
 
   double A[3][3];
   A[0][0] = n.X * n.X + (1 - n.X * n.X) * c;
@@ -158,18 +158,9 @@ XYZ XYZRotateAround(XYZ* pThis, XYZ* axisFrom, XYZ* axisTo, double angle)
   return result;
 }
 
-int XYZRandomlyGenerate(XYZ* pThis, double range)
-{
-  pThis->X = RandomDouble(-range, range);
-  pThis->Y = RandomDouble(-range, range);
-  pThis->Z = RandomDouble(-range, range);
-  return Success;
-}
-
-
 int XYZArrayCreate(XYZArray* pThis, int length)
 {
-  pThis->xyzCount = length;
+  pThis->xyzNum = length;
   pThis->xyzs = (XYZ*)calloc(length, sizeof(XYZ));
   return Success;
 }
@@ -178,15 +169,15 @@ int XYZArrayDestroy(XYZArray* pThis)
 {
   free(pThis->xyzs);
   pThis->xyzs = NULL;
-  pThis->xyzCount = 0;
+  pThis->xyzNum = 0;
   return Success;
 }
 
 int XYZArrayCopy(XYZArray* pThis, XYZArray* pOther)
 {
   XYZArrayDestroy(pThis);
-  XYZArrayCreate(pThis, pOther->xyzCount);
-  for (int i = 0;i < pThis->xyzCount;i++)
+  XYZArrayCreate(pThis, pOther->xyzNum);
+  for (int i = 0;i < pThis->xyzNum;i++)
   {
     pThis->xyzs[i] = pOther->xyzs[i];
   }
@@ -195,28 +186,28 @@ int XYZArrayCopy(XYZArray* pThis, XYZArray* pOther)
 int XYZArrayResize(XYZArray* pThis, int newLength)
 {
   pThis->xyzs = (XYZ*)realloc(pThis->xyzs, sizeof(XYZ) * newLength);
-  for (int i = pThis->xyzCount; i < newLength; i++)
+  for (int i = pThis->xyzNum; i < newLength; i++)
   {
     pThis->xyzs[i].X = pThis->xyzs[i].Y = pThis->xyzs[i].Z = 0;
   }
-  pThis->xyzCount = newLength;
+  pThis->xyzNum = newLength;
   return Success;
 }
 
-int XYZArrayGetLength(XYZArray* pThis)
+int XYZArrayGetNum(XYZArray* pThis)
 {
-  return pThis->xyzCount;
+  return pThis->xyzNum;
 }
 
 XYZ* XYZArrayGet(XYZArray* pThis, int index)
 {
-  if (index < 0 || index >= pThis->xyzCount) return NULL;
+  if (index < 0 || index >= pThis->xyzNum) return NULL;
   return &pThis->xyzs[index];
 }
 
 int XYZArraySet(XYZArray* pThis, int index, XYZ* newXYZ)
 {
-  if (index < 0 || index >= pThis->xyzCount) return IndexError;
+  if (index < 0 || index >= pThis->xyzNum) return IndexError;
   pThis->xyzs[index] = *newXYZ;
   return Success;
 }
@@ -228,7 +219,7 @@ XYZ* XYZArrayGetAll(XYZArray* pThis)
 
 int XYZArrayShow(XYZArray* pThis)
 {
-  for (int i = 0;i < pThis->xyzCount;i++)
+  for (int i = 0;i < pThis->xyzNum;i++)
   {
     printf("%d : ", i);
     XYZShow(&pThis->xyzs[i]);
@@ -239,12 +230,12 @@ int XYZArrayShow(XYZArray* pThis)
 double XYZArrayRMSD(XYZArray* pThis, XYZArray* pOther)
 {
   double sum = 0.0;
-  for (int i = 0;i < pThis->xyzCount;i++)
+  for (int i = 0;i < pThis->xyzNum;i++)
   {
-    double distance = XYZDistance(&pThis->xyzs[i], &pOther->xyzs[i]);
+    double distance = XYZDist(&pThis->xyzs[i], &pOther->xyzs[i]);
     sum += distance * distance;
   }
-  return sqrt(sum / pThis->xyzCount);
+  return sqrt(sum / pThis->xyzNum);
 }
 
 int FourXYZsGroupCreate(FourXYZsGroup* pThis, XYZ* pAtomA, XYZ* pAtomB, XYZ* pAtomC, XYZ* pAtomD)
@@ -259,22 +250,22 @@ int FourXYZsGroupCreate(FourXYZsGroup* pThis, XYZ* pAtomA, XYZ* pAtomB, XYZ* pAt
 
 int FourXYZsGroupGetTorsionAngle(FourXYZsGroup* pThis, double* angle)
 {
-  XYZ rAB = XYZDifference(&pThis->atomA, &pThis->atomB);
-  XYZ rBC = XYZDifference(&pThis->atomB, &pThis->atomC);
-  XYZ rCD = XYZDifference(&pThis->atomC, &pThis->atomD);
+  XYZ rAB = XYZDiff(&pThis->atomA, &pThis->atomB);
+  XYZ rBC = XYZDiff(&pThis->atomB, &pThis->atomC);
+  XYZ rCD = XYZDiff(&pThis->atomC, &pThis->atomD);
   XYZ rABXrBC = XYZCrossProduct(&rAB, &rBC);
   XYZ rBCXrCD = XYZCrossProduct(&rBC, &rCD);
   XYZ rCDXrAB = XYZCrossProduct(&rCD, &rAB);
 
-  if (XYZNormalization(&rABXrBC) < MIN_ZERO_TOLERANCE || XYZNormalization(&rBCXrCD) < MIN_ZERO_TOLERANCE)
+  if (XYZNorm(&rABXrBC) < MIN_ZERO_TOLERANCE || XYZNorm(&rBCXrCD) < MIN_ZERO_TOLERANCE)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = ZeroDivisonError;
-    sprintf(errMsg, "in file %s line %d, zero vector encountered", __FILE__, __LINE__);
+    sprintf(errMsg, "in file %s line %d, zero vector identified", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
     return errorCode;
   }
-  double cosValue = XYZDotProduct(&rABXrBC, &rBCXrCD) / XYZNormalization(&rABXrBC) / XYZNormalization(&rBCXrCD);
+  double cosValue = XYZDotProduct(&rABXrBC, &rBCXrCD) / XYZNorm(&rABXrBC) / XYZNorm(&rBCXrCD);
   double sinValue = XYZDotProduct(&rBC, &rCDXrAB);
   if (sinValue < 0) *angle = -1 * SafeArccos(cosValue);
   else *angle = SafeArccos(cosValue);
@@ -313,10 +304,10 @@ int FourXYZsGroupGetFourthAtom(FourXYZsGroup* pThis, double* icParam, XYZ* pAtom
     else
     {
       XYZ vectorI, vectorJ;
-      vectorI = XYZDifference(&atoms[i - 1], &atoms[i - 2]);
-      vectorJ = XYZDifference(&atoms[i - 1], &atoms[i]);
+      vectorI = XYZDiff(&atoms[i - 1], &atoms[i - 2]);
+      vectorJ = XYZDiff(&atoms[i - 1], &atoms[i]);
       angle = XYZAngle(&vectorI, &vectorJ);
-      bond = XYZDistance(&atoms[i - 1], &atoms[i]);
+      bond = XYZDist(&atoms[i - 1], &atoms[i]);
       torsion = GetTorsionAngle(&atoms[i - 3], &atoms[i - 2], &atoms[i - 1], &atoms[i]);
     }
     ca = cos(angle);
@@ -343,20 +334,20 @@ int FourXYZsGroupGetFourthAtom(FourXYZsGroup* pThis, double* icParam, XYZ* pAtom
 }
 
 
-int FourXYZsGroupGetFourthAtomNew(FourXYZsGroup* pThis, double* icParam, XYZ* pAtomD)
+int FourXYZsGroupGetFourthAtom2(FourXYZsGroup* pThis, double* icParam, XYZ* pAtomD)
 {
   // another method for calculating the fourth atom from three given atoms, different from the above method
   // much faster than the above method
-  XYZ ba = XYZDifference(&pThis->atomB, &pThis->atomA);
-  XYZ bc = XYZDifference(&pThis->atomB, &pThis->atomC);
+  XYZ ba = XYZDiff(&pThis->atomB, &pThis->atomA);
+  XYZ bc = XYZDiff(&pThis->atomB, &pThis->atomC);
   XYZ baXbc = XYZCrossProduct(&ba, &bc);
   double angleABC = XYZAngle(&ba, &bc);
 
-  if (XYZNormalization(&baXbc) < MIN_ZERO_TOLERANCE)
+  if (XYZNorm(&baXbc) < MIN_ZERO_TOLERANCE)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = ZeroDivisonError;
-    sprintf(errMsg, "in file %s line %d, zero vector encountered", __FILE__, __LINE__);
+    sprintf(errMsg, "in file %s line %d, zero vector identified", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
     return errorCode;
   }
@@ -364,8 +355,8 @@ int FourXYZsGroupGetFourthAtomNew(FourXYZsGroup* pThis, double* icParam, XYZ* pA
   XYZAdd(&baXbc, &pThis->atomB);
   *pAtomD = XYZRotateAround(&pThis->atomA, &pThis->atomB, &baXbc, icParam[3] - (PI - angleABC));
   *pAtomD = XYZRotateAround(pAtomD, &pThis->atomB, &pThis->atomC, icParam[2]);
-  XYZMinus(pAtomD, &pThis->atomB);
-  XYZScale(pAtomD, icParam[4] / XYZNormalization(pAtomD));
+  XYZSubtract(pAtomD, &pThis->atomB);
+  XYZScale(pAtomD, icParam[4] / XYZNorm(pAtomD));
   XYZAdd(pAtomD, &pThis->atomC);
 
   return Success;
@@ -377,32 +368,32 @@ int FourXYZsGroupGetICParam(FourXYZsGroup* pThis, int torsionProperFlag, double*
   // the first IC parameter; if the dihedral angle is proper, this parameter is R(AB); otherwise R(AC) instead;
   if (torsionProperFlag)
   {
-    icParam[0] = XYZDistance(&pThis->atomA, &pThis->atomB);
+    icParam[0] = XYZDist(&pThis->atomA, &pThis->atomB);
   }
   else
   {
-    icParam[0] = XYZDistance(&pThis->atomA, &pThis->atomC);
+    icParam[0] = XYZDist(&pThis->atomA, &pThis->atomC);
   }
   // the second IC parameter; if the dihedral angle is proper, this parameter is Theta(ABC); otherwise Theta(ACB) instead;
   if (torsionProperFlag)
   {
-    vectorI = XYZDifference(&pThis->atomA, &pThis->atomB);
-    vectorJ = XYZDifference(&pThis->atomC, &pThis->atomB);
+    vectorI = XYZDiff(&pThis->atomA, &pThis->atomB);
+    vectorJ = XYZDiff(&pThis->atomC, &pThis->atomB);
   }
   else
   {
-    vectorI = XYZDifference(&pThis->atomA, &pThis->atomC);
-    vectorJ = XYZDifference(&pThis->atomB, &pThis->atomC);
+    vectorI = XYZDiff(&pThis->atomA, &pThis->atomC);
+    vectorJ = XYZDiff(&pThis->atomB, &pThis->atomC);
   }
   icParam[1] = XYZAngle(&vectorI, &vectorJ);
   // the third parameter; Phi(ABCD);
   FourXYZsGroupGetTorsionAngle(pThis, &icParam[2]);
   // the fourth parameter, Theta(BCD);
-  vectorI = XYZDifference(&pThis->atomB, &pThis->atomC);
-  vectorJ = XYZDifference(&pThis->atomD, &pThis->atomC);
+  vectorI = XYZDiff(&pThis->atomB, &pThis->atomC);
+  vectorJ = XYZDiff(&pThis->atomD, &pThis->atomC);
   icParam[3] = XYZAngle(&vectorI, &vectorJ);
   // the fifth parameter, R(CD);
-  icParam[4] = XYZDistance(&pThis->atomC, &pThis->atomD);
+  icParam[4] = XYZDist(&pThis->atomC, &pThis->atomD);
   return Success;
 }
 
@@ -411,7 +402,7 @@ int GetFourthAtom(XYZ* pAtomA, XYZ* pAtomB, XYZ* pAtomC, double* icParam, XYZ* p
 {
   FourXYZsGroup group;
   FourXYZsGroupCreate(&group, pAtomA, pAtomB, pAtomC, NULL);
-  int result = FourXYZsGroupGetFourthAtomNew(&group, icParam, pAtomD);
+  int result = FourXYZsGroupGetFourthAtom2(&group, icParam, pAtomD);
   return result;
 }
 

@@ -20,54 +20,44 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Structure.h"
 #include "EnergyFunction.h"
 
+int PrintProgramHelp();
+int PrintProgramVersion();
+int PrintProgramInfo();
+int ComputeStability(Structure * pStruct, AAppTable * pAAppTable, RamaTable * pRama, BBdepRotLib * pLib, double energyTerms[MAX_ENERGY_TERM]);
+int ComputeBinding(Structure* pStruct);
+int ComputeBinding2(Structure* pStruct, char split1[], char split2[]);
+int BuildMutant(Structure * pStruct, char * mutfile, BBdepRotLib * pLib, AtomParams * pParams, ResTopos * pTops);
+int RepairStructure(Structure* pStruct, BBdepRotLib* pLib, AtomParams* pParams, ResTopos* pTops);
+int EnergyMinimization(Structure* pStruct, BBdepRotLib* pLib, AtomParams* pParams, ResTopos* pTops);
+int AddPolarHydrogen(Structure* pStruct);
+int OptimizeHydrogen(Structure* pStruct, AtomParams* pParams, ResTopos* pTops);
+int ComputeResidueInteractionWithFixedEnvironment(Structure * pStruct, AAppTable * pAAPP, RamaTable * pRama, BBdepRotLib * pLib, int chnNdx, int resNdx);
 
-int PrintHelp();
-int PrintVersion();
-int PrintOutProgramInformation();
+int ComputeRotamersEnergy(Structure* pStruct, BBdepRotLib* pLib, AAppTable* pAAPP, RamaTable* pRama, AtomParams* pParams, ResTopos* pTops);
+int ComputeWildtypeRotamersEnergy(Structure* pStruct, BBdepRotLib* pLib, AAppTable* pAAPP, RamaTable* pRama, AtomParams* pParams, ResTopos* pTops);
 
-int ComputeStructureStability(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, double energyTerms[MAX_ENERGY_TERM]);
-int ComputeStructureStabilityByBBdepRotLib(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, BBdepRotamerLib* pRotLib, double energyTerms[MAX_ENERGY_TERM]);
-int ComputeStructureStabilityByBBdepRotLib2(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, char* dunlibfile, double energyTerms[MAX_ENERGY_TERM]);
+int WritePhiPsi(Structure* pStruct, char* file);
 
-int ComputeBinding(Structure* pStructure);
-int ComputeBindingWithChainSplitting(Structure* pStructure, char split1[], char split2[]);
+int CheckRotamerInBBdepRotLib(Structure* pStruct, BBdepRotLib* pLib, ResTopos* pTops, double cutoff);
+int FindMinRmsdRotFromRotLib(Structure* pStruct);
+int CompareTwoStructureProteinSidechains(Structure* pStruct, Structure* pStruct2, FILE* pTorsion, FILE* pRmsd);
 
-int BuildMutant(Structure* pStructure, char* mutantfile, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
-int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotamerLib* pBBdepRotLib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
+int CheckClash0(Structure* pStruct, double clashRatio);
+int CheckClash1(Structure* pStruct, double clashRatio);
+int CheckClash2(Structure* pStruct, double clashRatio);
 
-int RepairStructure(Structure* pStructure, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
-int RepairStructureByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pBBdepRotLib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
-int EnergyMinimizationByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pBBdepRotLib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
+int FindInterfaceResidues(Structure* pStruct);
+int FindInterfaceResidues2(Structure* pStruct, char split1[], char split2[]);
+int FindCoreResidues(Structure* pStruct);
+int FindSurfaceResidues(Structure* pStruct);
+int FindIntermediateResidues(Structure* pStruct);
 
-int AddPolarHydrogen(Structure* pStructure, char* pdbid);
-int OptimizeHydrogen(Structure* pStructure, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
+int ComputeAminoAcidComposition(Structure* pStruct, int* aas);
 
-int ComputeResidueInteractionWithFixedEnvironment(Structure* pStructure, int chainIndex, int residueIndex);
-int ComputeAllRotamersEnergy(Structure* pStructure, BBindRotamerLib* rotlib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
-int ComputeWildtypeRotamersEnergy(Structure* pStructure, BBindRotamerLib* rotlib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
-int ComputeRotamersEnergyByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
-int ComputeWildtypeRotamersEnergyByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid);
+int SelectResiduesInRange(Structure* pStruct);
 
-int ShowPhiPsi(Structure* pStructure, char* file);
-
-int CheckRotamerInBBindRotLib(Structure* pStructure, BBindRotamerLib* pRotLib, ResiTopoSet* pTopos, double cutoff, char* pdbid);
-int CheckRotamerInBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pRotLib, ResiTopoSet* pTopos, double cutoff, char* pdbid);
-int FindMinRmsdRotFromRotLib(Structure* pStructure, char* pdbid);
-int CompareSidechainsOf2Structures(Structure* pStructure, Structure* pStructure2, FILE* pTorsion, FILE* pRmsd);
-
-int CheckClash0(Structure* pStructure, double clashRatio);
-int CheckClash1(Structure* pStructure, double clashRatio);
-int CheckClash2(Structure* pStructure, double clashRatio);
-
-int FindInterfaceResidues(Structure* pStructure);
-int FindInterfaceResiduesWithChainSplitting(Structure* pStructure, char split1[], char split2[]);
-int FindCoreResidues(Structure* pStructure);
-int FindSurfaceResidues(Structure* pStructure);
-int FindIntermediateResidues(Structure* pStructure);
-
-int StructureGetAminoAcidComposition(Structure* pStructure, int* aas);
-
-int SelectResiduesInRange(Structure* pStructure);
+int StructureFindMutations(Structure* pStruct, Structure* pStruct2, char* mutStr);
 
 
 #endif //PROGRAM_FUNCTION_H
+

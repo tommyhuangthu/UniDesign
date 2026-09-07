@@ -19,7 +19,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 int DesignSiteCreate(DesignSite* pThis)
 {
   pThis->pRes = NULL;
-  RotamerSetCreate(&pThis->rots);
+  RotamersCreate(&pThis->rots);
   pThis->chnNdx = -1;
   pThis->resNdx = -1;
   return Success;
@@ -28,18 +28,18 @@ int DesignSiteDestroy(DesignSite* pThis)
 {
   pThis->pRes->desType = Type_DesType_Fixed;
   pThis->pRes = NULL;
-  RotamerSetDestroy(&pThis->rots);
+  RotamersDestroy(&pThis->rots);
   pThis->chnNdx = -1;
   pThis->resNdx = -1;
   return Success;
 }
-RotamerSet* DesignSiteGetRotamers(DesignSite* pThis)
+Rotamers* DesignSiteGetRotamers(DesignSite* pThis)
 {
   return &pThis->rots;
 }
 int DesignSiteShow(DesignSite* pThis, FILE* pFile)
 {
-  printf("Chain %s residue %s %d has %d rotamers\n", ResidueGetChainName(pThis->pRes), ResidueGetName(pThis->pRes), ResidueGetPosInChain(pThis->pRes), RotamerSetGetCount(&pThis->rots));
+  printf("Chain %s residue %s %d has %d rotamers\n", ResidueGetChainName(pThis->pRes), ResidueGetName(pThis->pRes), ResidueGetPosInChain(pThis->pRes), RotamersGetNum(&pThis->rots));
   return Success;
 }
 
@@ -62,12 +62,12 @@ Residue* DesignSiteGetResidue(DesignSite* pThis)
   return pThis->pRes;
 }
 
-int DesignSiteShowRepresentativeRotamerAtomParameter(DesignSite* pThis)
+int DesignSiteShowRepresentativeRotamerAtomParam(DesignSite* pThis)
 {
-  RotamerSet* pSet = DesignSiteGetRotamers(pThis);
-  for (int i = 0; i < RotamerSetGetRepresentativeCount(pSet); ++i)
+  Rotamers* pSet = DesignSiteGetRotamers(pThis);
+  for (int i = 0; i < RotamersGetRepNum(pSet); ++i)
   {
-    Rotamer* pRotamer = RotamerSetGetRepresentativeByIndex(pSet, i);
+    Rotamer* pRotamer = RotamersGetRepByIndex(pSet, i);
     printf("Rotamer %s Atom Parameter:\n", RotamerGetType(pRotamer));
     RotamerShowAtomParameter(pRotamer);
   }
@@ -75,12 +75,12 @@ int DesignSiteShowRepresentativeRotamerAtomParameter(DesignSite* pThis)
 }
 
 
-int DesignSiteShowRepresentativeRotamerBondInformation(DesignSite* pThis)
+int DesignSiteShowRepresentativeRotamerBondInfo(DesignSite* pThis)
 {
-  RotamerSet* pSet = DesignSiteGetRotamers(pThis);
-  for (int i = 0; i < RotamerSetGetRepresentativeCount(pSet); ++i)
+  Rotamers* pSet = DesignSiteGetRotamers(pThis);
+  for (int i = 0; i < RotamersGetRepNum(pSet); ++i)
   {
-    Rotamer* pRotamer = RotamerSetGetRepresentativeByIndex(pSet, i);
+    Rotamer* pRotamer = RotamersGetRepByIndex(pSet, i);
     printf("Rotamer %s Bond information:\n", RotamerGetType(pRotamer));
     RotamerShowBondInformation(pRotamer);
   }
@@ -89,8 +89,8 @@ int DesignSiteShowRepresentativeRotamerBondInformation(DesignSite* pThis)
 
 int DesignSiteRemoveRotamers(DesignSite* pThis)
 {
-  RotamerSetDestroy(&pThis->rots);
-  return RotamerSetCreate(&pThis->rots);
+  RotamersDestroy(&pThis->rots);
+  return RotamersCreate(&pThis->rots);
 }
 
 
@@ -99,6 +99,6 @@ int DesignSiteCopy(DesignSite* pThis, DesignSite* pOther)
   pThis->chnNdx = pOther->chnNdx;
   pThis->resNdx = pOther->resNdx;
   pThis->pRes = pOther->pRes;
-  RotamerSetCopy(&pThis->rots, &pOther->rots);
+  RotamersCopy(&pThis->rots, &pOther->rots);
   return Success;
 }

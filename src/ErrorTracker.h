@@ -19,7 +19,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define _CRT_SECURE_NO_WARNINGS
 
-#define MAX_LEN_ERR_MSG    1024
+#define MAX_LEN_ERR_MSG    500
 #define BOOL               char
 #define TRUE               1
 #define FALSE              0

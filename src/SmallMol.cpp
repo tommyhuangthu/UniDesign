@@ -24,8 +24,8 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 int CataConsItemShow(CataConsItem* pThis)
 {
-  char type[MAX_LEN_ONE_LINE_CONTENT + 1];
-  char location[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char type[MAX_LEN_ONE_LINE_CONTENT+1];
+  char location[MAX_LEN_ONE_LINE_CONTENT+1];
 
   switch (pThis->type)
   {
@@ -63,7 +63,7 @@ int CataConsItemShow(CataConsItem* pThis)
 
 int CataConsGroupDeploy(CataConsGroup* pThis, Rotamer* pFirstSiteRotamer, Rotamer* pSecondSiteRotamer)
 {
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int  result = Success;
   StringArray pseudoAtomNames;
   StringArrayCreate(&pseudoAtomNames);
@@ -79,27 +79,27 @@ int CataConsGroupDeploy(CataConsGroup* pThis, Rotamer* pFirstSiteRotamer, Rotame
 
   for (int itemIndex = 0; itemIndex < pThis->nconsItems; itemIndex++)
   {
-    int atomCount;
+    int atomNum;
     CataConsItem* pCurItem = &pThis->consItems[itemIndex];
     switch (pCurItem->type)
     {
     case Type_CataCons_NewPseudoAtom:
-      atomCount = 3;
+      atomNum = 3;
       break;
     case Type_CataCons_Distance:
-      atomCount = 2;
+      atomNum = 2;
       break;
     case Type_CataCons_Angle:
-      atomCount = 3;
+      atomNum = 3;
       break;
     case Type_CataCons_Torsion:
-      atomCount = 4;
+      atomNum = 4;
       break;
     default:
-      atomCount = 4;
+      atomNum = 4;
     }
 
-    for (int i = 0;i < atomCount;i++)
+    for (int i = 0;i < atomNum;i++)
     {
       switch (pCurItem->atomLoc[i])
       {
@@ -149,10 +149,10 @@ int CataConsGroupDeploy(CataConsGroup* pThis, Rotamer* pFirstSiteRotamer, Rotame
 
 int CataConsSitePairCreate(CataConsSitePair* pThis, FileReader* pFile)
 {
-  char line[MAX_LEN_ONE_LINE_CONTENT + 1];
-  char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
-  char errMsg[MAX_LEN_ERR_MSG + 1];
-  char atomName[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char line[MAX_LEN_ONE_LINE_CONTENT+1];
+  char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
+  char atomName[MAX_LEN_ONE_LINE_CONTENT+1];
   int  result;
 
   CataConsItem* pCurItem;
@@ -214,7 +214,7 @@ int CataConsSitePairCreate(CataConsSitePair* pThis, FileReader* pFile)
     {
       //Create New Item
       int atomIndex;
-      char constraintType[MAX_LEN_ONE_LINE_CONTENT + 1];
+      char constraintType[MAX_LEN_ONE_LINE_CONTENT+1];
 
       // allocate memories for new catalytic constraint items;
       (pCurGroup->nconsItems)++;
@@ -272,13 +272,13 @@ int CataConsSitePairCreate(CataConsSitePair* pThis, FileReader* pFile)
         {
           pCurItem->atomLoc[atomIndex] = Type_CataConsAtomLocation_SecondSite;
           // remove the symbol '*' before the atom name;
-          strcpy(pCurItem->atomName[atomIndex], atomName + 1);
+          strcpy(pCurItem->atomName[atomIndex], atomName+1);
         }
         else if (atomName[0] == PSEUDO_ATOM_SYMBOL)
         {
           pCurItem->atomLoc[atomIndex] = Type_CataConsAtomLocation_Pseudo;
           // remove the symbol '+' before the atom name;
-          strcpy(pCurItem->atomName[atomIndex], atomName + 1);
+          strcpy(pCurItem->atomName[atomIndex], atomName+1);
         }
         else
         {
@@ -346,10 +346,10 @@ BOOL CataConsSitePairGetDeployedFlag(CataConsSitePair* pThis)
 }
 
 
-int CataConsSitePairDeploy(CataConsSitePair* pThis, RotamerSet* pFirstSiteRotSet, RotamerSet* pSecondSiteRotSet)
+int CataConsSitePairDeploy(CataConsSitePair* pThis, Rotamers* pFirstSiteRotSet, Rotamers* pSecondSiteRotSet)
 {
   int result;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
 
   if (CataConsSitePairGetDeployedFlag(pThis))
   {
@@ -367,8 +367,8 @@ int CataConsSitePairDeploy(CataConsSitePair* pThis, RotamerSet* pFirstSiteRotSet
     char* firstSiteRotamerType = pThis->groups[i].site1RotType;
     char* secondSiteRotamerType = pThis->groups[i].site2RotType;
 
-    pFirstSiteRotamer = RotamerSetGetRepresentative(pFirstSiteRotSet, firstSiteRotamerType);
-    pSecondSiteRotamer = RotamerSetGetRepresentative(pSecondSiteRotSet, secondSiteRotamerType);
+    pFirstSiteRotamer = RotamersFindRep(pFirstSiteRotSet, firstSiteRotamerType);
+    pSecondSiteRotamer = RotamersFindRep(pSecondSiteRotSet, secondSiteRotamerType);
 
     if (pFirstSiteRotamer == NULL)
     {
@@ -427,20 +427,20 @@ int CataConsSitePairArrayCreate(CataConsSitePairArray* pThis, char* cataConsFile
   int result = FileReaderCreate(&file, cataConsFile);
   if (FAILED(result))
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     sprintf(errMsg, "in file %s line %d, cannot open file", __FILE__, __LINE__);
     TraceError(errMsg, result);
     return result;
   }
-  pThis->count = 0;
+  pThis->num = 0;
   pThis->sites = NULL;
 
   while (TRUE)
   {
-    int newCount = pThis->count + 1;
+    int newNum = pThis->num + 1;
     CataConsSitePair* pCurSite;
-    pThis->sites = (CataConsSitePair*)realloc(pThis->sites, sizeof(CataConsSitePair) * newCount);
-    pCurSite = &pThis->sites[newCount - 1];
+    pThis->sites = (CataConsSitePair*)realloc(pThis->sites, sizeof(CataConsSitePair) * newNum);
+    pCurSite = &pThis->sites[newNum - 1];
     result = CataConsSitePairCreate(pCurSite, &file);
     if (FAILED(result))
     {
@@ -448,7 +448,7 @@ int CataConsSitePairArrayCreate(CataConsSitePairArray* pThis, char* cataConsFile
     }
     else
     {
-      pThis->count = newCount;
+      pThis->num = newNum;
     }
   }
   FileReaderDestroy(&file);
@@ -458,7 +458,7 @@ int CataConsSitePairArrayCreate(CataConsSitePairArray* pThis, char* cataConsFile
 
 void CataConsSitePairArrayDestroy(CataConsSitePairArray* pThis)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
     CataConsSitePairDestroy(&pThis->sites[i]);
   }
@@ -466,15 +466,15 @@ void CataConsSitePairArrayDestroy(CataConsSitePairArray* pThis)
 }
 
 
-int CataConsSitePairArrayGetCount(CataConsSitePairArray* pThis)
+int CataConsSitePairArrayGetNum(CataConsSitePairArray* pThis)
 {
-  return pThis->count;
+  return pThis->num;
 }
 
 
 CataConsSitePair* CataConsSitePairArrayGet(CataConsSitePairArray* pThis, int index)
 {
-  if (index<0 || index>pThis->count)
+  if (index<0 || index>pThis->num)
   {
     return NULL;
   }
@@ -484,7 +484,7 @@ CataConsSitePair* CataConsSitePairArrayGet(CataConsSitePairArray* pThis, int ind
 
 CataConsSitePair* CataConsSitePairArrayFind(CataConsSitePairArray* pThis, char* chnName1, int pos1, char* resiName1, char* chnName2, int pos2, char* resiName2)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
     if (pos1 != pThis->sites[i].pos1) continue;
     if (pos2 != pThis->sites[i].pos2) continue;
@@ -498,7 +498,7 @@ CataConsSitePair* CataConsSitePairArrayFind(CataConsSitePairArray* pThis, char* 
 
 int CataConsSitePairArrayShow(CataConsSitePairArray* pThis)
 {
-  for (int i = 0;i < CataConsSitePairArrayGetCount(pThis);i++)
+  for (int i = 0;i < CataConsSitePairArrayGetNum(pThis);i++)
   {
     CataConsSitePairShow(CataConsSitePairArrayGet(pThis, i));
     printf("\n");
@@ -566,7 +566,7 @@ BOOL CataConsItemCheck(CataConsItem* pThis, XYZArray* pOnFirstSite, XYZArray* pO
     return TRUE;
 
   case Type_CataCons_Distance:
-    value = XYZDistance(pAtoms[1], pAtoms[0]);
+    value = XYZDist(pAtoms[1], pAtoms[0]);
     //printf("dist = %f\n", value);
     if (value > pThis->max || value < pThis->min)
     {
@@ -575,8 +575,8 @@ BOOL CataConsItemCheck(CataConsItem* pThis, XYZArray* pOnFirstSite, XYZArray* pO
     return TRUE;
 
   case Type_CataCons_Angle:
-    vectorI = XYZDifference(pAtoms[0], pAtoms[1]);
-    vectorJ = XYZDifference(pAtoms[2], pAtoms[1]);
+    vectorI = XYZDiff(pAtoms[0], pAtoms[1]);
+    vectorJ = XYZDiff(pAtoms[2], pAtoms[1]);
     value = XYZAngle(&vectorI, &vectorJ);
     //printf("angle = %f\n", RadToDeg(value));
     if (value > pThis->max || value < pThis->min)
@@ -616,7 +616,7 @@ BOOL CataConsSitePairCheck(CataConsSitePair* pThis, Rotamer* pOnFirstSite, Rotam
 {
   if (pThis->deployedFlag == FALSE)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     sprintf(errMsg, "in file %s line %d, catalytic constraint pair between %s%d%s and %s%d%s has not been deployed yet", __FILE__, __LINE__,
       pThis->chnName1, pThis->pos1, pThis->resName1,
       pThis->chnName2, pThis->pos2, pThis->resName2);
@@ -657,7 +657,7 @@ int PlacingActionCreate(PlacingAction* pThis, Type_PlacingAction type)
     IntArrayCreate(&pThis->checkVDW_backbone_smallmolAtomHasXyz, 0);
     break;
   case Type_PlacingAction_CheckVDW_Internal:
-    pThis->checkVDW_internal_smallMolAtomCount = 0;
+    pThis->checkVDW_internal_smallMolAtomNum = 0;
     pThis->checkVDW_internal_smallMolAtom13bondedMatrix = NULL;
     IntArrayCreate(&pThis->checkVDW_internal_smallmolAtomHasXyz, 0);
     break;
@@ -665,7 +665,7 @@ int PlacingActionCreate(PlacingAction* pThis, Type_PlacingAction type)
     IntArrayCreate(&pThis->checkRMSD_smallmolAtomHasXyz, 0);
     break;
   case Type_PlacingAction_CheckMultiCons:
-    pThis->checkMultiCons_cataConsCount = 0;
+    pThis->checkMultiCons_cataConsNum = 0;
     StringArrayCreate(&pThis->checkMultiCons_firstSiteChainNames);
     StringArrayCreate(&pThis->checkMultiCons_firstSiteResidueNames);
     IntArrayCreate(&pThis->checkMultiCons_firstSitePosInChains, 0);
@@ -673,10 +673,10 @@ int PlacingActionCreate(PlacingAction* pThis, Type_PlacingAction type)
     StringArrayCreate(&pThis->checkMultiCons_secondSiteResidueNames);
     IntArrayCreate(&pThis->checkMultiCons_secondSitePosInChains, 0);
 
-    for (int i = 0;i < MAX_COUNT_CHECK_MULTI_CONS;i++)
+    for (int i = 0;i < MAX_NUM_CHECK_MULTI_CONS;i++)
     {
-      pThis->checkMultiCons_rotamerCountOnEachSite[i][0] =
-        pThis->checkMultiCons_rotamerCountOnEachSite[i][1] = 0;
+      pThis->checkMultiCons_rotNumOnEachSite[i][0] =
+        pThis->checkMultiCons_rotNumOnEachSite[i][1] = 0;
       pThis->checkMultiCons_predeterminedConsRelations[i] = NULL;
     }
 
@@ -706,31 +706,31 @@ int PlacingActionDestroy(PlacingAction* pThis)
     IntArrayDestroy(&pThis->checkVDW_backbone_smallmolAtomHasXyz);
     break;
   case Type_PlacingAction_CheckVDW_Internal:
-    for (int i = 0;i < pThis->checkVDW_internal_smallMolAtomCount;i++)
+    for (int i = 0;i < pThis->checkVDW_internal_smallMolAtomNum;i++)
     {
       free(pThis->checkVDW_internal_smallMolAtom13bondedMatrix[i]);
     }
     free(pThis->checkVDW_internal_smallMolAtom13bondedMatrix);
     pThis->checkVDW_internal_smallMolAtom13bondedMatrix = NULL;
-    pThis->checkVDW_internal_smallMolAtomCount = 0;
+    pThis->checkVDW_internal_smallMolAtomNum = 0;
     IntArrayDestroy(&pThis->checkVDW_internal_smallmolAtomHasXyz);
     break;
   case Type_PlacingAction_CheckRMSD:
     IntArrayDestroy(&pThis->checkRMSD_smallmolAtomHasXyz);
     break;
   case Type_PlacingAction_CheckMultiCons:
-    pThis->checkMultiCons_cataConsCount = 0;
+    pThis->checkMultiCons_cataConsNum = 0;
     StringArrayDestroy(&pThis->checkMultiCons_firstSiteChainNames);
     StringArrayDestroy(&pThis->checkMultiCons_firstSiteResidueNames);
     IntArrayDestroy(&pThis->checkMultiCons_firstSitePosInChains);
     StringArrayDestroy(&pThis->checkMultiCons_secondSiteChainNames);
     StringArrayDestroy(&pThis->checkMultiCons_secondSiteResidueNames);
     IntArrayDestroy(&pThis->checkMultiCons_secondSitePosInChains);
-    for (int i = 0;i < MAX_COUNT_CHECK_MULTI_CONS;i++)
+    for (int i = 0;i < MAX_NUM_CHECK_MULTI_CONS;i++)
     {
       if (pThis->checkMultiCons_predeterminedConsRelations[i] != NULL)
       {
-        for (int j = 0;j < pThis->checkMultiCons_rotamerCountOnEachSite[i][0];j++)
+        for (int j = 0;j < pThis->checkMultiCons_rotNumOnEachSite[i][0];j++)
         {
           free(pThis->checkMultiCons_predeterminedConsRelations[i][j]);
         }
@@ -751,7 +751,7 @@ BOOL PlacingActionValidParamName(char* paramName)
   if (isalpha(paramName[0]) || paramName[0] == '_') return TRUE;
   else
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     sprintf(errMsg, "in file %s line %d, parameter name %s is invalid, it can only begin with a letter or an underscore, e.g. D1, D2 or D3 for distance, A1, A2 or A3 for angles, T1, T2 or T3 for torsions", __FILE__, __LINE__, paramName);
     TraceError(errMsg, ValueError);
     return FALSE;
@@ -764,10 +764,10 @@ int PlacingActionRead_CALC(PlacingAction* pThis, StringArray* pAtomNames, XYZArr
   int index;
   char* atomName;
   char* paramName;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int result;
 
-  if (StringArrayGetCount(pContent) != 9)
+  if (StringArrayGetNum(pContent) != 9)
   {
     return FormatError;
   }
@@ -791,8 +791,8 @@ int PlacingActionRead_CALC(PlacingAction* pThis, StringArray* pAtomNames, XYZArr
   if (FAILED(result))
   {
     StringArrayAppend(pAtomNames, atomName);
-    index = StringArrayGetCount(pAtomNames) - 1;
-    XYZArrayResize(pAtomXYZs, XYZArrayGetLength(pAtomXYZs) + 1);
+    index = StringArrayGetNum(pAtomNames) - 1;
+    XYZArrayResize(pAtomXYZs, XYZArrayGetNum(pAtomXYZs) + 1);
   }
   IntArrayAppend(&pThis->calc_atoms, index);
 
@@ -810,7 +810,7 @@ int PlacingActionRead_CALC(PlacingAction* pThis, StringArray* pAtomNames, XYZArr
       {
         DoubleArrayAppend(pParams, atof(paramName));
       }
-      index = StringArrayGetCount(pParamNames) - 1;
+      index = StringArrayGetNum(pParamNames) - 1;
       IntArrayAppend(&pThis->calc_params, index);
     }
     else
@@ -832,7 +832,7 @@ int PlacingActionRead_CALC(PlacingAction* pThis, StringArray* pAtomNames, XYZArr
 
 int PlacingActionRead_CHECK_CATA_CONS(PlacingAction* pThis, StringArray* pContent)
 {
-  if (StringArrayGetCount(pContent) != 6) return FormatError;
+  if (StringArrayGetNum(pContent) != 6) return FormatError;
 
   strcpy(pThis->checkCataCons_firstSiteChainName, StringArrayGet(pContent, 0));
   strcpy(pThis->checkCataCons_firstSiteResidueName, StringArrayGet(pContent, 1));
@@ -848,8 +848,8 @@ int PlacingActionRead_CHECK_CATA_CONS(PlacingAction* pThis, StringArray* pConten
 
 int PlacingActionRead_CHECK_MULTI_CONS(PlacingAction* pThis, StringArray* pContent)
 {
-  pThis->checkMultiCons_cataConsCount = StringArrayGetCount(pContent) / 6;
-  for (int i = 0;i < pThis->checkMultiCons_cataConsCount;i++)
+  pThis->checkMultiCons_cataConsNum = StringArrayGetNum(pContent) / 6;
+  for (int i = 0;i < pThis->checkMultiCons_cataConsNum;i++)
   {
     StringArrayAppend(&pThis->checkMultiCons_firstSiteChainNames, StringArrayGet(pContent, 6 * i));
     StringArrayAppend(&pThis->checkMultiCons_firstSiteResidueNames, StringArrayGet(pContent, 6 * i + 1));
@@ -865,10 +865,10 @@ int PlacingActionRead_CHECK_MULTI_CONS(PlacingAction* pThis, StringArray* pConte
 int PlacingActionRead_CHECK_RMSD(PlacingAction* pThis, StringArray* pContent)
 {
   char* withHydrogen;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int result;
 
-  if (StringArrayGetCount(pContent) != 2) return FormatError;
+  if (StringArrayGetNum(pContent) != 2) return FormatError;
 
   withHydrogen = StringArrayGet(pContent, 0);
   if (strcmp(withHydrogen, "WITH_HYDROGEN") == 0)
@@ -895,10 +895,10 @@ int PlacingActionRead_CHECK_RMSD(PlacingAction* pThis, StringArray* pContent)
 int    PlacingActionRead_CHECK_VDW_BACKBONE(PlacingAction* pThis, StringArray* pContent)
 {
   char* withHydrogen;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int result;
 
-  if (StringArrayGetCount(pContent) != 3) return FormatError;
+  if (StringArrayGetNum(pContent) != 2) return FormatError;
 
   withHydrogen = StringArrayGet(pContent, 0);
   if (strcmp(withHydrogen, "WITH_HYDROGEN") == 0)
@@ -917,8 +917,7 @@ int    PlacingActionRead_CHECK_VDW_BACKBONE(PlacingAction* pThis, StringArray* p
     return result;
   }
 
-  pThis->checkVDW_backbone_activeRange = atof(StringArrayGet(pContent, 1));
-  pThis->checkVDW_backbone_maxAllowed = atof(StringArrayGet(pContent, 2));
+  pThis->checkVDW_backbone_maxAllowed = atof(StringArrayGet(pContent, 1));
 
   return Success;
 }
@@ -927,10 +926,10 @@ int    PlacingActionRead_CHECK_VDW_BACKBONE(PlacingAction* pThis, StringArray* p
 int    PlacingActionRead_CHECK_VDW_INTERNAL(PlacingAction* pThis, StringArray* pContent)
 {
   char* withHydrogen;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int result;
 
-  if (StringArrayGetCount(pContent) != 2) return FormatError;
+  if (StringArrayGetNum(pContent) != 2) return FormatError;
 
   withHydrogen = StringArrayGet(pContent, 0);
   if (strcmp(withHydrogen, "WITH_HYDROGEN") == 0)
@@ -959,15 +958,13 @@ int    PlacingActionRead_EVALUATE(PlacingAction* pThis, StringArray* pAtomNames,
   char* paramName;
   char* atomName;
   char* typeName;
-  int wordCount;
-  int atomCount;
   int    result;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int index;
 
-  wordCount = StringArrayGetCount(pContent);
+  int wordNum = StringArrayGetNum(pContent);
 
-  if (wordCount < 4)
+  if (wordNum < 4)
     return FormatError;
 
   paramName = StringArrayGet(pContent, 0);
@@ -979,7 +976,7 @@ int    PlacingActionRead_EVALUATE(PlacingAction* pThis, StringArray* pAtomNames,
   if (FAILED(StringArrayFind(pParamNames, paramName, &index)))
   {
     StringArrayAppend(pParamNames, paramName);
-    index = StringArrayGetCount(pParamNames) - 1;
+    index = StringArrayGetNum(pParamNames) - 1;
     DoubleArrayAppend(pParams, 0.0);
     pThis->evaluate_param = index;
   }
@@ -993,26 +990,26 @@ int    PlacingActionRead_EVALUATE(PlacingAction* pThis, StringArray* pAtomNames,
 
   typeName = StringArrayGet(pContent, 1);
 
-  atomCount = 0;
+  int atomNum = 0;
   if (strcmp(typeName, "HALF_DISTANCE") == 0)
   {
     pThis->evaluate_type = Type_PlacingActionEvaluate_HalfDistance;
-    atomCount = 2;
+    atomNum = 2;
   }
   else if (strcmp(typeName, "DISTANCE") == 0)
   {
     pThis->evaluate_type = Type_PlacingActionEvaluate_Distance;
-    atomCount = 2;
+    atomNum = 2;
   }
   else if (strcmp(typeName, "ANGLE") == 0)
   {
     pThis->evaluate_type = Type_PlacingActionEvaluate_Angle;
-    atomCount = 3;
+    atomNum = 3;
   }
   else if (strcmp(typeName, "TORSION") == 0)
   {
     pThis->evaluate_type = Type_PlacingActionEvaluate_Torsion;
-    atomCount = 4;
+    atomNum = 4;
   }
   else
   {
@@ -1022,12 +1019,12 @@ int    PlacingActionRead_EVALUATE(PlacingAction* pThis, StringArray* pAtomNames,
     return result;
   }
 
-  if (atomCount + 2 != wordCount)
+  if (atomNum + 2 != wordNum)
   {
     return FormatError;
   }
 
-  for (int i = 0;i < atomCount;i++)
+  for (int i = 0;i < atomNum;i++)
   {
     atomName = StringArrayGet(pContent, i + 2);
     if (FAILED(StringArrayFind(pAtomNames, atomName, &index)))
@@ -1048,13 +1045,13 @@ int    PlacingActionRead_LOAD(PlacingAction* pThis, StringArray* pAtomNames, XYZ
 {
   int index;
   char* newAtomName;
-  for (int i = 0; i < StringArrayGetCount(pContent); i++)
+  for (int i = 0; i < StringArrayGetNum(pContent); i++)
   {
     newAtomName = StringArrayGet(pContent, i);
     if (strlen(newAtomName) > MAX_LEN_ATOM_NAME)
     {
       int result = NameError;
-      char errMsg[MAX_LEN_ERR_MSG + 1];
+      char errMsg[MAX_LEN_ERR_MSG+1];
       sprintf(errMsg, "in file %s line %d, atom name %s is too long", __FILE__, __LINE__, newAtomName);
       TraceError(errMsg, result);
       return result;
@@ -1062,9 +1059,9 @@ int    PlacingActionRead_LOAD(PlacingAction* pThis, StringArray* pAtomNames, XYZ
     if (FAILED(StringArrayFind(pAtomNames, newAtomName, &index)))
     {
       StringArrayAppend(pAtomNames, newAtomName);
-      index = StringArrayGetCount(pAtomNames) - 1;
+      index = StringArrayGetNum(pAtomNames) - 1;
       IntArrayAppend(&pThis->load_atoms, index);
-      XYZArrayResize(pAtomXYZs, XYZArrayGetLength(pAtomXYZs) + 1);
+      XYZArrayResize(pAtomXYZs, XYZArrayGetNum(pAtomXYZs) + 1);
     }
   }
   return Success;
@@ -1076,10 +1073,10 @@ int PlacingActionRead_VARIATE(PlacingAction* pThis, StringArray* pParamNames, Do
   char* name;
   char* degreeOrAnsgrom;
   int index;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int    result;
 
-  if (StringArrayGetCount(pContent) != 5) return FormatError;
+  if (StringArrayGetNum(pContent) != 5) return FormatError;
   name = StringArrayGet(pContent, 0);
   if (!PlacingActionValidParamName(name)) return FormatError;
 
@@ -1089,7 +1086,7 @@ int PlacingActionRead_VARIATE(PlacingAction* pThis, StringArray* pParamNames, Do
     StringArrayAppend(pParamNames, name);
     DoubleArrayAppend(pParams, 0.0);
 
-    index = StringArrayGetCount(pParamNames) - 1;
+    index = StringArrayGetNum(pParamNames) - 1;
     pThis->variate_param = index;
 
     pThis->variate_from = atof(StringArrayGet(pContent, 2));
@@ -1131,16 +1128,15 @@ int PlacingActionRead_VARIATE(PlacingAction* pThis, StringArray* pParamNames, Do
 int    PlacingRuleReadFile(PlacingRule* pThis, FileReader* pFileReader)
 {
   BOOL done;
-  char line[MAX_LEN_ONE_LINE_CONTENT + 1];
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char line[MAX_LEN_ONE_LINE_CONTENT+1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int    result;
 
   done = FALSE;
   while (!FAILED(FileReaderGetNextLine(pFileReader, line)))
   {
-    //printf("%s\n",line);
-    char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
-    char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
+    char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
+    char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
     PlacingAction* pCurAction;
     StringArray wordsInLine;
     StringArrayCreate(&wordsInLine);
@@ -1154,7 +1150,7 @@ int    PlacingRuleReadFile(PlacingRule* pThis, FileReader* pFileReader)
       ExtractFirstStringFromSourceString(pThis->rotamerType, line);
       done = TRUE;
       StringArrayDestroy(&wordsInLine);
-      continue;  //continue 'while'
+      continue;
     }
     else if (strcmp(keyword, "PLACING") == 0 && done)
     {
@@ -1164,10 +1160,10 @@ int    PlacingRuleReadFile(PlacingRule* pThis, FileReader* pFileReader)
     }
 
 
-    (pThis->actionCount)++;
+    (pThis->actionNum)++;
     pThis->actions = (PlacingAction*)realloc(pThis->actions,
-      sizeof(PlacingAction) * pThis->actionCount);
-    pCurAction = &pThis->actions[pThis->actionCount - 1];
+      sizeof(PlacingAction) * pThis->actionNum);
+    pCurAction = &pThis->actions[pThis->actionNum - 1];
 
     StringArraySplitString(&wordsInLine, line, ' ');
 
@@ -1206,7 +1202,7 @@ int    PlacingRuleReadFile(PlacingRule* pThis, FileReader* pFileReader)
       while (FileReaderGetNextLine(pFileReader, line) == Success)
       {
         StringArraySplitString(&wordsInLine, line, ' ');
-        if (StringArrayGetCount(&wordsInLine) != 6)
+        if (StringArrayGetNum(&wordsInLine) != 6)
         {
           break;
         }
@@ -1221,10 +1217,10 @@ int    PlacingRuleReadFile(PlacingRule* pThis, FileReader* pFileReader)
       }
       if (strcmp(line, "CHECK_MULTI_CONS_END") == 0)
       {
-        int count = StringArrayGetCount(&allContent) / 6;
-        if (count > MAX_COUNT_CHECK_MULTI_CONS)
+        int num = StringArrayGetNum(&allContent) / 6;
+        if (num > MAX_NUM_CHECK_MULTI_CONS)
         {
-          sprintf(errMsg, "in file %s line %d, no more than %d constraints can be checked simultaneously", __FILE__, __LINE__, MAX_COUNT_CHECK_MULTI_CONS);
+          sprintf(errMsg, "in file %s line %d, no more than %d constraints can be checked simultaneously", __FILE__, __LINE__, MAX_NUM_CHECK_MULTI_CONS);
           result = IndexError;
           TraceError(errMsg, result);
           return result;
@@ -1276,7 +1272,7 @@ int    PlacingRuleReadFile(PlacingRule* pThis, FileReader* pFileReader)
 int PlacingRuleCreate(PlacingRule* pThis, char* file)
 {
   FileReader fr;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int result = FileReaderCreate(&fr, file);
   if (FAILED(result))
   {
@@ -1299,7 +1295,7 @@ int PlacingRuleCreate(PlacingRule* pThis, char* file)
   DoubleArrayCreate(&pThis->params, 0);
 
   pThis->actions = NULL;
-  pThis->actionCount = 0;
+  pThis->actionNum = 0;
 
   pThis->deployedFlag = FALSE;
 
@@ -1320,7 +1316,7 @@ int PlacingRuleCreate(PlacingRule* pThis, char* file)
 void PlacingRuleDestroy(PlacingRule* pThis)
 {
   int i;
-  for (i = 0;i < pThis->actionCount;i++)
+  for (i = 0;i < pThis->actionNum;i++)
   {
     PlacingActionDestroy(&pThis->actions[i]);
   }
@@ -1342,7 +1338,7 @@ void PlacingRuleDestroy(PlacingRule* pThis)
 
   free(pThis->actions);
   pThis->actions = NULL;
-  pThis->actionCount = 0;
+  pThis->actionNum = 0;
 }
 
 
@@ -1376,17 +1372,17 @@ char* PlacingRuleGetRotamerType(PlacingRule* pThis)
 }
 
 
-double PlacingRuleGetTruncatedBackboneRange(PlacingRule* pThis)
-{
-  for (int i = 0;i < pThis->actionCount;i++)
-  {
-    if (pThis->actions[i].actionType == Type_PlacingAction_CheckVDW_Backbone)
-    {
-      return pThis->actions[i].checkVDW_backbone_activeRange;
-    }
-  }
-  return 0.0;
-}
+//double PlacingRuleGetTruncatedBackboneRange(PlacingRule* pThis)
+//{
+//  for (int i = 0;i < pThis->actionNum;i++)
+//  {
+//    if (pThis->actions[i].actionType == Type_PlacingAction_CheckVDW_Backbone)
+//    {
+//      return pThis->actions[i].checkVDW_backbone_activeRange;
+//    }
+//  }
+//  return 0.0;
+//}
 
 
 int PlacingActionDeploy_CheckCataCons(PlacingAction* pThis,
@@ -1394,7 +1390,7 @@ int PlacingActionDeploy_CheckCataCons(PlacingAction* pThis,
   CataConsSitePairArray* pCataConsArray,
   char* startingSiteChainName,
   int startingSitePosInChain,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite** relatedProteinSites)
 {
   pThis->checkCataCons_pCataCon = CataConsSitePairArrayFind(
@@ -1408,7 +1404,7 @@ int PlacingActionDeploy_CheckCataCons(PlacingAction* pThis,
 
   if (pThis->checkCataCons_pCataCon == NULL)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     sprintf(errMsg, "in file %s line %d, cannot find the catalytic constraint between site %s%d%s and site %s%d%s", __FILE__, __LINE__,
       pThis->checkCataCons_firstSiteChainName,
       pThis->checkCataCons_firstSitePosInChain,
@@ -1441,17 +1437,17 @@ int PlacingActionDeploy_CheckCataCons(PlacingAction* pThis,
     if (posInChain == ResidueGetPosInChain(pSmallMol) &&
       strcmp(chainName, ResidueGetChainName(pSmallMol)) == 0)
     {
-      pThis->checkCataCons_pSite[i] = relatedProteinSiteCount;  //the small molecule
+      pThis->checkCataCons_pSite[i] = relatedProteinSiteNum;  //the small molecule
     }
     else if (
       posInChain == startingSitePosInChain &&
       strcmp(chainName, startingSiteChainName) == 0)
     {
-      pThis->checkCataCons_pSite[i] = relatedProteinSiteCount + 1;  //the starting site
+      pThis->checkCataCons_pSite[i] = relatedProteinSiteNum + 1;  //the starting site
     }
     else
     {
-      for (int j = 0;j < relatedProteinSiteCount;j++)
+      for (int j = 0;j < relatedProteinSiteNum;j++)
       {
         //this is probably a smallmol design site, not finished, skip it
         if (relatedProteinSites[j] == NULL) continue;
@@ -1466,7 +1462,7 @@ int PlacingActionDeploy_CheckCataCons(PlacingAction* pThis,
 
     if (pThis->checkCataCons_pSite[i] == -1)
     {
-      char errMsg[MAX_LEN_ERR_MSG + 1];
+      char errMsg[MAX_LEN_ERR_MSG+1];
       sprintf(errMsg, "in file %s line %d, cannot find design site %s%d needed by checking of catalytic constraint", __FILE__, __LINE__, chainName, posInChain);
       TraceError(errMsg, DataNotExistError);
       return DataNotExistError;
@@ -1483,11 +1479,11 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
   char* startingSiteChainName,
   char* startingSiteResidueName,
   int startingSitePosInChain,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite** relatedProteinSites)
 {
   //Find Identity of every CataConsPair
-  for (int i = 0;i < pThis->checkMultiCons_cataConsCount;i++)
+  for (int i = 0;i < pThis->checkMultiCons_cataConsNum;i++)
   {
     pThis->checkMultiCons_pCataCons[i] = CataConsSitePairArrayFind(
       pCataConsArray,
@@ -1500,7 +1496,7 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
 
     if (pThis->checkMultiCons_pCataCons[i] == NULL)
     {
-      char errMsg[MAX_LEN_ERR_MSG + 1];
+      char errMsg[MAX_LEN_ERR_MSG+1];
       sprintf(errMsg, "in file %s line %d, cannot find the catalytic constraint between site %s%d%s and site%s%d%s", __FILE__, __LINE__,
         StringArrayGet(&pThis->checkMultiCons_firstSiteChainNames, i),
         IntArrayGet(&pThis->checkMultiCons_firstSitePosInChains, i),
@@ -1513,7 +1509,7 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
     }
   }
   //Determine the identity of the first and second site of every catalytic constraint
-  for (int i = 0;i < pThis->checkMultiCons_cataConsCount;i++)
+  for (int i = 0;i < pThis->checkMultiCons_cataConsNum;i++)
   {
     for (int j = 0;j < 2;j++)
     {
@@ -1535,18 +1531,18 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
       if (posInChain == ResidueGetPosInChain(pSmallMol) &&
         strcmp(chainName, ResidueGetChainName(pSmallMol)) == 0)
       {
-        pThis->checkMultiCons_siteIndexes[i][j] = relatedProteinSiteCount;
+        pThis->checkMultiCons_siteIndexes[i][j] = relatedProteinSiteNum;
       }
       else if (
         posInChain == startingSitePosInChain &&
         strcmp(chainName, startingSiteChainName) == 0)
       {
-        pThis->checkMultiCons_siteIndexes[i][j] = relatedProteinSiteCount + 1;
+        pThis->checkMultiCons_siteIndexes[i][j] = relatedProteinSiteNum + 1;
       }
       else
       {
         int s;
-        for (s = 0;s < relatedProteinSiteCount;s++)
+        for (s = 0;s < relatedProteinSiteNum;s++)
         {
           //this is probably a smallmol design site, not finished, skip it
           if (relatedProteinSites[s] == NULL) continue;
@@ -1561,7 +1557,7 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
 
       if (pThis->checkMultiCons_siteIndexes[i][j] == -1)
       {
-        char errMsg[MAX_LEN_ERR_MSG + 1];
+        char errMsg[MAX_LEN_ERR_MSG+1];
         sprintf(errMsg, "in file %s line %d, cannot find design site %s%d needed by checking of catalytic constraint", __FILE__, __LINE__, chainName, posInChain);
         TraceError(errMsg, DataNotExistError);
         return DataNotExistError;
@@ -1570,31 +1566,31 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
   }
 
   //Determine whether the catalytic constraints between only protein sites are satisfied
-  for (int i = 0;i < pThis->checkMultiCons_cataConsCount;i++)
+  for (int i = 0;i < pThis->checkMultiCons_cataConsNum;i++)
   {
     int indexOfSite1 = pThis->checkMultiCons_siteIndexes[i][0];
     int indexOfSite2 = pThis->checkMultiCons_siteIndexes[i][1];
-    if (indexOfSite1 < relatedProteinSiteCount && indexOfSite2 < relatedProteinSiteCount)
+    if (indexOfSite1 < relatedProteinSiteNum && indexOfSite2 < relatedProteinSiteNum)
     {
       int rotOnSite1;
       int rotOnSite2;
-      int rotCountOnSite1;
-      int rotCountOnSite2;
-      pThis->checkMultiCons_rotamerCountOnEachSite[i][0] = rotCountOnSite1 =
-        RotamerSetGetCount(DesignSiteGetRotamers(relatedProteinSites[indexOfSite1]));
-      pThis->checkMultiCons_rotamerCountOnEachSite[i][1] = rotCountOnSite2 =
-        RotamerSetGetCount(DesignSiteGetRotamers(relatedProteinSites[indexOfSite2]));
-      pThis->checkMultiCons_predeterminedConsRelations[i] = (BOOL**)malloc(sizeof(BOOL*) * rotCountOnSite1);
-      for (rotOnSite1 = 0;rotOnSite1 < rotCountOnSite1;rotOnSite1++)
+      int rotNumOnSite1;
+      int rotNumOnSite2;
+      pThis->checkMultiCons_rotNumOnEachSite[i][0] = rotNumOnSite1 =
+        RotamersGetNum(DesignSiteGetRotamers(relatedProteinSites[indexOfSite1]));
+      pThis->checkMultiCons_rotNumOnEachSite[i][1] = rotNumOnSite2 =
+        RotamersGetNum(DesignSiteGetRotamers(relatedProteinSites[indexOfSite2]));
+      pThis->checkMultiCons_predeterminedConsRelations[i] = (BOOL**)malloc(sizeof(BOOL*) * rotNumOnSite1);
+      for (rotOnSite1 = 0;rotOnSite1 < rotNumOnSite1;rotOnSite1++)
       {
         pThis->checkMultiCons_predeterminedConsRelations[i][rotOnSite1] =
-          (BOOL*)malloc(sizeof(BOOL) * rotCountOnSite2);
-        for (rotOnSite2 = 0; rotOnSite2 < rotCountOnSite2; rotOnSite2++)
+          (BOOL*)malloc(sizeof(BOOL) * rotNumOnSite2);
+        for (rotOnSite2 = 0; rotOnSite2 < rotNumOnSite2; rotOnSite2++)
         {
           BOOL checkResult;
           checkResult = CataConsSitePairCheck(pThis->checkMultiCons_pCataCons[i],
-            RotamerSetGet(DesignSiteGetRotamers(relatedProteinSites[indexOfSite1]), rotOnSite1),
-            RotamerSetGet(DesignSiteGetRotamers(relatedProteinSites[indexOfSite2]), rotOnSite2)
+            RotamersGet(DesignSiteGetRotamers(relatedProteinSites[indexOfSite1]), rotOnSite1),
+            RotamersGet(DesignSiteGetRotamers(relatedProteinSites[indexOfSite2]), rotOnSite2)
           );
           pThis->checkMultiCons_predeterminedConsRelations[i][rotOnSite1][rotOnSite2] = checkResult;
         }
@@ -1603,14 +1599,14 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
   }
 
   //Construct the data structure needed by the recurrence algorithm in PlacingRuleProcess_CHECK_MULTI_CONS()
-  pThis->checkMultiCons_stepCount = 0;
-  for (int i = 0;i < pThis->checkMultiCons_cataConsCount;i++)
+  pThis->checkMultiCons_stepNum = 0;
+  for (int i = 0;i < pThis->checkMultiCons_cataConsNum;i++)
   {
     for (int j = 0;j < 2;j++)
     {
       int siteToFindInPreviousSteps = pThis->checkMultiCons_siteIndexes[i][j];
       BOOL addNewStep = TRUE;
-      for (int k = 0;k < pThis->checkMultiCons_stepCount;k++)
+      for (int k = 0;k < pThis->checkMultiCons_stepNum;k++)
       {
         if (pThis->checkMultiCons_steps[k].designSite == siteToFindInPreviousSteps)
         {
@@ -1620,20 +1616,20 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
       }
       if (addNewStep)
       {
-        pThis->checkMultiCons_steps[pThis->checkMultiCons_stepCount].designSite = siteToFindInPreviousSteps;
-        pThis->checkMultiCons_steps[pThis->checkMultiCons_stepCount].countOfConsToCheckAtThisStep = 0;
-        pThis->checkMultiCons_stepCount++;
+        pThis->checkMultiCons_steps[pThis->checkMultiCons_stepNum].designSite = siteToFindInPreviousSteps;
+        pThis->checkMultiCons_steps[pThis->checkMultiCons_stepNum].nConsToCheckAtThisStep = 0;
+        pThis->checkMultiCons_stepNum++;
       }
     }
   }
 
-  for (int i = 0;i < pThis->checkMultiCons_cataConsCount;i++)
+  for (int i = 0;i < pThis->checkMultiCons_cataConsNum;i++)
   {
     BOOL site1Found = FALSE;
     BOOL site2Found = FALSE;
     int stepIndex = 0;
     CheckMultiConsStep* pCurStep = NULL;
-    for (stepIndex = 0; stepIndex < pThis->checkMultiCons_stepCount; stepIndex++)
+    for (stepIndex = 0; stepIndex < pThis->checkMultiCons_stepNum; stepIndex++)
     {
       pCurStep = &pThis->checkMultiCons_steps[stepIndex];
       if (pCurStep->designSite == pThis->checkMultiCons_siteIndexes[i][0])
@@ -1649,8 +1645,8 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
         break;
       }
     }
-    pCurStep->consToCheckAtThisStep[pCurStep->countOfConsToCheckAtThisStep] = i;
-    pCurStep->countOfConsToCheckAtThisStep++;
+    pCurStep->consToCheckAtThisStep[pCurStep->nConsToCheckAtThisStep] = i;
+    pCurStep->nConsToCheckAtThisStep++;
   }
 
   return Success;
@@ -1673,24 +1669,24 @@ int PlacingActionDeploy_CheckVDWBackbone(PlacingAction* pThis, IntArray* pSmallm
 
 int PlacingActionDeploy_CheckVDWInternal(PlacingAction* pThis, Residue* pSmallMol, IntArray* pSmallmolAtomGetXyzByThisStep)
 {
-  pThis->checkVDW_internal_smallMolAtomCount = ResidueGetAtomCount(pSmallMol);
+  pThis->checkVDW_internal_smallMolAtomNum = ResidueGetAtomNum(pSmallMol);
   pThis->checkVDW_internal_smallMolAtom13bondedMatrix =
-    (BOOL**)malloc(sizeof(BOOL*) * ResidueGetAtomCount(pSmallMol));
-  for (int i = 0;i < ResidueGetAtomCount(pSmallMol);i++)
+    (BOOL**)malloc(sizeof(BOOL*) * ResidueGetAtomNum(pSmallMol));
+  for (int i = 0;i < ResidueGetAtomNum(pSmallMol);i++)
   {
     pThis->checkVDW_internal_smallMolAtom13bondedMatrix[i] =
-      (BOOL*)malloc(sizeof(BOOL) * ResidueGetAtomCount(pSmallMol));
+      (BOOL*)malloc(sizeof(BOOL) * ResidueGetAtomNum(pSmallMol));
     memset(pThis->checkVDW_internal_smallMolAtom13bondedMatrix[i], FALSE,
-      sizeof(BOOL) * ResidueGetAtomCount(pSmallMol));
+      sizeof(BOOL) * ResidueGetAtomNum(pSmallMol));
   }
   //Find 1-2 bond relation
-  for (int i = 0;i < ResidueGetAtomCount(pSmallMol);i++)
+  for (int i = 0;i < ResidueGetAtomNum(pSmallMol);i++)
   {
-    for (int j = 0;j < ResidueGetAtomCount(pSmallMol);j++)
+    for (int j = 0;j < ResidueGetAtomNum(pSmallMol);j++)
     {
       Atom* pAtomI = ResidueGetAtom(pSmallMol, i);
       Atom* pAtomJ = ResidueGetAtom(pSmallMol, j);
-      if (BondSetFind(&pSmallMol->bonds, AtomGetName(pAtomI), AtomGetName(pAtomJ)) == Type_Bond_None)
+      if (BondsFind(&pSmallMol->bonds, AtomGetName(pAtomI), AtomGetName(pAtomJ)) == Type_Bond_None)
       {
         pThis->checkVDW_internal_smallMolAtom13bondedMatrix[i][j] = FALSE;
       }
@@ -1701,18 +1697,18 @@ int PlacingActionDeploy_CheckVDWInternal(PlacingAction* pThis, Residue* pSmallMo
     }
   }
   //Find 1-3 bond relation
-  for (int i = 0;i < ResidueGetAtomCount(pSmallMol);i++)
+  for (int i = 0;i < ResidueGetAtomNum(pSmallMol);i++)
   {
-    for (int j = 0;j < ResidueGetAtomCount(pSmallMol);j++)
+    for (int j = 0;j < ResidueGetAtomNum(pSmallMol);j++)
     {
-      for (int k = 0;k < ResidueGetAtomCount(pSmallMol);k++)
+      for (int k = 0;k < ResidueGetAtomNum(pSmallMol);k++)
       {
         Atom* pAtomI = ResidueGetAtom(pSmallMol, i);
         Atom* pAtomJ = ResidueGetAtom(pSmallMol, j);
         Atom* pAtomK = ResidueGetAtom(pSmallMol, k);
         if (
-          (BondSetFind(&pSmallMol->bonds, AtomGetName(pAtomI), AtomGetName(pAtomK)) != Type_Bond_None) &&
-          (BondSetFind(&pSmallMol->bonds, AtomGetName(pAtomK), AtomGetName(pAtomJ)) != Type_Bond_None)
+          (BondsFind(&pSmallMol->bonds, AtomGetName(pAtomI), AtomGetName(pAtomK)) != Type_Bond_None) &&
+          (BondsFind(&pSmallMol->bonds, AtomGetName(pAtomK), AtomGetName(pAtomJ)) != Type_Bond_None)
           )
         {
           pThis->checkVDW_internal_smallMolAtom13bondedMatrix[i][j] = TRUE;
@@ -1758,10 +1754,10 @@ int PlacingActionDeploy_Load(PlacingAction* pThis,
 }
 
 
-int PlacingRuleDeploy(PlacingRule* pThis, Residue* pSmallMol, CataConsSitePairArray* pCataConsArray, int relatedProteinSiteCount, DesignSite** relatedProteinSites, AtomArray* pTruncatedBackbone)
+int PlacingRuleDeploy(PlacingRule* pThis, Residue* pSmallMol, CataConsSitePairArray* pCataConsArray, int relatedProteinSiteNum, DesignSite** relatedProteinSites, AtomArray* pTruncatedBackbone)
 {
   int result;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   IntArray smallmolAtomGetXyzByThisStep;
 
   if (PlacingRuleGetDeployedFlag(pThis))
@@ -1779,22 +1775,22 @@ int PlacingRuleDeploy(PlacingRule* pThis, Residue* pSmallMol, CataConsSitePairAr
   }
 
   // maintain the set of small molecule atom xyzs stored in this placing rule
-  XYZArrayResize(&pThis->smallMolAtomXYZs, ResidueGetAtomCount(pSmallMol));
-  pThis->xyzValidArray = (BOOL*)malloc(sizeof(BOOL) * ResidueGetAtomCount(pSmallMol));
-  for (int i = 0; i < ResidueGetAtomCount(pSmallMol); i++)
+  XYZArrayResize(&pThis->smallMolAtomXYZs, ResidueGetAtomNum(pSmallMol));
+  pThis->xyzValidArray = (BOOL*)malloc(sizeof(BOOL) * ResidueGetAtomNum(pSmallMol));
+  for (int i = 0; i < ResidueGetAtomNum(pSmallMol); i++)
   {
     pThis->xyzValidArray[i] = FALSE;
   }
 
   // find the exact locations of each Atom, special operations are needed if it is on the small molecule
-  for (int i = 0;i < StringArrayGetCount(&pThis->atomNames);i++)
+  for (int i = 0;i < StringArrayGetNum(&pThis->atomNames);i++)
   {
     int index;
     char atomName[MAX_LEN_ONE_LINE_CONTENT];
     strcpy(atomName, StringArrayGet(&pThis->atomNames, i));
     if (atomName[0] == SMALLMOL_ATOM_SYMBOL)
     {
-      int result = ResidueFindAtom(pSmallMol, atomName + 1, &index);
+      int result = ResidueFindAtom(pSmallMol, atomName+1, &index);
       // use atomName+1 to skip the '$' character used to represent small molecular atoms
       if (FAILED(result))
       {
@@ -1811,12 +1807,12 @@ int PlacingRuleDeploy(PlacingRule* pThis, Residue* pSmallMol, CataConsSitePairAr
   }
 
 
-  IntArrayCreate(&smallmolAtomGetXyzByThisStep, XYZArrayGetLength(&pThis->smallMolAtomXYZs));
+  IntArrayCreate(&smallmolAtomGetXyzByThisStep, XYZArrayGetNum(&pThis->smallMolAtomXYZs));
   for (int j = 0; j < IntArrayGetLength(&smallmolAtomGetXyzByThisStep); j++)
   {
     IntArraySet(&smallmolAtomGetXyzByThisStep, j, 0);
   }
-  for (int i = 0;i < pThis->actionCount;i++)
+  for (int i = 0;i < pThis->actionNum;i++)
   {
     PlacingAction* pCurAction = &pThis->actions[i];
     //printf("deploy placing action %d\n", i);
@@ -1827,11 +1823,11 @@ int PlacingRuleDeploy(PlacingRule* pThis, Residue* pSmallMol, CataConsSitePairAr
       break;
     case Type_PlacingAction_CheckCataCons:
       result = PlacingActionDeploy_CheckCataCons(pCurAction, pSmallMol, pCataConsArray,
-        pThis->chainName, pThis->posInChain, relatedProteinSiteCount, relatedProteinSites);
+        pThis->chainName, pThis->posInChain, relatedProteinSiteNum, relatedProteinSites);
       break;
     case Type_PlacingAction_CheckMultiCons:
       result = PlacingActionDeploy_CheckMultiCons(pCurAction, pSmallMol, pCataConsArray, pThis->chainName,
-        pThis->residueName, pThis->posInChain, relatedProteinSiteCount, relatedProteinSites);
+        pThis->residueName, pThis->posInChain, relatedProteinSiteNum, relatedProteinSites);
       break;
     case Type_PlacingAction_CheckRMSD:
       result = PlacingActionDeploy_CheckRMSD(pCurAction, &smallmolAtomGetXyzByThisStep);
@@ -1895,16 +1891,16 @@ int PlacingRuleProcess_CALC(PlacingRule* pThis, PlacingAction* pAction)
 }
 
 
-BOOL   PlacingRuleProcess_CHECK_CATA_CONS(PlacingRule* pThis, Rotamer* pStartRot, int siteCount, DesignSite** ppSites, PlacingAction* pAction)
+BOOL   PlacingRuleProcess_CHECK_CATA_CONS(PlacingRule* pThis, Rotamer* pStartRot, int siteNum, DesignSite** ppSites, PlacingAction* pAction)
 {
   BOOL checkResult = FALSE;
-  RotamerSet rotSetOnlySmallMol;
-  RotamerSet rotSetOnlyStartingProteinRotamer;
-  RotamerSet* pRotSetOnFirstAndSecondSite[2] = { NULL,NULL };
-  RotamerSetCreate(&rotSetOnlySmallMol);
-  RotamerSetCreate(&rotSetOnlyStartingProteinRotamer);
+  Rotamers rotSetOnlySmallMol;
+  Rotamers rotSetOnlyStartingProteinRotamer;
+  Rotamers* pRotSetOnFirstAndSecondSite[2] = { NULL,NULL };
+  RotamersCreate(&rotSetOnlySmallMol);
+  RotamersCreate(&rotSetOnlyStartingProteinRotamer);
 
-  RotamerSetAdd(&rotSetOnlyStartingProteinRotamer, pStartRot);
+  RotamersAdd(&rotSetOnlyStartingProteinRotamer, pStartRot);
   if (pThis->pSmallMol != NULL)
   {
     Rotamer tempRotamer;
@@ -1912,7 +1908,7 @@ BOOL   PlacingRuleProcess_CHECK_CATA_CONS(PlacingRule* pThis, Rotamer* pStartRot
     RotamerSetType(&tempRotamer, ResidueGetName(pThis->pSmallMol));
     RotamerAddAtoms(&tempRotamer, ResidueGetAllAtoms(pThis->pSmallMol));
     XYZArrayCopy(&tempRotamer.xyzs, &pThis->smallMolAtomXYZs);
-    RotamerSetAdd(&rotSetOnlySmallMol, &tempRotamer);
+    RotamersAdd(&rotSetOnlySmallMol, &tempRotamer);
     RotamerDestroy(&tempRotamer);
   }
 
@@ -1920,11 +1916,11 @@ BOOL   PlacingRuleProcess_CHECK_CATA_CONS(PlacingRule* pThis, Rotamer* pStartRot
   for (int i = 0;i < 2;i++)
   {
     int siteIndex = pAction->checkCataCons_pSite[i];
-    if (siteIndex == siteCount)
+    if (siteIndex == siteNum)
     {
       pRotSetOnFirstAndSecondSite[i] = &rotSetOnlySmallMol;
     }
-    else if (siteIndex == siteCount + 1)
+    else if (siteIndex == siteNum + 1)
     {
       pRotSetOnFirstAndSecondSite[i] = &rotSetOnlyStartingProteinRotamer;
     }
@@ -1936,17 +1932,17 @@ BOOL   PlacingRuleProcess_CHECK_CATA_CONS(PlacingRule* pThis, Rotamer* pStartRot
 
   // check the constraints
   checkResult = FALSE;
-  for (int i = 0;i < RotamerSetGetCount(pRotSetOnFirstAndSecondSite[0]);i++)
+  for (int i = 0;i < RotamersGetNum(pRotSetOnFirstAndSecondSite[0]);i++)
   {
     if (checkResult)
     {
       break;
     }
-    for (int j = 0;j < RotamerSetGetCount(pRotSetOnFirstAndSecondSite[1]);j++)
+    for (int j = 0;j < RotamersGetNum(pRotSetOnFirstAndSecondSite[1]);j++)
     {
       checkResult = CataConsSitePairCheck(pAction->checkCataCons_pCataCon,
-        RotamerSetGet(pRotSetOnFirstAndSecondSite[0], i),
-        RotamerSetGet(pRotSetOnFirstAndSecondSite[1], j));
+        RotamersGet(pRotSetOnFirstAndSecondSite[0], i),
+        RotamersGet(pRotSetOnFirstAndSecondSite[1], j));
 #ifdef DEBUGGING_SMALLMOL
       if (checkResult == TRUE)
       {
@@ -1961,44 +1957,44 @@ BOOL   PlacingRuleProcess_CHECK_CATA_CONS(PlacingRule* pThis, Rotamer* pStartRot
     }
   }
 
-  RotamerSetDestroy(&rotSetOnlySmallMol);
-  RotamerSetDestroy(&rotSetOnlyStartingProteinRotamer);
+  RotamersDestroy(&rotSetOnlySmallMol);
+  RotamersDestroy(&rotSetOnlyStartingProteinRotamer);
   return checkResult;
 }
 
 
 BOOL   PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(PlacingAction* pAction,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite** relatedProteinSites,
   int* rotamersSelectedOnPreviousSteps,
   Rotamer* pSmallMolRotamer,
   Rotamer* pStartingProteinRotamer,
   int currentStepIndex)
 {
-  int rotCount;
+  int rotNum;
   CheckMultiConsStep* pCurStep = &pAction->checkMultiCons_steps[currentStepIndex];
   BOOL satisfied = FALSE;
 
-  if (currentStepIndex == pAction->checkMultiCons_stepCount)
+  if (currentStepIndex == pAction->checkMultiCons_stepNum)
   {
     return TRUE;
   }
 
-  if (pCurStep->designSite < relatedProteinSiteCount)
+  if (pCurStep->designSite < relatedProteinSiteNum)
   {
-    rotCount = RotamerSetGetCount(DesignSiteGetRotamers(relatedProteinSites[pCurStep->designSite]));
+    rotNum = RotamersGetNum(DesignSiteGetRotamers(relatedProteinSites[pCurStep->designSite]));
   }
   else
   {
-    rotCount = 1;
+    rotNum = 1;
   }
 
-  for (int i = 0;i < rotCount;i++)
+  for (int i = 0;i < rotNum;i++)
   {
     BOOL checkResult = TRUE;
     rotamersSelectedOnPreviousSteps[pCurStep->designSite] = i;
 
-    for (int j = 0;j < pCurStep->countOfConsToCheckAtThisStep;j++)
+    for (int j = 0;j < pCurStep->nConsToCheckAtThisStep;j++)
     {
       int consIndex = pCurStep->consToCheckAtThisStep[j];
       CataConsSitePair* pCurCons = pAction->checkMultiCons_pCataCons[consIndex];
@@ -2009,7 +2005,7 @@ BOOL   PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(PlacingAction* pAction,
       Rotamer* pRotOnSite1;
       Rotamer* pRotOnSite2;
 
-      if (site1Index < relatedProteinSiteCount && site2Index < relatedProteinSiteCount)
+      if (site1Index < relatedProteinSiteNum && site2Index < relatedProteinSiteNum)
       {
         checkResult = pAction->checkMultiCons_predeterminedConsRelations[consIndex][rotOnSite1][rotOnSite2];
 #ifdef DEBUGGING_SMALLMOL
@@ -2021,49 +2017,49 @@ BOOL   PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(PlacingAction* pAction,
       }
       else
       {
-        if (site1Index == relatedProteinSiteCount)
+        if (site1Index == relatedProteinSiteNum)
         {
           pRotOnSite1 = pSmallMolRotamer;
         }
-        else if (site1Index == relatedProteinSiteCount + 1)
+        else if (site1Index == relatedProteinSiteNum + 1)
         {
           pRotOnSite1 = pStartingProteinRotamer;
         }
         else
         {
-          pRotOnSite1 = RotamerSetGet(DesignSiteGetRotamers(relatedProteinSites[site1Index]), rotOnSite1);
+          pRotOnSite1 = RotamersGet(DesignSiteGetRotamers(relatedProteinSites[site1Index]), rotOnSite1);
         }
 
-        if (site2Index == relatedProteinSiteCount)
+        if (site2Index == relatedProteinSiteNum)
         {
           pRotOnSite2 = pSmallMolRotamer;
         }
-        else if (site2Index == relatedProteinSiteCount + 1)
+        else if (site2Index == relatedProteinSiteNum + 1)
         {
           pRotOnSite2 = pStartingProteinRotamer;
         }
         else
         {
-          pRotOnSite2 = RotamerSetGet(DesignSiteGetRotamers(relatedProteinSites[site2Index]), rotOnSite2);
+          pRotOnSite2 = RotamersGet(DesignSiteGetRotamers(relatedProteinSites[site2Index]), rotOnSite2);
         }
 
         checkResult = CataConsSitePairCheck(pCurCons, pRotOnSite1, pRotOnSite2);
 #ifdef DEBUGGING_SMALLMOL
         if (checkResult)
         {
-          if (site1Index == relatedProteinSiteCount + 1)
+          if (site1Index == relatedProteinSiteNum + 1)
           {
             printf("(%d start, %d %d) satisfy constraint %d\n", site1Index, site2Index, rotOnSite2, consIndex);
           }
-          else if (site2Index == relatedProteinSiteCount + 1)
+          else if (site2Index == relatedProteinSiteNum + 1)
           {
             printf("(%d %d, %d start) satisfy constraint %d\n", site1Index, rotOnSite1, site2Index, consIndex);
           }
-          if (site1Index == relatedProteinSiteCount)
+          if (site1Index == relatedProteinSiteNum)
           {
             printf("(%d ligand, %d %d) satisfy constraint %d\n", site1Index, site2Index, rotOnSite2, consIndex);
           }
-          else if (site2Index == relatedProteinSiteCount)
+          else if (site2Index == relatedProteinSiteNum)
           {
             printf("(%d %d, %d ligand) satisfy constraint %d\n", site1Index, rotOnSite1, site2Index, consIndex);
           }
@@ -2083,7 +2079,7 @@ BOOL   PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(PlacingAction* pAction,
       continue;
     }
 
-    checkResult = PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(pAction, relatedProteinSiteCount,
+    checkResult = PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(pAction, relatedProteinSiteNum,
       relatedProteinSites, rotamersSelectedOnPreviousSteps, pSmallMolRotamer, pStartingProteinRotamer,
       currentStepIndex + 1);
     if (checkResult)
@@ -2103,27 +2099,24 @@ BOOL   PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(PlacingAction* pAction,
 
 BOOL   PlacingRuleProcess_CHECK_MULTI_CONS(PlacingRule* pThis,
   Rotamer* pProteinRotamerOnStartingSite,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite** relatedProteinSites,
   PlacingAction* pAction)
 {
   int checkResult;
-  int* rotamersSelectedOnPreviousSteps = (int*)malloc(sizeof(int) * (relatedProteinSiteCount + 2));
+  int* rotamersSelectedOnPreviousSteps = (int*)malloc(sizeof(int) * (relatedProteinSiteNum + 2));
   Rotamer smallMolRotamer;
   RotamerCreate(&smallMolRotamer);
   RotamerSetType(&smallMolRotamer, ResidueGetName(pThis->pSmallMol));
   RotamerAddAtoms(&smallMolRotamer, ResidueGetAllAtoms(pThis->pSmallMol));
   XYZArrayCopy(&smallMolRotamer.xyzs, &pThis->smallMolAtomXYZs);
-  //for(int i=0;i<RotamerGetAtomCount(&smallMolRotamer);i++){
-  //	RotamerGetAtom(&smallMolRotamer,i)->xyz = *XYZArrayGet(&pThis->smallMolAtomXYZs,i);
-  //}
 
-  for (int i = 0;i < relatedProteinSiteCount + 2;i++)
+  for (int i = 0;i < relatedProteinSiteNum + 2;i++)
   {
     rotamersSelectedOnPreviousSteps[i] = -1;
   }
 
-  checkResult = PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(pAction, relatedProteinSiteCount,
+  checkResult = PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(pAction, relatedProteinSiteNum,
     relatedProteinSites, rotamersSelectedOnPreviousSteps, &smallMolRotamer, pProteinRotamerOnStartingSite, 0);
 
   RotamerDestroy(&smallMolRotamer);
@@ -2134,58 +2127,58 @@ BOOL   PlacingRuleProcess_CHECK_MULTI_CONS(PlacingRule* pThis,
 }
 
 
-BOOL   PlacingRuleProcess_CHECK_RMSD(PlacingRule* pThis, RotamerSet* pSmallMolRotSet, PlacingAction* pAction)
+BOOL   PlacingRuleProcess_CHECK_RMSD(PlacingRule* pThis, Rotamers* pSmallMolRotSet, PlacingAction* pAction)
 {
-  int rotIndex;
-  int atomIndex;
-  int rotCount = RotamerSetGetCount(pSmallMolRotSet);
-  int atomCount = ResidueGetAtomCount(pThis->pSmallMol);
+  int rotNdx;
+  int atomNdx;
+  int rotNum = RotamersGetNum(pSmallMolRotSet);
+  int atomNum = ResidueGetAtomNum(pThis->pSmallMol);
   BOOL* omitThisAtom;
 
-  if (rotCount == 0)
+  if (rotNum == 0)
   {
     return TRUE;
   }
 
-  omitThisAtom = (BOOL*)calloc(atomCount, sizeof(BOOL));
-  for (atomIndex = 0; atomIndex < atomCount; atomIndex++)
+  omitThisAtom = (BOOL*)calloc(atomNum, sizeof(BOOL));
+  for (atomNdx = 0; atomNdx < atomNum; atomNdx++)
   {
-    if (AtomIsHydrogen(ResidueGetAtom(pThis->pSmallMol, atomIndex)) &&
+    if (AtomIsHydrogen(ResidueGetAtom(pThis->pSmallMol, atomNdx)) &&
       (!pAction->checkRMSD_withHydrogen))
     {
-      omitThisAtom[atomIndex] = TRUE;
+      omitThisAtom[atomNdx] = TRUE;
     }
-    else if (IntArrayGet(&pAction->checkRMSD_smallmolAtomHasXyz, atomIndex) == FALSE)
+    else if (IntArrayGet(&pAction->checkRMSD_smallmolAtomHasXyz, atomNdx) == FALSE)
     {
-      omitThisAtom[atomIndex] = TRUE;
+      omitThisAtom[atomNdx] = TRUE;
     }
     else
     {
-      omitThisAtom[atomIndex] = FALSE;
+      omitThisAtom[atomNdx] = FALSE;
     }
   }
 
-  for (rotIndex = 0; rotIndex < rotCount; rotIndex++)
+  for (rotNdx = 0; rotNdx < rotNum; rotNdx++)
   {
-    double totalRMSD = 0.0;
-    int totalAtomCount = 0;
-    Rotamer* pRot = RotamerSetGet(pSmallMolRotSet, rotIndex);
-    for (atomIndex = 0; atomIndex < atomCount; atomIndex++)
+    double totRMSD = 0.0;
+    int totAtomNum = 0;
+    Rotamer* pRot = RotamersGet(pSmallMolRotSet, rotNdx);
+    for (atomNdx = 0; atomNdx < atomNum; atomNdx++)
     {
       XYZ* atomInRotSet;
       XYZ* atomInNewRot;
-      if (omitThisAtom[atomIndex])
+      if (omitThisAtom[atomNdx])
       {
         continue;
       }
-      atomInRotSet = XYZArrayGet(&pRot->xyzs, atomIndex);
-      atomInNewRot = XYZArrayGet(&pThis->smallMolAtomXYZs, atomIndex);
-      totalRMSD += pow(XYZDistance(atomInRotSet, atomInNewRot), 2);
-      totalAtomCount++;
+      atomInRotSet = XYZArrayGet(&pRot->xyzs, atomNdx);
+      atomInNewRot = XYZArrayGet(&pThis->smallMolAtomXYZs, atomNdx);
+      totRMSD += pow(XYZDist(atomInRotSet, atomInNewRot), 2);
+      totAtomNum++;
     }
-    totalRMSD = sqrt(totalRMSD / totalAtomCount);
+    totRMSD = sqrt(totRMSD / totAtomNum);
     //printf("%f ",totalRMSD);
-    if (totalRMSD < pAction->checkRMSD_minDifference)
+    if (totRMSD < pAction->checkRMSD_minDifference)
     {
       free(omitThisAtom);
       return FALSE;
@@ -2201,16 +2194,16 @@ BOOL   PlacingRuleProcess_CHECK_VDW_BACKBONE(PlacingRule* pThis, PlacingAction* 
 {
   Atom* pAtomOnSmallMol;
   Atom* pAtomOnBackbone;
-  pAction->checkVDW_backbone_totalPotential = 0.0;
+  pAction->checkVDW_backbone_totalEnergy = 0.0;
 
-  for (int i = 0;i < AtomArrayGetCount(pThis->pTruncBone);i++)
+  for (int i = 0;i < AtomArrayGetNum(pThis->pTruncBone);i++)
   {
     pAtomOnBackbone = AtomArrayGet(pThis->pTruncBone, i);
     if (pAction->checkVDW_backbone_withHydrogen == FALSE && AtomIsHydrogen(pAtomOnBackbone))
     {
       continue;
     }
-    for (int j = 0;j < ResidueGetAtomCount(pThis->pSmallMol);j++)
+    for (int j = 0;j < ResidueGetAtomNum(pThis->pSmallMol);j++)
     {
       double dist;
       double rminSum;
@@ -2224,24 +2217,24 @@ BOOL   PlacingRuleProcess_CHECK_VDW_BACKBONE(PlacingRule* pThis, PlacingAction* 
       {
         continue;
       }
-      dist = XYZDistance(&(pAtomOnBackbone->xyz), XYZArrayGet(&pThis->smallMolAtomXYZs, j));
-      rminSum = 0.95 * (pAtomOnBackbone->vdw_radius + pAtomOnSmallMol->vdw_radius);
+      dist = XYZDist(&(pAtomOnBackbone->xyz), XYZArrayGet(&pThis->smallMolAtomXYZs, j));
+      rminSum = 0.95 * (pAtomOnBackbone->vdw_rad + pAtomOnSmallMol->vdw_rad);
 
       ratio = dist / rminSum;
       if (ratio < 0.8909)
       {
         double B6 = pow(1 / ratio, 6.0);
         double A12 = B6 * B6;
-        double epsilon = sqrt(pAtomOnBackbone->vdw_epsilon * pAtomOnSmallMol->vdw_epsilon);
+        double epsilon = sqrt(pAtomOnBackbone->vdw_eps * pAtomOnSmallMol->vdw_eps);
         double energy = epsilon * (A12 - 2.0 * B6);
-        pAction->checkVDW_backbone_totalPotential += energy;
+        pAction->checkVDW_backbone_totalEnergy += energy;
         //pAction->checkVDW_backbone_totalPotential += 10.0 - 11.225*ratio ;
       }
-      pThis->vdwBackbone = pAction->checkVDW_backbone_totalPotential;
+      pThis->vdwBackbone = pAction->checkVDW_backbone_totalEnergy;
 
     }
 
-    if (pAction->checkVDW_backbone_totalPotential > pAction->checkVDW_backbone_maxAllowed)
+    if (pAction->checkVDW_backbone_totalEnergy > pAction->checkVDW_backbone_maxAllowed)
     {
       return FALSE;
     }
@@ -2255,9 +2248,9 @@ BOOL   PlacingRuleProcess_CHECK_VDW_INTERNAL(PlacingRule* pThis, PlacingAction* 
 {
   Atom* pAtomI;
   Atom* pAtomJ;
-  pAction->checkVDW_internal_totalPotential = 0.0;
+  pAction->checkVDW_internal_totalEnergy = 0.0;
 
-  for (int i = 0;i < pAction->checkVDW_internal_smallMolAtomCount;i++)
+  for (int i = 0;i < pAction->checkVDW_internal_smallMolAtomNum;i++)
   {
     pAtomI = ResidueGetAtom(pThis->pSmallMol, i);
     if (pAction->checkVDW_internal_withHydrogen == FALSE && AtomIsHydrogen(pAtomI))
@@ -2270,7 +2263,7 @@ BOOL   PlacingRuleProcess_CHECK_VDW_INTERNAL(PlacingRule* pThis, PlacingAction* 
       continue;
     }
 
-    for (int j = i + 1;j < pAction->checkVDW_internal_smallMolAtomCount;j++)
+    for (int j = i + 1;j < pAction->checkVDW_internal_smallMolAtomNum;j++)
     {
       double dist;
       double rminSum;
@@ -2292,23 +2285,23 @@ BOOL   PlacingRuleProcess_CHECK_VDW_INTERNAL(PlacingRule* pThis, PlacingAction* 
         continue;
       }
       //A rough estimation of VDW potential
-      dist = XYZDistance(XYZArrayGet(&pThis->smallMolAtomXYZs, i), XYZArrayGet(&pThis->smallMolAtomXYZs, j));
-      rminSum = 0.95 * (pAtomI->vdw_radius + pAtomJ->vdw_radius);
+      dist = XYZDist(XYZArrayGet(&pThis->smallMolAtomXYZs, i), XYZArrayGet(&pThis->smallMolAtomXYZs, j));
+      rminSum = 0.95 * (pAtomI->vdw_rad + pAtomJ->vdw_rad);
       ratio = dist / rminSum;
 
       if (ratio < 0.8909)
       {
         double B6 = pow(1 / ratio, 6.0);
         double A12 = B6 * B6;
-        double epsilon = sqrt(pAtomI->vdw_epsilon * pAtomJ->vdw_epsilon);
+        double epsilon = sqrt(pAtomI->vdw_eps * pAtomJ->vdw_eps);
         double energy = epsilon * (A12 - 2.0 * B6);
-        pAction->checkVDW_internal_totalPotential += energy;
+        pAction->checkVDW_internal_totalEnergy += energy;
         //pAction->checkVDW_internal_totalPotential += 10.0 - 11.225*ratio;
       }
       //Debug
-      pThis->vdwInternal = pAction->checkVDW_internal_totalPotential;
+      pThis->vdwInternal = pAction->checkVDW_internal_totalEnergy;
 
-      if (pAction->checkVDW_internal_totalPotential > pAction->checkVDW_internal_maxAllowed)
+      if (pAction->checkVDW_internal_totalEnergy > pAction->checkVDW_internal_maxAllowed)
       {
         return FALSE;
       }
@@ -2333,14 +2326,14 @@ int    PlacingRuleProcess_EVALUATE(PlacingRule* pThis, PlacingAction* pAction)
   switch (pAction->evaluate_type)
   {
   case Type_PlacingActionEvaluate_HalfDistance:
-    newValue = XYZDistance(&atomXYZs[0], &atomXYZs[1]) * 0.5;
+    newValue = XYZDist(&atomXYZs[0], &atomXYZs[1]) * 0.5;
     break;
   case Type_PlacingActionEvaluate_Distance:
-    newValue = XYZDistance(&atomXYZs[0], &atomXYZs[1]);
+    newValue = XYZDist(&atomXYZs[0], &atomXYZs[1]);
     break;
   case Type_PlacingActionEvaluate_Angle:
-    vectorI = XYZDifference(&atomXYZs[1], &atomXYZs[0]);
-    vectorJ = XYZDifference(&atomXYZs[1], &atomXYZs[2]);
+    vectorI = XYZDiff(&atomXYZs[1], &atomXYZs[0]);
+    vectorJ = XYZDiff(&atomXYZs[1], &atomXYZs[2]);
     newValue = XYZAngle(&vectorI, &vectorJ);
     break;
   case Type_PlacingActionEvaluate_Torsion:
@@ -2360,7 +2353,7 @@ int    PlacingRuleProcess_LOAD(PlacingRule* pThis,
   Rotamer* pProteinRotamerOnStartingSite,
   PlacingAction* pAction)
 {
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int    result;
   for (int i = 0;i < IntArrayGetLength(&pAction->load_atoms);i++)
   {
@@ -2372,8 +2365,8 @@ int    PlacingRuleProcess_LOAD(PlacingRule* pThis,
     if (atomName[0] == SMALLMOL_ATOM_SYMBOL)
     {
       //Find Atom On SmallMol
-      pAtomOnProteinOrSmallMol = ResidueGetAtomByName(pThis->pSmallMol, atomName + 1);
-      //use 'atomName+1' instead of 'atomName' to skip the '*' symbol
+      pAtomOnProteinOrSmallMol = ResidueGetAtomByName(pThis->pSmallMol, atomName+1);
+      //use 'atomName+1' instead of 'atomName' to skip the '$' symbol
       if (pAtomOnProteinOrSmallMol != NULL)
       {
         int atomPosOnSmallMol = IntArrayGet(&pThis->atomPosOnSmallMol, index);
@@ -2406,10 +2399,10 @@ int    PlacingRuleProcess_LOAD(PlacingRule* pThis,
 }
 
 
-int PlacingRuleProcess(PlacingRule* pRule, Rotamer* pStartRot, CataConsSitePairArray* pConsArray, int siteCount, DesignSite** ppSites, RotamerSet* pSmallSet, int step)
+int PlacingRuleProcess(PlacingRule* pRule, Rotamer* pStartRot, CataConsSitePairArray* pConsArray, int siteNum, DesignSite** ppSites, Rotamers* pSmallSet, int step)
 {
   int result = Success;
-  for (; step < pRule->actionCount; step++)
+  for (; step < pRule->actionNum; step++)
   {
     PlacingAction* pCurAction = &pRule->actions[step];
     BOOL cataConsSatisfied = FALSE;
@@ -2423,11 +2416,11 @@ int PlacingRuleProcess(PlacingRule* pRule, Rotamer* pStartRot, CataConsSitePairA
       result = PlacingRuleProcess_CALC(pRule, pCurAction);
       break;
     case Type_PlacingAction_CheckCataCons:
-      cataConsSatisfied = PlacingRuleProcess_CHECK_CATA_CONS(pRule, pStartRot, siteCount, ppSites, pCurAction);
+      cataConsSatisfied = PlacingRuleProcess_CHECK_CATA_CONS(pRule, pStartRot, siteNum, ppSites, pCurAction);
       result = Success;
       break;
     case Type_PlacingAction_CheckMultiCons:
-      cataConsSatisfied = PlacingRuleProcess_CHECK_MULTI_CONS(pRule, pStartRot, siteCount, ppSites, pCurAction);
+      cataConsSatisfied = PlacingRuleProcess_CHECK_MULTI_CONS(pRule, pStartRot, siteNum, ppSites, pCurAction);
       result = Success;
       break;
     case Type_PlacingAction_CheckRMSD:
@@ -2483,25 +2476,22 @@ int PlacingRuleProcess(PlacingRule* pRule, Rotamer* pStartRot, CataConsSitePairA
 
   }
 
-  if (step == pRule->actionCount)
+  if (step == pRule->actionNum)
   {
     Rotamer newRot;
     RotamerCreate(&newRot);
     RotamerAddAtoms(&newRot, ResidueGetAllAtoms(pRule->pSmallMol));
     strcpy(newRot.type, ResidueGetName(pRule->pSmallMol));
-    /*for (int i = 0; i < RotamerGetAtomCount(&newRot); i++) {
-      RotamerGetAtom(&newRot, i)->isXyzValid = FALSE;
-    }*/
     RotamerCopyAtomXYZ(&newRot, &pRule->smallMolAtomXYZs);
     RotamerAtomsCopyXYZFromArray(&newRot, &pRule->smallMolAtomXYZs);
-    for (int i = 0; i < RotamerGetAtomCount(&newRot); i++)
+    for (int i = 0; i < RotamerGetAtomNum(&newRot); i++)
     {
       RotamerGetAtom(&newRot, i)->isXyzValid = pRule->xyzValidArray[i];
     }
-    BondSetCopy(&newRot.bonds, &pRule->pSmallMol->bonds);
+    BondsCopy(&newRot.bonds, &pRule->pSmallMol->bonds);
     newRot.vdwBackbone = pRule->vdwBackbone;
     newRot.vdwInternal = pRule->vdwInternal;
-    RotamerSetAdd(pSmallSet, &newRot);
+    RotamersAdd(pSmallSet, &newRot);
     RotamerDestroy(&newRot);
     return Success;
   }
@@ -2514,7 +2504,7 @@ int PlacingRuleProcess(PlacingRule* pRule, Rotamer* pStartRot, CataConsSitePairA
       result = PlacingRuleProcess(pRule,
         pStartRot,
         pConsArray,
-        siteCount,
+        siteNum,
         ppSites,
         pSmallSet, step + 1);
       if (FAILED(result)) return result;
@@ -2525,10 +2515,10 @@ int PlacingRuleProcess(PlacingRule* pRule, Rotamer* pStartRot, CataConsSitePairA
 }
 
 
-int PlacingRulePlaceSmallMol(PlacingRule* pThis, CataConsSitePairArray* pConsArray, DesignSite* pStartSite, int siteCount, DesignSite** ppSites, RotamerSet* pSmallSet)
+int PlacingRulePlaceSmallMol(PlacingRule* pThis, CataConsSitePairArray* pConsArray, DesignSite* pStartSite, int siteNum, DesignSite** ppSites, Rotamers* pSmallSet)
 {
   int result = Success;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
 
   if (PlacingRuleGetDeployedFlag(pThis) == FALSE)
   {
@@ -2541,14 +2531,14 @@ int PlacingRulePlaceSmallMol(PlacingRule* pThis, CataConsSitePairArray* pConsArr
   time_t begin = time(NULL);
   int progressBarWidth = 100;
   ShowProgress(progressBarWidth, 0.0);
-  for (int i = 0; i < RotamerSetGetCount(DesignSiteGetRotamers(pStartSite)); i++)
+  for (int i = 0; i < RotamersGetNum(DesignSiteGetRotamers(pStartSite)); i++)
   {
-    Rotamer* pCurRot = RotamerSetGet(DesignSiteGetRotamers(pStartSite), i);
+    Rotamer* pCurRot = RotamersGet(DesignSiteGetRotamers(pStartSite), i);
     RotamerRestore(pCurRot, DesignSiteGetRotamers(pStartSite));
 
     if (strcmp(pThis->rotamerType, RotamerGetType(pCurRot)) == 0)
     {
-      result = PlacingRuleProcess(pThis, pCurRot, pConsArray, siteCount, ppSites, pSmallSet, 0);
+      result = PlacingRuleProcess(pThis, pCurRot, pConsArray, siteNum, ppSites, pSmallSet, 0);
       if (FAILED(result))
       {
         sprintf(errMsg, "in file %s line %d, when placing ligand from site %s%d%s with rotamer type %s", __FILE__, __LINE__, pThis->chainName, pThis->posInChain, pThis->residueName, pThis->rotamerType);
@@ -2560,9 +2550,9 @@ int PlacingRulePlaceSmallMol(PlacingRule* pThis, CataConsSitePairArray* pConsArr
 
     time_t now = time(NULL);
     int elapsed = (int)(now - begin);
-    double percentage = (double)(i + 1) / (double)(RotamerSetGetCount(DesignSiteGetRotamers(pStartSite))) * 100.0;
+    double percentage = (double)(i + 1) / (double)(RotamersGetNum(DesignSiteGetRotamers(pStartSite))) * 100.0;
     ShowProgress(progressBarWidth, percentage);
-    printf("time elapsed: %2d h %2d m %2d s; %d rots created\n", elapsed / 3600, (elapsed % 3600) / 60, (elapsed % 3600) % 60, RotamerSetGetCount(pSmallSet));
+    printf("time elapsed: %2d h %2d m %2d s; %d rots created\n", elapsed / 3600, (elapsed % 3600) / 60, (elapsed % 3600) % 60, RotamersGetNum(pSmallSet));
   }
   return Success;
 }
@@ -2573,7 +2563,7 @@ int    PlacingRuleShowAtom(PlacingRule* pThis, int index)
 {
   int value;
 
-  if (index < 0 || index >= StringArrayGetCount(&pThis->atomNames))
+  if (index < 0 || index >= StringArrayGetNum(&pThis->atomNames))
     return IndexError;
 
   printf("ATOM  %2d  %5.5s  ", index, StringArrayGet(&pThis->atomNames, index));
@@ -2596,8 +2586,8 @@ int    PlacingRuleShowAtom(PlacingRule* pThis, int index)
 
 int    PlacingRuleShowAtomDistances(PlacingRule* pThis)
 {
-  int count = XYZArrayGetLength(&pThis->atomXYZs);
-  for (int i = -1;i < count;i++)
+  int num = XYZArrayGetNum(&pThis->atomXYZs);
+  for (int i = -1;i < num;i++)
   {
     if (i == -1)
     {
@@ -2607,7 +2597,7 @@ int    PlacingRuleShowAtomDistances(PlacingRule* pThis)
     {
       printf("%5.5s|", StringArrayGet(&pThis->atomNames, i));
     }
-    for (int j = 0;j < count;j++)
+    for (int j = 0;j < num;j++)
     {
       if (i == -1)
       {
@@ -2617,7 +2607,7 @@ int    PlacingRuleShowAtomDistances(PlacingRule* pThis)
 
       if (i != j)
       {
-        printf("%5.2f|", XYZDistance(
+        printf("%5.2f|", XYZDist(
           XYZArrayGet(&pThis->atomXYZs, i),
           XYZArrayGet(&pThis->atomXYZs, j))
         );
@@ -2635,7 +2625,7 @@ int    PlacingRuleShowAtomDistances(PlacingRule* pThis)
 
 int    PlacingRuleShowParam(PlacingRule* pThis, int index)
 {
-  if (index < 0 || index >= StringArrayGetCount(&pThis->paramNames))
+  if (index < 0 || index >= StringArrayGetNum(&pThis->paramNames))
     return IndexError;
   printf("PARAM  %2d  %8.8s  %f\n", index,
     StringArrayGet(&pThis->paramNames, index),
@@ -2648,7 +2638,7 @@ int    PlacingRuleShowAction(PlacingRule* pThis, int index)
 {
   PlacingAction* pCurAction;
 
-  if (index < 0 || index >= pThis->actionCount)
+  if (index < 0 || index >= pThis->actionNum)
     return IndexError;
 
   pCurAction = &pThis->actions[index];
@@ -2724,7 +2714,7 @@ int    PlacingRuleShowAction(PlacingRule* pThis, int index)
     break;
   case Type_PlacingAction_CheckMultiCons:
     printf("CHECK_MULTI_CONS_BEGIN\n");
-    for (int j = 0;j < pCurAction->checkMultiCons_cataConsCount;j++)
+    for (int j = 0;j < pCurAction->checkMultiCons_cataConsNum;j++)
     {
       printf("%s  %s  %d\t%s	%s	%d\n",
         StringArrayGet(&pCurAction->checkMultiCons_firstSiteChainNames, j),
@@ -2778,15 +2768,15 @@ int    PlacingRuleShowAction(PlacingRule* pThis, int index)
 
 int PlacingRuleShow(PlacingRule* pThis)
 {
-  for (int i = 0;i < StringArrayGetCount(&pThis->atomNames);i++)
+  for (int i = 0;i < StringArrayGetNum(&pThis->atomNames);i++)
   {
     PlacingRuleShowAtom(pThis, i);
   }
-  for (int i = 0;i < StringArrayGetCount(&pThis->paramNames);i++)
+  for (int i = 0;i < StringArrayGetNum(&pThis->paramNames);i++)
   {
     PlacingRuleShowParam(pThis, i);
   }
-  for (int i = 0;i < pThis->actionCount;i++)
+  for (int i = 0;i < pThis->actionNum;i++)
   {
     PlacingRuleShowAction(pThis, i);
   }
@@ -2812,7 +2802,7 @@ int ScreenSmallmolRotamersByRMSD(char* oldFile, char* newFile, double rmsdcut)
 {
   FILE* pIn = fopen(oldFile, "r");
   FILE* pOut = fopen(newFile, "w");
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
 
   if (pIn == NULL || pOut == NULL)
   {
@@ -2821,25 +2811,25 @@ int ScreenSmallmolRotamersByRMSD(char* oldFile, char* newFile, double rmsdcut)
     return IOError;
   }
 
-  int atomCounter = 0;
+  int atomNum = 0;
   char line[MAX_LEN_ONE_LINE_CONTENT];
   while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
     char keyword[10];
     ExtractFirstStringFromSourceString(keyword, line);
-    if (strcmp(keyword, "ATOM") == 0) atomCounter++;
+    if (strcmp(keyword, "ATOM") == 0) atomNum++;
     else if (strcmp(keyword, "ENDMDL") == 0) break;
   }
   Rotamer currentRotamer;
   RotamerCreate(&currentRotamer);
-  XYZArrayResize(&currentRotamer.xyzs, atomCounter);
+  XYZArrayResize(&currentRotamer.xyzs, atomNum);
 
   fseek(pIn, 0, SEEK_SET);
 
-  int totalRotamerCount = 0;
+  int totRotNum = 0;
   BOOL lastAccepted = FALSE;
-  RotamerSet acceptedRotamers;
-  RotamerSetCreate(&acceptedRotamers);
+  Rotamers acceptedRotamers;
+  RotamersCreate(&acceptedRotamers);
   StringArray buffer;
   StringArrayCreate(&buffer);
   while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
@@ -2849,9 +2839,9 @@ int ScreenSmallmolRotamersByRMSD(char* oldFile, char* newFile, double rmsdcut)
     if (strcmp(keyword, "ENDM") == 0)
     {
       lastAccepted = TRUE;
-      for (int i = 0;i < RotamerSetGetCount(&acceptedRotamers);i++)
+      for (int i = 0;i < RotamersGetNum(&acceptedRotamers);i++)
       {
-        double rmsd = XYZArrayRMSD(&RotamerSetGet(&acceptedRotamers, i)->xyzs, &currentRotamer.xyzs);
+        double rmsd = XYZArrayRMSD(&RotamersGet(&acceptedRotamers, i)->xyzs, &currentRotamer.xyzs);
         if (rmsd < rmsdcut)
         {
           lastAccepted = FALSE;
@@ -2860,28 +2850,28 @@ int ScreenSmallmolRotamersByRMSD(char* oldFile, char* newFile, double rmsdcut)
       }
       if (lastAccepted)
       {
-        fprintf(pOut, "MODEL     %d\n", RotamerSetGetCount(&acceptedRotamers) + 1);
-        for (int i = 0;i < StringArrayGetCount(&buffer);i++)
+        fprintf(pOut, "MODEL     %d\n", RotamersGetNum(&acceptedRotamers) + 1);
+        for (int i = 0;i < StringArrayGetNum(&buffer);i++)
         {
           fprintf(pOut, "%s", StringArrayGet(&buffer, i));
         }
         fprintf(pOut, "ENDMDL\n");
-        RotamerSetAdd(&acceptedRotamers, &currentRotamer);
+        RotamersAdd(&acceptedRotamers, &currentRotamer);
       }
 
-      totalRotamerCount++;
-      printf("\r %d / %d rotamers processed", RotamerSetGetCount(&acceptedRotamers), totalRotamerCount);
+      totRotNum++;
+      printf("\r %d / %d rotamers processed", RotamersGetNum(&acceptedRotamers), totRotNum);
       //fflush(stdout);
     }
     else if (strcmp(keyword, "MODE") == 0)
     {
-      atomCounter = 0;
+      atomNum = 0;
       StringArrayDestroy(&buffer);
       StringArrayCreate(&buffer);
     }
     else if (strcmp(keyword, "ATOM") == 0)
     {
-      XYZ* pXYZ = XYZArrayGet(&currentRotamer.xyzs, atomCounter);
+      XYZ* pXYZ = XYZArrayGet(&currentRotamer.xyzs, atomNum);
       ExtractTargetStringFromSourceString(keyword, line, 31, 7);
       pXYZ->X = atof(keyword);
       ExtractTargetStringFromSourceString(keyword, line, 39, 7);
@@ -2889,7 +2879,7 @@ int ScreenSmallmolRotamersByRMSD(char* oldFile, char* newFile, double rmsdcut)
       ExtractTargetStringFromSourceString(keyword, line, 47, 7);
       pXYZ->Z = atof(keyword);
       StringArrayAppend(&buffer, line);
-      atomCounter++;
+      atomNum++;
     }
     else if (strcmp(keyword, "ENER") == 0)
     {
@@ -2899,7 +2889,7 @@ int ScreenSmallmolRotamersByRMSD(char* oldFile, char* newFile, double rmsdcut)
 
   StringArrayDestroy(&buffer);
   RotamerDestroy(&currentRotamer);
-  RotamerSetDestroy(&acceptedRotamers);
+  RotamersDestroy(&acceptedRotamers);
   fclose(pIn);
   fclose(pOut);
 
@@ -2909,7 +2899,7 @@ int ScreenSmallmolRotamersByRMSD(char* oldFile, char* newFile, double rmsdcut)
 
 int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
 {
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   char line[MAX_LEN_ONE_LINE_CONTENT];
 
   FILE* pIn = fopen(rotFile, "r");
@@ -2920,7 +2910,7 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
     return IOError;
   }
 
-  int atomCounter = 0;
+  int atomNum = 0;
   XYZArray currentRotamerXYZ;
   IntArray atomPosOnNativeSmallMol;
   IntArrayCreate(&atomPosOnNativeSmallMol, 0);
@@ -2932,14 +2922,14 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
     ExtractTargetStringFromSourceString(keyword, line, 0, 6);
     if (strcmp(keyword, "ATOM") == 0)
     {
-      atomCounter++;
+      atomNum++;
       ExtractTargetStringFromSourceString(atomName, line, 12, 4);
       // 05/08/2023: add this if(){} to reformat the atom name
       if (isdigit(atomName[0]) && isalpha(atomName[1]))
       {
-        char tempName[MAX_LEN_ATOM_NAME + 1];
-        strcpy(tempName, atomName + 1);
-        tempName[strlen(atomName) - 1] = atomName[0];
+        char tempName[MAX_LEN_ATOM_NAME+1];
+        strcpy(tempName, atomName+1);
+        tempName[strlen(atomName)-1] = atomName[0];
         tempName[strlen(atomName)] = '\0';
         strcpy(atomName, tempName);
       }
@@ -2955,28 +2945,28 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
     }
     else if (strcmp(keyword, "ENDMDL") == 0) break;
   }
-  XYZArrayResize(&currentRotamerXYZ, atomCounter);
+  XYZArrayResize(&currentRotamerXYZ, atomNum);
   fseek(pIn, 0, SEEK_SET);
 
-  int poseCounter = 0;
-  // minRMSD rotamer
+  int poseNum = 0;
+  // minRMSD pose
   double minRMSD = 1e8;
   int indexOfMinRMSD = -1;
   double internalVDWOfMinRMSD = 1e8;
   double backboneVDWOfMinRMSD = 1e8;
-  // minInternalVDW rotamer
+  // minInternalVDW pose
   double minInternalVDW = 1e8;
   int indexOfMinInternalVDW = -1;
   double backboneVDWOfMinInternalVDW = 1e8;
   double rmsdOfMinInternalVDW = 1e8;
 
-  //minBackboneVDW rotamer
+  //minBackboneVDW pose
   double minBackboneVDW = 1e8;
   int indexOfMinBackboneVDW = -1;
   double internalVDWOfMinBackboneVDW = 1e8;
   double rmsdOfMinBackboneVDW = 1e8;
 
-  //number of rotamers below 0.5, 1, 1.5, 2.0, 2.5, and 3.0 angstroms;
+  //number of poses below 0.5, 1, 1.5, 2.0, 2.5, and 3.0 angstroms;
   int numOfPoseBelow0_5A = 0;
   int numOfPoseBelow1_0A = 0;
   int numOfPoseBelow1_5A = 0;
@@ -2993,18 +2983,18 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
     if (strcmp(keyword, "ENDM") == 0)
     {
       double rmsd = 0.0;
-      for (int i = 0;i < atomCounter;i++)
+      for (int i = 0;i < atomNum;i++)
       {
         Atom* pNativeAtom = ResidueGetAtom(pSmallMol, IntArrayGet(&atomPosOnNativeSmallMol, i));
-        double dist = XYZDistance(XYZArrayGet(&currentRotamerXYZ, i), &pNativeAtom->xyz);
+        double dist = XYZDist(XYZArrayGet(&currentRotamerXYZ, i), &pNativeAtom->xyz);
         rmsd += dist * dist;
       }
-      rmsd = sqrt(rmsd / atomCounter);
+      rmsd = sqrt(rmsd / atomNum);
 
       if (rmsd < minRMSD)
       {
         minRMSD = rmsd;
-        indexOfMinRMSD = poseCounter;
+        indexOfMinRMSD = poseNum;
         internalVDWOfMinRMSD = internalVDW;
         backboneVDWOfMinRMSD = backboneVDW;
       }
@@ -3036,19 +3026,19 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
     }
     else if (strcmp(keyword, "MODE") == 0)
     {
-      atomCounter = 0;
-      poseCounter++;
+      atomNum = 0;
+      poseNum++;
     }
     else if (strcmp(keyword, "ATOM") == 0)
     {
-      XYZ* pXYZ = XYZArrayGet(&currentRotamerXYZ, atomCounter);
+      XYZ* pXYZ = XYZArrayGet(&currentRotamerXYZ, atomNum);
       ExtractTargetStringFromSourceString(keyword, line, 31, 7);
       pXYZ->X = atof(keyword);
       ExtractTargetStringFromSourceString(keyword, line, 39, 7);
       pXYZ->Y = atof(keyword);
       ExtractTargetStringFromSourceString(keyword, line, 47, 7);
       pXYZ->Z = atof(keyword);
-      atomCounter++;
+      atomNum++;
     }
     else if (strcmp(keyword, "ENER") == 0)
     {
@@ -3056,13 +3046,13 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
       if (internalVDW < minInternalVDW)
       {
         minInternalVDW = internalVDW;
-        indexOfMinInternalVDW = poseCounter;
+        indexOfMinInternalVDW = poseNum;
         backboneVDWOfMinInternalVDW = backboneVDW;
       }
       if (backboneVDW < minBackboneVDW)
       {
         minBackboneVDW = backboneVDW;
-        indexOfMinBackboneVDW = poseCounter;
+        indexOfMinBackboneVDW = poseNum;
         internalVDWOfMinBackboneVDW = internalVDW;
       }
     }
@@ -3070,7 +3060,7 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
 
   printf("Summary of ligand pose analysis:\n");
   printf("----------------------------------------------\n");
-  printf("No. of total poses                : %d\n", poseCounter);
+  printf("No. of total poses                : %d\n", poseNum);
   printf("No. of poses < 0.5 A              : %d\n", numOfPoseBelow0_5A);
   printf("No. of poses < 1.0 A              : %d\n", numOfPoseBelow1_0A);
   printf("No. of poses < 1.5 A              : %d\n", numOfPoseBelow1_5A);
@@ -3099,45 +3089,43 @@ int AnalyzeSmallMolRotamers(char* rotFile, Residue* pSmallMol)
 }
 
 
-int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* poseFile, Residue* pNativeSmallMol, char* specificAtomFile)
+int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* poseFile, Residue* pSmall, char* specificAtomFile)
 {
-  int atomCounter;
-  int rotamerCounter;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   char line[MAX_LEN_ONE_LINE_CONTENT];
   double minInternalVDW = 1e8;
   double minBackboneVDW = 1e8;
   double internalVDWOfMinRMSD = 1e4;
   double backboneVDWOfMinRMSD = 1e4;
   double minRMSD = 1e8;
-  int minRMSDindex = -1;
+  int minRMSDndx = -1;
 
-  FileReader file;
+  FileReader fr;
   StringArray specificAtomNames;
 
-  XYZArray currentRotamerXYZ;
-  IntArray atomPosOnNativeSmallMol;
-  FILE* fin = fopen(poseFile, "r");
-  if (fin == NULL)
+  XYZArray curRotXYZs;
+  IntArray atomNdxArray;
+  FILE* pIn = fopen(poseFile, "r");
+  if (pIn == NULL)
   {
     sprintf(errMsg, "in file %s line %d, cannot open file %s", __FILE__, __LINE__, poseFile);
     TraceError(errMsg, IOError);
     return IOError;
   }
-  IntArrayCreate(&atomPosOnNativeSmallMol, 0);
-  XYZArrayCreate(&currentRotamerXYZ, 0);
+  IntArrayCreate(&atomNdxArray, 0);
+  XYZArrayCreate(&curRotXYZs, 0);
 
   StringArrayCreate(&specificAtomNames);
-  FileReaderCreate(&file, specificAtomFile);
-  while (!FAILED(FileReaderGetNextLine(&file, line)))
+  FileReaderCreate(&fr, specificAtomFile);
+  while (!FAILED(FileReaderGetNextLine(&fr, line)))
   {
     StringArray wordsInLine;
     StringArrayCreate(&wordsInLine);
     StringArraySplitString(&wordsInLine, line, ' ');
-    for (int i = 0; i < StringArrayGetCount(&wordsInLine); i++)
+    for (int i = 0; i < StringArrayGetNum(&wordsInLine); i++)
     {
       int posOnNativeSmallMol = -1;
-      ResidueFindAtom(pNativeSmallMol, StringArrayGet(&wordsInLine, i), &posOnNativeSmallMol);
+      ResidueFindAtom(pSmall, StringArrayGet(&wordsInLine, i), &posOnNativeSmallMol);
       if (posOnNativeSmallMol == -1)
       {
         sprintf(errMsg, "in file %s line %d, cannot find atom %s on ligand", __FILE__, __LINE__, StringArrayGet(&wordsInLine, i));
@@ -3149,40 +3137,38 @@ int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* poseFile, Residue* pNativeSma
     StringArrayDestroy(&wordsInLine);
   }
 
-  atomCounter = 0;
-  rotamerCounter = 0;
-  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, fin))
+  int atomNum = 0;
+  int poseNum = 0;
+  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
     char keyword[10];
     char atomName[10];
     ExtractTargetStringFromSourceString(keyword, line, 0, 6);
     if (strcmp(keyword, "ATOM") == 0)
     {
-      int posOnNativeSmallMol;
-
       ExtractTargetStringFromSourceString(atomName, line, 12, 4);
-      // 05/08/2023: add this if(){} to reformat the atom name
       if (isdigit(atomName[0]) && isalpha(atomName[1]))
       {
-        char tempName[MAX_LEN_ATOM_NAME + 1];
-        strcpy(tempName, atomName + 1);
-        tempName[strlen(atomName) - 1] = atomName[0];
-        tempName[strlen(atomName)] = '\0';
-        strcpy(atomName, tempName);
+        char temp[MAX_LEN_ATOM_NAME+1];
+        strcpy(temp, atomName+1);
+        temp[strlen(atomName)-1] = atomName[0];
+        temp[strlen(atomName)] = '\0';
+        strcpy(atomName, temp);
       }
-      for (int i = 0; i < StringArrayGetCount(&specificAtomNames); i++)
+      for (int i = 0; i < StringArrayGetNum(&specificAtomNames); i++)
       {
         if (strcmp(atomName, StringArrayGet(&specificAtomNames, i)) == 0)
         {
-          atomCounter++;
-          ResidueFindAtom(pNativeSmallMol, atomName, &posOnNativeSmallMol);
-          if (posOnNativeSmallMol == -1)
+          atomNum++;
+          int pos = -1;
+          ResidueFindAtom(pSmall, atomName, &pos);
+          if (pos == -1)
           {
             sprintf(errMsg, "in file %s line %d, cannot find atom %s on ligand", __FILE__, __LINE__, atomName);
             TraceError(errMsg, DataNotExistError);
             return DataNotExistError;
           }
-          IntArrayAppend(&atomPosOnNativeSmallMol, posOnNativeSmallMol);
+          IntArrayAppend(&atomNdxArray, pos);
         }
       }
     }
@@ -3192,11 +3178,11 @@ int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* poseFile, Residue* pNativeSma
     }
   }
 
-  XYZArrayResize(&currentRotamerXYZ, atomCounter);
+  XYZArrayResize(&curRotXYZs, atomNum);
 
-  fseek(fin, 0, SEEK_SET);
+  fseek(pIn, 0, SEEK_SET);
 
-  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, fin))
+  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
     char keyword[10];
     strcpy(keyword, "");
@@ -3204,48 +3190,44 @@ int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* poseFile, Residue* pNativeSma
     if (strcmp(keyword, "ENDM") == 0)
     {
       double rmsd = 0.0;
-      int i;
-      for (i = 0;i < atomCounter;i++)
+      for (int i = 0;i < atomNum;i++)
       {
-        Atom* pNativeAtom =
-          ResidueGetAtom(pNativeSmallMol, IntArrayGet(&atomPosOnNativeSmallMol, i));
-        double dist = XYZDistance(XYZArrayGet(&currentRotamerXYZ, i),
-          &pNativeAtom->xyz);
+        Atom* pAtom = ResidueGetAtom(pSmall, IntArrayGet(&atomNdxArray, i));
+        double dist = XYZDist(XYZArrayGet(&curRotXYZs, i), &pAtom->xyz);
         rmsd += dist * dist;
       }
-      rmsd = sqrt(rmsd / atomCounter);
+      rmsd = sqrt(rmsd / atomNum);
 
       if (rmsd < minRMSD)
       {
         minRMSD = rmsd;
-        minRMSDindex = rotamerCounter - 1;
+        minRMSDndx = poseNum - 1;
       }
     }
     else if (strcmp(keyword, "MODE") == 0)
     {
-      atomCounter = 0;
-      rotamerCounter++;
+      atomNum = 0;
+      poseNum++;
     }
     else if (strcmp(keyword, "ATOM") == 0)
     {
-      char atomName[MAX_LEN_ATOM_NAME + 1];
+      char atomName[MAX_LEN_ATOM_NAME+1];
 
       ExtractTargetStringFromSourceString(atomName, line, 12, 4);
-      for (int i = 0; i < StringArrayGetCount(&specificAtomNames); i++)
+      for (int i = 0; i < StringArrayGetNum(&specificAtomNames); i++)
       {
         if (strcmp(atomName, StringArrayGet(&specificAtomNames, i)) == 0)
         {
-          XYZ* pXYZ = XYZArrayGet(&currentRotamerXYZ, atomCounter);
+          XYZ* pXYZ = XYZArrayGet(&curRotXYZs, atomNum);
           ExtractTargetStringFromSourceString(keyword, line, 31, 7);
           pXYZ->X = atof(keyword);
           ExtractTargetStringFromSourceString(keyword, line, 39, 7);
           pXYZ->Y = atof(keyword);
           ExtractTargetStringFromSourceString(keyword, line, 47, 7);
           pXYZ->Z = atof(keyword);
-          atomCounter++;
+          atomNum++;
         }
       }
-
     }
     else if (strcmp(keyword, "ENER") == 0)
     {
@@ -3264,32 +3246,30 @@ int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* poseFile, Residue* pNativeSma
       {
         minBackboneVDW = atof(backboneVDW);
       }
-      if (rotamerCounter == minRMSDindex + 1)
+      if (poseNum == minRMSDndx + 1)
       {
         internalVDWOfMinRMSD = atof(internalVDW);
         backboneVDWOfMinRMSD = atof(backboneVDW);
       }
-
     }
-
     else
     {
       continue;
     }
   }
 
-  printf("Total Rotamer Count    : %d\n", rotamerCounter);
+  printf("Num of Total Poses     : %d\n", poseNum);
   printf("Min RMSD               : %f\n", minRMSD);
-  printf("Min RMSD Rotamer Index : %d\n", minRMSDindex);
+  printf("Min RMSD Rotamer Index : %d\n", minRMSDndx);
   printf("InternalVDW of minRMSD : %f\n", internalVDWOfMinRMSD);
   printf("BackboneVDW of minRMSD : %f\n", backboneVDWOfMinRMSD);
   printf("Min InternalVDW        : %f\n", minInternalVDW);
   printf("Min BackboneVDW        : %f\n", minBackboneVDW);
 
-  fclose(fin);
-  XYZArrayDestroy(&currentRotamerXYZ);
-  IntArrayDestroy(&atomPosOnNativeSmallMol);
-  FileReaderDestroy(&file);
+  fclose(pIn);
+  XYZArrayDestroy(&curRotXYZs);
+  IntArrayDestroy(&atomNdxArray);
+  FileReaderDestroy(&fr);
   StringArrayDestroy(&specificAtomNames);
 
   return Success;
@@ -3300,7 +3280,7 @@ typedef struct
 {
   double vdwInternal;
   double vdwBackbone;
-  int index;
+  int ndx;
 } RotamerEnergy;
 
 
@@ -3320,11 +3300,11 @@ int CompareByBackboneEnergy(const void* a, const void* b)
 }
 
 
-int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamersFile, char* newRotamersFile, double percent)
+int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamersFile, char* newRotamersFile, double bbVdwRankPerc, double internalVdwRankPerc)
 {
   int result = Success;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
-  printf("select smallmol rotamers that have internal and backbone VDW energy ranked in top %.0f%% among all smallmol rotamers\n", percent*100);
+  char errMsg[MAX_LEN_ERR_MSG+1];
+  printf("select smallmol poses that internal and backbone VDW energies ranked in top %.0f%% and %.0f%% respectively\n", internalVdwRankPerc*100, bbVdwRankPerc*100);
   FILE* pIn = fopen(oldRotamersFile, "r");
   if (pIn == NULL)
   {
@@ -3334,22 +3314,22 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
     return result;
   }
 
-  int rotCount = 0;
-  char line[MAX_LEN_ONE_LINE_CONTENT + 1];
+  int poseNum = 0;
+  char line[MAX_LEN_ONE_LINE_CONTENT+1];
   while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
-    char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
+    char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
     ExtractFirstStringFromSourceString(keyword, line);
     if (strcmp(keyword, "MODEL") == 0)
     {
-      rotCount++;
+      poseNum++;
     }
   }
-  printf("total smallmol rotamer count: %d\n", rotCount);
+  printf("total smallmol pose number: %d\n", poseNum);
 
-  RotamerEnergy* pRotamerEnergy = (RotamerEnergy*)malloc(sizeof(RotamerEnergy) * rotCount);
-  BOOL* flagRotamerWithinRank = (BOOL*)malloc(sizeof(BOOL) * rotCount);
-  for (int i = 0;i < rotCount;i++)
+  RotamerEnergy* pRotamerEnergy = (RotamerEnergy*)malloc(sizeof(RotamerEnergy) * poseNum);
+  BOOL* flagRotamerWithinRank = (BOOL*)malloc(sizeof(BOOL) * poseNum);
+  for (int i=0; i<poseNum; i++)
   {
     flagRotamerWithinRank[i] = FALSE;
   }
@@ -3358,7 +3338,7 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
   int rotNdx = 0;
   while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
-    char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
+    char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
     ExtractFirstStringFromSourceString(keyword, line);
     if (strcmp(keyword, "ENERGY") != 0) continue;
     ExtractFirstStringFromSourceString(keyword, line);
@@ -3369,42 +3349,42 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
     double vdwBackbone = atof(keyword);
     pRotamerEnergy[rotNdx].vdwInternal = vdwInternal;
     pRotamerEnergy[rotNdx].vdwBackbone = vdwBackbone;
-    pRotamerEnergy[rotNdx].index = rotNdx;
+    pRotamerEnergy[rotNdx].ndx = rotNdx;
     rotNdx++;
   }
 
   printf("rank smallmol rotamers by vdwInternal and vdwBackbone energy\n");
-  int rankThreshold = (int)(rotCount * percent);
+  int bbVdwRankThreshold = (int)(poseNum * bbVdwRankPerc);
+  int internalVdwRankThreshold = (int)(poseNum * internalVdwRankPerc);
   // rank by internalVDW;
-  IntArray highRankIndexByInternal;
-  IntArrayCreate(&highRankIndexByInternal, rankThreshold);
-  qsort(pRotamerEnergy, rotCount, sizeof(RotamerEnergy), CompareByInternalEnergy);
+  IntArray highRankIndexByInternalVDW;
+  IntArrayCreate(&highRankIndexByInternalVDW, internalVdwRankThreshold);
+  qsort(pRotamerEnergy, poseNum, sizeof(RotamerEnergy), CompareByInternalEnergy);
   rotNdx = 0;
-  while (rotNdx < rankThreshold)
+  while (rotNdx < internalVdwRankThreshold)
   {
-    IntArraySet(&highRankIndexByInternal, rotNdx, pRotamerEnergy[rotNdx].index);
+    IntArraySet(&highRankIndexByInternalVDW, rotNdx, pRotamerEnergy[rotNdx].ndx);
     rotNdx++;
   }
 
   // rank by backboneVDW;
-  IntArray highRankIndexByBackbone;
-  IntArrayCreate(&highRankIndexByBackbone, rankThreshold);
-  qsort(pRotamerEnergy, rotCount, sizeof(RotamerEnergy), CompareByBackboneEnergy);
+  IntArray highRankIndexByBBVDW;
+  IntArrayCreate(&highRankIndexByBBVDW, bbVdwRankThreshold);
+  qsort(pRotamerEnergy, poseNum, sizeof(RotamerEnergy), CompareByBackboneEnergy);
   rotNdx = 0;
-  while (rotNdx < rankThreshold)
+  while (rotNdx < bbVdwRankThreshold)
   {
-    IntArraySet(&highRankIndexByBackbone, rotNdx, pRotamerEnergy[rotNdx].index);
+    IntArraySet(&highRankIndexByBBVDW, rotNdx, pRotamerEnergy[rotNdx].ndx);
     rotNdx++;
   }
 
   // find out the rots that are ranked in top 'highRank' by internalVDW as well as backboneVDW;
-  printf("rotamer rank in top %.0f%% (%d rotamers) by both internal and backbone energy\n", percent * 100, rankThreshold);
-  for (int i = 0; i < IntArrayGetLength(&highRankIndexByInternal); i++)
+  for (int i = 0; i < IntArrayGetLength(&highRankIndexByInternalVDW); i++)
   {
-    int indexI = IntArrayGet(&highRankIndexByInternal, i);
-    for (int j = 0; j < IntArrayGetLength(&highRankIndexByBackbone); j++)
+    int indexI = IntArrayGet(&highRankIndexByInternalVDW, i);
+    for (int j = 0; j < IntArrayGetLength(&highRankIndexByBBVDW); j++)
     {
-      int indexJ = IntArrayGet(&highRankIndexByBackbone, j);
+      int indexJ = IntArrayGet(&highRankIndexByBBVDW, j);
       if (indexJ == indexI)
       {
         printf("RotamerIndex: %6d, InternalRank: %6d, BackboneRank: %6d\n", indexJ, i, j);
@@ -3430,7 +3410,7 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
   StringArrayCreate(&buffer);
   while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
-    char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
+    char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
     ExtractTargetStringFromSourceString(keyword, line, 0, 4);
     if (strcmp(keyword, "MODE") == 0)
     {
@@ -3448,10 +3428,10 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
     }
     else if (strcmp(keyword, "ENDM") == 0)
     {
-      if (flagRotamerWithinRank[rotNdx - 1] == TRUE)
+      if (flagRotamerWithinRank[rotNdx-1] == TRUE)
       {
-        fprintf(pOut, "MODEL     %d\n", accRotNdx + 1);
-        for (int j = 0;j < StringArrayGetCount(&buffer);j++)
+        fprintf(pOut, "MODEL     %d\n", accRotNdx+1);
+        for (int j = 0;j < StringArrayGetNum(&buffer);j++)
         {
           fprintf(pOut, "%s", StringArrayGet(&buffer, j));
         }
@@ -3463,8 +3443,8 @@ int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamers
   fclose(pOut);
   StringArrayDestroy(&buffer);
 
-  IntArrayDestroy(&highRankIndexByBackbone);
-  IntArrayDestroy(&highRankIndexByInternal);
+  IntArrayDestroy(&highRankIndexByBBVDW);
+  IntArrayDestroy(&highRankIndexByInternalVDW);
   free(pRotamerEnergy);
   free(flagRotamerWithinRank);
 

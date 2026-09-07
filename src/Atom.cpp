@@ -16,8 +16,6 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Atom.h"
 #include <string.h>
 
-extern BOOL FLAG_WRITE_HYDROGEN;
-
 int AtomCreate(Atom* pThis)
 {
   strcpy(pThis->name, "");
@@ -25,7 +23,7 @@ int AtomCreate(Atom* pThis)
   pThis->xyz.Y = -1e3;
   pThis->xyz.Z = -1e3;
   pThis->isXyzValid = FALSE;
-  strcpy(pThis->chainName, "");
+  strcpy(pThis->chnName, "");
   pThis->posInChain = -1;
   pThis->isInHBond = FALSE;
   pThis->isBBAtom = FALSE;
@@ -63,7 +61,7 @@ int AtomSetName(Atom* pThis, char* newName)
 {
   if (newName == NULL || strlen(newName) > MAX_LEN_ATOM_NAME)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int result = ValueError;
     sprintf(errMsg, "in file %s line %d, atom name is not specified or is too long", __FILE__, __LINE__);
     TraceError(errMsg, result);
@@ -114,7 +112,7 @@ BOOL AtomIsHydrogen(Atom* pThis)
 
 int AtomSetParamsByStringArray(Atom* pThis, StringArray* pParams)
 {
-  if (StringArrayGetCount(pParams) != 15)
+  if (StringArrayGetNum(pParams) != 15)
   {
     return ValueError;
   }
@@ -142,12 +140,12 @@ int AtomSetParamsByStringArray(Atom* pThis, StringArray* pParams)
     return ValueError;
   }
 
-  pThis->vdw_epsilon = epsilon;
-  pThis->vdw_radius = rmin;
+  pThis->vdw_eps = epsilon;
+  pThis->vdw_rad = rmin;
   pThis->charge = charge;
   pThis->EEF1_freeDG = EEF1DGfree;
   pThis->EEF1_volume = EEF1volume;
-  pThis->EEF1_lamda_ = EEF1lambda;
+  pThis->EEF1_lamda = EEF1lambda;
 
   AtomSetName(pThis, atomName);
   strcpy(pThis->type, atomType);
@@ -216,11 +214,11 @@ int AtomSetParamsByStringArray(Atom* pThis, StringArray* pParams)
   }
   else if (strcmp(polar, "NP1") == 0)
   {
-    pThis->polarity = Type_AtomPolarity_NPAliphatic;
+    pThis->polarity = Type_AtomPolarity_NPAL;
   }
   else if (strcmp(polar, "NP2") == 0)
   {
-    pThis->polarity = Type_AtomPolarity_NPAromatic;
+    pThis->polarity = Type_AtomPolarity_NPAR;
   }
   //for debug
   //AtomShowParams(pAtom);
@@ -240,10 +238,10 @@ int AtomShowParams(Atom* pThis)
   case Type_AtomPolarity_C:
     strcpy(polarity, "C  ");
     break;
-  case Type_AtomPolarity_NPAliphatic:
+  case Type_AtomPolarity_NPAL:
     strcpy(polarity, "NP1");
     break;
-  case Type_AtomPolarity_NPAromatic:
+  case Type_AtomPolarity_NPAR:
     strcpy(polarity, "NP2");
     break;
   default:
@@ -254,7 +252,7 @@ int AtomShowParams(Atom* pThis)
   printf("%5s %5s %c %3s %8.4f %8.4f %8.4f %5s %5s %5s %d\n",
     pThis->name, pThis->type,
     pThis->isBBAtom ? 'Y' : 'N',
-    polarity, pThis->vdw_epsilon, pThis->vdw_radius, pThis->charge,
+    polarity, pThis->vdw_eps, pThis->vdw_rad, pThis->charge,
     pThis->hbHorA, pThis->hbDorB, pThis->hbB2, pThis->hybridType);
   return Success;
 }
@@ -262,7 +260,7 @@ int AtomShowParams(Atom* pThis)
 
 char* AtomGetChainName(Atom* pThis)
 {
-  return pThis->chainName;
+  return pThis->chnName;
 }
 
 
@@ -274,7 +272,7 @@ int AtomSetChainName(Atom* pThis, char* newChainName)
   }
   else
   {
-    strcpy(pThis->chainName, newChainName);
+    strcpy(pThis->chnName, newChainName);
     return Success;
   }
 }
@@ -298,10 +296,6 @@ int AtomShowInPDBFormat(Atom* pAtom, char* header, char* resiName, char* chainNa
   // type, serial, name, altLoc, resName, chainID, resSeq, iCode, X, Y, Z
   // 0,  6,    12, 16,   17,    21,    22,   26,  30, 38, 46
   // 6,  5,    4,  1,    4,     1,     4,    1,   8, 8, 8
-  if (FLAG_WRITE_HYDROGEN == FALSE && AtomIsHydrogen(pAtom))
-  {
-    return Success;
-  }
   if (!pAtom->isXyzValid)
   {
     return Warning;
@@ -310,11 +304,11 @@ int AtomShowInPDBFormat(Atom* pAtom, char* header, char* resiName, char* chainNa
   {
     pFile = stdout;
   }
-  char atomName[MAX_LEN_ATOM_NAME + 1];
+  char atomName[MAX_LEN_ATOM_NAME+1];
   strcpy(atomName, AtomGetName(pAtom));
   if (strlen(atomName) >= 4)
   { //it should be a hydrogen atom
-    char tempName[MAX_LEN_ATOM_NAME + 1];
+    char tempName[MAX_LEN_ATOM_NAME+1];
     tempName[0] = atomName[3];
     tempName[1] = atomName[0];
     tempName[2] = atomName[1];
@@ -368,13 +362,13 @@ int AtomShowAtomParameter(Atom* pThis)
   BOOL isHBatomH = pThis->isHBatomH;
   BOOL isHBatomA = pThis->isHBatomA;
   // CHARMM parameters
-  double CHARMM_epsilon = pThis->vdw_epsilon;
-  double CHARMM_radius = pThis->vdw_radius;
+  double CHARMM_epsilon = pThis->vdw_eps;
+  double CHARMM_radius = pThis->vdw_rad;
   double CHARMM_charge = pThis->charge;
 
   // parameters used in LK model
   double EEF1_volume = pThis->EEF1_volume;
-  double EEF1_lamda_ = pThis->EEF1_lamda_;
+  double EEF1_lamda_ = pThis->EEF1_lamda;
   double EEF1_freeDG = pThis->EEF1_freeDG;
 
   printf("%4s %4s %4s %4s %4s %d %d %1s %4d %8.3f %8.3f %8.3f %d %d %d %d %d ",
@@ -423,7 +417,7 @@ int AtomArrayCopy(AtomArray* pThis, AtomArray* pOther)
 }
 
 
-int AtomArrayGetCount(AtomArray* pThis)
+int AtomArrayGetNum(AtomArray* pThis)
 {
   return pThis->atomNum;
 }
@@ -455,13 +449,13 @@ Atom* AtomArrayGetByName(AtomArray* pThis, char* atomName)
 }
 
 
-int AtomArrayFind(AtomArray* pThis, char* atomName, int* pIndex)
+int AtomArrayFind(AtomArray* pThis, char* atomName, int* pNdx)
 {
   for (int i = 0;i < pThis->atomNum;i++)
   {
     if (strcmp(AtomGetName(&pThis->atoms[i]), atomName) == 0)
     {
-      *pIndex = i;
+      *pNdx = i;
       return Success;
     }
   }
@@ -469,33 +463,33 @@ int AtomArrayFind(AtomArray* pThis, char* atomName, int* pIndex)
 }
 
 
-int AtomArrayInsert(AtomArray* pThis, int index, Atom* pNewAtom)
+int AtomArrayInsert(AtomArray* pThis, int ndx, Atom* pAtom)
 {
-  if (index < 0 || index > pThis->atomNum)
+  if (ndx < 0 || ndx > pThis->atomNum)
   {
     return IndexError;
   }
-  int newCount = pThis->atomNum + 1;
-  pThis->atoms = (Atom*)realloc(pThis->atoms, sizeof(Atom) * newCount);
-  pThis->atomNum = newCount;
+  int newNum = pThis->atomNum + 1;
+  pThis->atoms = (Atom*)realloc(pThis->atoms, sizeof(Atom) * newNum);
+  pThis->atomNum = newNum;
 
-  AtomCreate(&pThis->atoms[newCount - 1]);
-  for (int i = newCount - 1; i > index; i--)
+  AtomCreate(&pThis->atoms[newNum - 1]);
+  for (int i = newNum - 1; i > ndx; i--)
   {
     AtomCopy(&pThis->atoms[i], &pThis->atoms[i - 1]);
   }
-  return AtomCopy(&pThis->atoms[index], pNewAtom);
+  return AtomCopy(&pThis->atoms[ndx], pAtom);
 }
 
 
-int AtomArrayRemove(AtomArray* pThis, int index)
+int AtomArrayRemove(AtomArray* pThis, int ndx)
 {
-  if (index < 0 || index >= pThis->atomNum)
+  if (ndx < 0 || ndx >= pThis->atomNum)
   {
     return IndexError;
   }
 
-  for (int i = index; i < pThis->atomNum - 1; i++)
+  for (int i = ndx; i < pThis->atomNum - 1; i++)
   {
     AtomCopy(&pThis->atoms[i], &pThis->atoms[i + 1]);
   }
@@ -522,37 +516,37 @@ int AtomArrayRemoveByName(AtomArray* pThis, char* atomName)
 
 int AtomArrayAppend(AtomArray* pThis, Atom* pNewAtom)
 {
-  return AtomArrayInsert(pThis, AtomArrayGetCount(pThis), pNewAtom);
+  return AtomArrayInsert(pThis, AtomArrayGetNum(pThis), pNewAtom);
 }
 
 
 double AtomArrayCalcTotalCharge(AtomArray* pThis)
 {
-  double totalCharge = 0.0;
-  for (int i = 0; i < AtomArrayGetCount(pThis); i++)
+  double totCharge = 0.0;
+  for (int i = 0; i < AtomArrayGetNum(pThis); i++)
   {
-    totalCharge += pThis->atoms[i].charge;
+    totCharge += pThis->atoms[i].charge;
   }
-  return totalCharge;
+  return totCharge;
 }
 
 
 double AtomArrayCalcMinDistance(AtomArray* pThis, AtomArray* pOther)
 {
   double minDist = 1e8;
-  for (int i = 0; i < AtomArrayGetCount(pThis); i++)
+  for (int i = 0; i < AtomArrayGetNum(pThis); i++)
   {
-    if (AtomIsHydrogen(&pThis->atoms[i]))
+    if (AtomIsHydrogen(&pThis->atoms[i]) || pThis->atoms[i].isXyzValid == FALSE)
     {
       continue;
     }
-    for (int j = 0; j < AtomArrayGetCount(pOther); j++)
+    for (int j = 0; j < AtomArrayGetNum(pOther); j++)
     {
-      if (AtomIsHydrogen(&pOther->atoms[j]))
+      if (AtomIsHydrogen(&pOther->atoms[j]) || pOther->atoms[j].isXyzValid == FALSE)
       {
         continue;
       }
-      double dist = XYZDistance(&pThis->atoms[i].xyz, &pOther->atoms[j].xyz);
+      double dist = XYZDist(&pThis->atoms[i].xyz, &pOther->atoms[j].xyz);
       if (dist < minDist)
       {
         minDist = dist;
@@ -576,11 +570,11 @@ BOOL AtomArrayAllAtomXYZAreValid(AtomArray* pThis)
 }
 
 
-int AtomArrayShowInPDBFormat(AtomArray* pThis, char* header, char* resiName, char* chainName, int atomIndex, int resiIndex, FILE* pFile)
+int AtomArrayShowInPDBFormat(AtomArray* pThis, char* header, char* resName, char* chnName, int atomNdx, int resNdx, FILE* pOut)
 {
-  for (int i = 0;i < AtomArrayGetCount(pThis); i++)
+  for (int i = 0;i < AtomArrayGetNum(pThis); i++)
   {
-    AtomShowInPDBFormat(&pThis->atoms[i], header, resiName, chainName, atomIndex + i, resiIndex, pFile);
+    AtomShowInPDBFormat(&pThis->atoms[i], header, resName, chnName, atomNdx + i, resNdx, pOut);
   }
   return Success;
 }
@@ -589,12 +583,12 @@ int AtomArrayShowInPDBFormat(AtomArray* pThis, char* header, char* resiName, cha
 int AtomCopyParameter(Atom* pThis, Atom* pOther)
 {
   strcpy(pThis->type, pOther->type);
-  pThis->vdw_epsilon = pOther->vdw_epsilon;
-  pThis->vdw_radius = pOther->vdw_radius;
+  pThis->vdw_eps = pOther->vdw_eps;
+  pThis->vdw_rad = pOther->vdw_rad;
   pThis->charge = pOther->charge;
   pThis->EEF1_atType = pOther->EEF1_atType;
   pThis->EEF1_volume = pOther->EEF1_volume;
-  pThis->EEF1_lamda_ = pOther->EEF1_lamda_;
+  pThis->EEF1_lamda = pOther->EEF1_lamda;
   pThis->EEF1_freeDG = pOther->EEF1_freeDG;
   pThis->polarity = pOther->polarity;
   pThis->hybridType = pOther->hybridType;

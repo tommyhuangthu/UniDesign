@@ -36,9 +36,7 @@ int isFiniteNumber(double d);
 
 typedef struct _EnergyTermRot
 {
-  //only two types: the first type is NAT rotamer
-  //the second is ROT rotamer
-  int rotCount[2];
+  int rotTypeNum[2]; // two rotamer types: NAT and ROT
   double** energy[2];
 }EnergyTermRot;
 
@@ -48,7 +46,7 @@ int EnergyTermRotDestroy(EnergyTermRot* pTerm);
 
 typedef struct _EnergyTermsRot
 {
-  int posCount;
+  int posNum;
   EnergyTermRot* terms;
 }EnergyTermsRot;
 
@@ -56,17 +54,17 @@ int EnergyTermsRotCreate(EnergyTermsRot* pTerms);
 int EnergyTermsRotDestroy(EnergyTermsRot* pTerms);
 int EnergyTermsRotRead(EnergyTermsRot* terms, char* pdblist);
 
-int GradientUnit(double* grad, int xcount);
-double GradientNorm(double* grad, int xcount);
-double GradientMax(double* grad, int xcount);
-int Xupdate(double* x, double* grad, int xcount, double alpha);
-int Xshow(double* x, int xcount);
+int GradientUnit(double* grad, int n);
+double GradientNorm(double* grad, int n);
+double GradientMax(double* grad, int n);
+int Xupdate(double* x, double* grad, int n, double alpha);
+int Xshow(double* x, int n);
 
-int PNATROT_BacktrackLineSearch(EnergyTermsRot* pTerms, double lossk, double* xk, double* gradk, double scalar, int xcnt);
-int PNATROT_LossFunction(EnergyTermsRot* pTerms, double* x, int xcount, double* loss);
-int PNATROT_CalcGradientTwoSide(EnergyTermsRot* pTerms, double loss, double* x, double* grad, int xcount);
-int PNATROT_CalcGradientForward(EnergyTermsRot* pTerms, double loss, double* x, double* grad, int xcount);
-int PNATROT_CalcGradientBackword(EnergyTermsRot* pTerms, double loss, double* x, double* grad, int xcount);
+int PNATROT_BacktrackLineSearch(EnergyTermsRot* pTerms, double lossk, double* xk, double* gradk, double scalar, int n);
+int PNATROT_LossFunction(EnergyTermsRot* pTerms, double* x, int n, double* loss);
+int PNATROT_CalcGradientTwoSide(EnergyTermsRot* pTerms, double loss, double* x, double* grad, int n);
+int PNATROT_CalcGradientForward(EnergyTermsRot* pTerms, double loss, double* x, double* grad, int n);
+int PNATROT_CalcGradientBackword(EnergyTermsRot* pTerms, double loss, double* x, double* grad, int n);
 int PNATROT_WeightOptByGradientDescent(char* pdblistfile);
 
 
@@ -77,7 +75,7 @@ typedef struct _EnergyTermAA
 {
   //21 types: ACD...Y and NAT rotamer
   //index 0-19 are A,C,D,...,Y and index 21 is NAT
-  int rotCount[TYPE_TWENTYTWO];
+  int rotTypeNum[TYPE_TWENTYTWO];
   double** energy[TYPE_TWENTYTWO];
 }EnergyTermAA;
 
@@ -86,16 +84,16 @@ int EnergyTermAllDestroy(EnergyTermAA* pTerm);
 
 typedef struct _EnergyTermsAA
 {
-  int posCount;
+  int posNum;
   EnergyTermAA* terms;
 }EnergyTermsAA;
 
 int EnergyTermsAACreate(EnergyTermsAA* pTerms);
 int EnergyTermsAADestroy(EnergyTermsAA* pTerms);
 int EnergyTermsAARead(EnergyTermsAA* pTerms, char* pdblist);
-int PNATAA_BacktrackLineSearch(EnergyTermsAA* pTerms, double lossk, double* xk, double* gradk, double scalar, int xcnt);
-int PNATAA_LossFunction(EnergyTermsAA* pTerms, double* x, int xcount, double* loss);
-int PNATAA_CalcGradientForward(EnergyTermsAA* pTerms, double loss, double* x, double* grad, int xcount);
+int PNATAA_BacktrackLineSearch(EnergyTermsAA* pTerms, double lossk, double* xk, double* gradk, double scalar, int n);
+int PNATAA_LossFunction(EnergyTermsAA* pTerms, double* x, int n, double* loss);
+int PNATAA_CalcGradientForward(EnergyTermsAA* pTerms, double loss, double* x, double* grad, int n);
 int PNATAA_WeightOptByGradientDescent(char* pdblistfile);
 
 #endif

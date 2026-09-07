@@ -25,21 +25,21 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 int StringArrayCreate(StringArray* pThis)
 {
-  pThis->stringCount = 0;
+  pThis->strNum = 0;
   pThis->capacity = 1;
-  pThis->strings = (char**)malloc(sizeof(char*) * (pThis->capacity));
+  pThis->strs = (char**)malloc(sizeof(char*) * (pThis->capacity));
   return Success;
 }
 
 int StringArrayDestroy(StringArray* pThis)
 {
-  for (int i = 0;i < pThis->stringCount;i++)
+  for (int i = 0;i < pThis->strNum;i++)
   {
-    free(pThis->strings[i]);
+    free(pThis->strs[i]);
   }
-  free(pThis->strings);
-  pThis->stringCount = pThis->capacity = 0;
-  pThis->strings = NULL;
+  free(pThis->strs);
+  pThis->strNum = pThis->capacity = 0;
+  pThis->strs = NULL;
   return Success;
 }
 
@@ -47,54 +47,54 @@ int StringArrayCopy(StringArray* pThis, StringArray* pOther)
 {
   StringArrayDestroy(pThis);
   pThis->capacity = pOther->capacity;
-  pThis->stringCount = pOther->stringCount;
-  pThis->strings = (char**)malloc(sizeof(char*) * pThis->capacity);
-  for (int i = 0;i < pThis->stringCount;i++)
+  pThis->strNum = pOther->strNum;
+  pThis->strs = (char**)malloc(sizeof(char*) * pThis->capacity);
+  for (int i = 0;i < pThis->strNum;i++)
   {
-    pThis->strings[i] = (char*)malloc(sizeof(char) * (strlen(pOther->strings[i]) + 1));
-    strcpy(pThis->strings[i], pOther->strings[i]);
+    pThis->strs[i] = (char*)malloc(sizeof(char) * (strlen(pOther->strs[i]) + 1));
+    strcpy(pThis->strs[i], pOther->strs[i]);
   }
   return Success;
 }
 
-int StringArrayGetCount(StringArray* pThis)
+int StringArrayGetNum(StringArray* pThis)
 {
-  return pThis->stringCount;
+  return pThis->strNum;
 }
 
 int StringArraySet(StringArray* pThis, int index, char* srcString)
 {
-  if (index < 0 || index >= pThis->stringCount)
+  if (index < 0 || index >= pThis->strNum)
   {
     return IndexError;
   }
-  if (strlen(srcString) > strlen(pThis->strings[index]))
+  if (strlen(srcString) > strlen(pThis->strs[index]))
   {
-    pThis->strings[index] = (char*)realloc(pThis->strings[index],
+    pThis->strs[index] = (char*)realloc(pThis->strs[index],
       sizeof(char) * (strlen(srcString) + 1));
   }
-  strcpy(pThis->strings[index], srcString);
+  strcpy(pThis->strs[index], srcString);
   return Success;
 }
 
 char* StringArrayGet(StringArray* pThis, int index)
 {
-  if (index < 0 || index >= pThis->stringCount)
+  if (index < 0 || index >= pThis->strNum)
   {
     return NULL;
   }
-  return pThis->strings[index];
+  return pThis->strs[index];
 }
 
 int StringArrayFind(StringArray* pThis, char* srcString, int* pos)
 {
   int i;
-  for (i = 0;i < pThis->stringCount;i++)
+  for (i = 0;i < pThis->strNum;i++)
   {
-    if (strcmp(pThis->strings[i], srcString) == 0)
+    if (strcmp(pThis->strs[i], srcString) == 0)
       break;
   }
-  if (i == pThis->stringCount)
+  if (i == pThis->strNum)
   {
     return DataNotExistError;
   }
@@ -104,48 +104,48 @@ int StringArrayFind(StringArray* pThis, char* srcString, int* pos)
 
 int StringArrayInsert(StringArray* pThis, int pos, char* srcString)
 {
-  if (pos<0 || pos>pThis->stringCount)
+  if (pos<0 || pos>pThis->strNum)
   {
     return IndexError;
   }
 
-  if (pThis->stringCount == pThis->capacity)
+  if (pThis->strNum == pThis->capacity)
   {
     int newCap = pThis->capacity * 2;
-    pThis->strings = (char**)realloc(pThis->strings, sizeof(char*) * newCap);
+    pThis->strs = (char**)realloc(pThis->strs, sizeof(char*) * newCap);
     pThis->capacity = newCap;
   }
 
   char* newString = (char*)malloc(sizeof(char) * (strlen(srcString) + 1));
   strcpy(newString, srcString);
 
-  for (int i = pThis->stringCount; i > pos; i--)
+  for (int i = pThis->strNum; i > pos; i--)
   {
-    pThis->strings[i] = pThis->strings[i - 1];
+    pThis->strs[i] = pThis->strs[i - 1];
   }
-  pThis->strings[pos] = newString;
-  pThis->stringCount++;
+  pThis->strs[pos] = newString;
+  pThis->strNum++;
   return Success;
 }
 
 int StringArrayRemove(StringArray* pThis, int pos)
 {
-  if (pos < 0 || pos >= pThis->stringCount)
+  if (pos < 0 || pos >= pThis->strNum)
   {
     return IndexError;
   }
-  free(pThis->strings[pos]);
-  for (int i = pos;i < pThis->stringCount - 1;i++)
+  free(pThis->strs[pos]);
+  for (int i = pos;i < pThis->strNum - 1;i++)
   {
-    pThis->strings[i] = pThis->strings[i + 1];
+    pThis->strs[i] = pThis->strs[i + 1];
   }
-  pThis->stringCount--;
+  pThis->strNum--;
   return Success;
 }
 
 int StringArrayAppend(StringArray* pThis, char* srcString)
 {
-  return StringArrayInsert(pThis, StringArrayGetCount(pThis), srcString);
+  return StringArrayInsert(pThis, StringArrayGetNum(pThis), srcString);
 }
 
 int StringArraySplitString(StringArray* pThis, char* srcStr, char splitter)
@@ -186,13 +186,13 @@ int StringArraySplitString(StringArray* pThis, char* srcStr, char splitter)
 int StringArrayShow(StringArray* pThis)
 {
   printf("[");
-  if (pThis->stringCount > 0)
+  if (pThis->strNum > 0)
   {
-    for (int i = 0;i < pThis->stringCount - 1;i++)
+    for (int i = 0;i < pThis->strNum - 1;i++)
     {
-      printf("\"%s\", ", pThis->strings[i]);
+      printf("\"%s\", ", pThis->strs[i]);
     }
-    printf("\"%s\"", pThis->strings[pThis->stringCount - 1]);
+    printf("\"%s\"", pThis->strs[pThis->strNum - 1]);
   }
   printf("]\n");
   return Success;
@@ -200,7 +200,7 @@ int StringArrayShow(StringArray* pThis)
 
 int FileReaderCreate(FileReader* pThis, char* path)
 {
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   StringArrayCreate(&pThis->lines);
   FILE* pFile = fopen(path, "r");
   if (pFile == NULL)
@@ -210,7 +210,7 @@ int FileReaderCreate(FileReader* pThis, char* path)
     TraceError(errMsg, result);
     return result;
   }
-  char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
   while (fgets(buffer, MAX_LEN_ONE_LINE_CONTENT, pFile))
   {
     int length = 0;
@@ -243,9 +243,9 @@ int FileReaderDestroy(FileReader* pThis)
   return Success;
 }
 
-int FileReaderGetLineCount(FileReader* pThis)
+int FileReaderGetLineNum(FileReader* pThis)
 {
-  return StringArrayGetCount(&pThis->lines);
+  return StringArrayGetNum(&pThis->lines);
 }
 
 int FileReaderGetLine(FileReader* pThis, int index, char* dest)
@@ -269,9 +269,9 @@ int FileReaderGetCurrentPos(FileReader* pThis)
 
 int FileReaderSetCurrentPos(FileReader* pThis, int index)
 {
-  if (index < 0 || index >= FileReaderGetLineCount(pThis))
+  if (index < 0 || index >= FileReaderGetLineNum(pThis))
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = IndexError;
     sprintf(errMsg, "in file %s line %d, index is invalid", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
@@ -297,32 +297,10 @@ int FileReaderGetNextLine(FileReader* pThis, char* dest)
 
 BOOL FileReaderEndOfFile(FileReader* pThis)
 {
-  if (pThis->position == FileReaderGetLineCount(pThis))
+  if (pThis->position == FileReaderGetLineNum(pThis))
     return TRUE;
   else
     return FALSE;
-}
-
-Type_CoordinateFile FileReaderRecognizeCoordinateFileType(FileReader* pThis)
-{
-  for (int i = 0;i < FileReaderGetLineCount(pThis);i++)
-  {
-    char line[MAX_LEN_ONE_LINE_CONTENT + 1];
-    FileReaderGetLine(pThis, i, line);
-    if (strlen(line) > 9)
-    {
-      line[9] = '\0';
-      if (strcmp(line, "@<TRIPOS>") == 0)
-        return Type_CoordinateFile_MOL2;
-    }
-    if (strlen(line) > 6)
-    {
-      line[6] = '\0';
-      if (strcmp(line, "ATOM  ") == 0 || strcmp(line, "HETATM") == 0)
-        return Type_CoordinateFile_PDB;
-    }
-  }
-  return Type_CoordinateFile_Unrecognized;
 }
 
 int IntArrayCreate(IntArray* pThis, int length)
@@ -377,7 +355,7 @@ int IntArrayGet(IntArray* pThis, int index)
 {
   if (index < 0 || index >= pThis->length)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = IndexError;
     sprintf(errMsg, "in file %s line %d, index is invalid", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
@@ -538,9 +516,9 @@ double DoubleArrayGet(DoubleArray* pThis, int index)
 {
   if (index < 0 || index >= pThis->length)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = IndexError;
-    sprintf(errMsg, "in file %s line %d, index is invalid", __FILE__, __LINE__);
+    sprintf(errMsg, "in file %s line %d, index %d is invalid", __FILE__, __LINE__, index);
     TraceError(errMsg, errorCode);
     return errorCode;
   }
@@ -675,16 +653,6 @@ int DoubleArrayShow(DoubleArray* pThis)
 
 int ExtractTargetStringFromSourceString(char* dest, char* src, int start, int length)
 {
-  // the function strncpy() from <string.h> has the following format;
-  // char *strncpy(char *strDest, char *strSource, size_t count);
-  // the function copies characters with a maximum number of 'count' from string 'strSource' to string 'strDest', 
-  // if 'count' <= strlen(strSource), '\0' will not be added to the end of 'strDest'; else added.
-  // given the parameters 'beg' and 'length';
-  // the following operation:
-  // strncpy(strDest, strSource+beg, length);
-  // strDest[length] = '\0';
-  // equals to
-  // copying a string with a length of 'length' from the 'beg' character of 'strSource' to 'strDest'.
   char* temp = (char*)malloc(sizeof(char) * (length + 1));
   strncpy(temp, src + start, length);
   temp[length] = '\0';

@@ -19,52 +19,70 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Structure.h"
 
-#define NATIVE_ROTAMER_DUNBRACK 0.0//kcal
-
-#define EXPANDED_ROT_SER  5
-#define EXPANDED_ROT_THR  5
-#define EXPANDED_ROT_TYR  1
-
-//deal with BBind protein rots
-int ProteinSiteBuildAllRotamers(Structure* pThis, int chainIndex, int resiIndex, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int ProteinSiteBuildSpecifiedRotamers(Structure* pThis, int chainIndex, int resiIndex, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, Type_ResidueDesignType type);
-int ProteinSiteBuildMutatedRotamers(Structure* pThis, int chainIndex, int resiIndex, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, StringArray* pDesignTypes, StringArray* pPatchTypes);
-int ProteinSiteBuildWildtypeRotamers(Structure* pThis, int chainIndex, int resiIndex, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int StructureGenerateSpecifiedProteinRotamers(Structure* pThis, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile);
-int StructureGenerateAllRotamers(Structure* pThis, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int StructureGenerateWildtypeRotamers(Structure* pThis, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-BOOL IsNativeRotamerInBBindRotLib(Structure* pThis, int chainIndex, int resiIndex, ResiTopoSet* pResiTopos, BBindRotamerLib* pBBindRotLib, double torsionStd);
+#define NATROT_DUNBRACK_ENERGY  0.0//kcal
+#define EXPANDED_ROT_SER        2
+#define EXPANDED_ROT_THR        2
+#define EXPANDED_ROT_TYR        1
 
 //deal with BBdep protein rots
-int ProteinSiteBuildAllRotamersByBBdepRotLib(Structure* pThis, int chainIndex, int resiIndex, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(Structure* pThis, int chainIndex, int resiIndex, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int ProteinSiteBuildMutatedRotamersByBBdepRotLib(Structure* pThis, int chainIndex, int resiIndex, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, StringArray* pDesignTypes, StringArray* pPatchTypes);
-int ProteinSiteBuildWildtypeRotamersByBBdepRotLib(Structure* pThis, int chainIndex, int resiIndex, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int StructureBuildAllRotamersByBBdepRotLib(Structure* pThis, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int StructureBuildResfileRotamersByBBdepRotLib(Structure* pThis, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile);
-int StructureGenerateWildtypeRotamersByBBdepRotLib(Structure* pThis, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int StructureBuildCatalyticRotamersByBBdepRotLib(Structure* pThis, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile);
-int StructureBuildPLIShell1RotamersByBBdepRotLib(Structure* pThis, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile);
-int StructureBuildPLIShell2RotamersByBBdepRotLib(Structure* pThis, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile);
-int StructureBuildPPIRotamersByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-
-BOOL IsNativeRotamerInBBdepRotLib(Structure* pThis, int chainIndex, int resiIndex, ResiTopoSet* pResiTopos, BBdepRotamerLib* pBBdepRotLib, double torsionStd);
+int ProteinSiteBuildAllRotamersByBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos);
+int ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos);
+int ProteinSiteBuildMutatedRotamersByBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos, StringArray* pDesTypes, StringArray* pPatchTypes);
+int ProteinSiteBuildWildtypeRotamersByBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos);
+int StructureBuildAllRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos);
+int StructureBuildResfileRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos, char* resfile);
+int StructureGenerateWildtypeRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos);
+int StructureBuildCatalyticRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos, char* resfile);
+int StructureBuildPLIShell1RotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos, char* resfile);
+int StructureBuildPLIShell2RotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos, char* resfile);
+int StructureBuildPPIRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos);
+BOOL IsNativeRotamerInBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, ResTopos* pResiTopos, BBdepRotLib* pBBdepRotLib, double cut);
 
 //deal with small molecule
-int StructureGetTruncatedBackbone(Structure* pThis, Residue* pSmallMol, double activeSiteRange, BOOL withHydrogen, AtomArray* pBackboneAtoms);
-int StructureGetTruncatedBackboneNew(Structure* pThis, Residue* pSmallMol, BOOL withHydrogen, AtomArray* pBackboneAtoms);
-int StructureDeployCataConsSitePair(Structure* pThis, CataConsSitePair* pCataConsSitePair);
-int StructurePlaceSmallMol(Structure* pThis, PlacingRule* pPlacingRule, CataConsSitePairArray* pCataConsCollection, int relatedProteinSiteCount, DesignSite** relatedProteinSites, RotamerSet* pSmallMolRotSet);
-int StructureGenerateSmallMolRotamers(Structure* pThis, char* cataConsFile, char* placingRuleFile);
-int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char* smallMolFile);
-int StructureWriteSmallMolRotamers(Structure* pThis, char* smallMolFile);
-int StructureSmallmolOrientationScreen(Structure* pStructure, ResiTopoSet* pResiTopo, char* initialPoseFile, char* newPoseFile, char* screenRuleFile);
+int StructureGetTruncatedBackbone(Structure* pStruct, Residue* pSmallMol, double range, BOOL withH, AtomArray* pBackbone);
+int StructureGetTruncatedBackbone2(Structure* pStruct, Residue* pSmallMol, BOOL withH, AtomArray* pBackbone);
+int StructureDeployCataConsSitePair(Structure* pStruct, CataConsSitePair* pCataConsSitePair);
+int StructurePlaceSmallMol(Structure* pStruct, PlacingRule* pRule, CataConsSitePairArray* pCataArray, int siteNum, DesignSite** ppSites, Rotamers* pSmallSet);
+int StructureGenerateSmallMolRotamers(Structure* pStruct, char* cataConsFile, char* ligplaceFile);
+int StructureReadSmallMolRotamers(Structure* pStruct, ResTopos* resiTopos, char* smallmolFile);
+int StructureWriteSmallMolRotamers(Structure* pStruct, char* smallmolFile);
+int StructureSmallmolOrientationScreen(Structure* pStruct, ResTopos* resTopos, char* oldposeFile, char* newposeFile, char* orientRuleFile);
 
-// general function for BBdep and BBind protein rots, and ligand rots
-int ProteinSiteWriteRotamers(Structure* pStructure, int chainIndex, int resiIndex, char* rotamerFilePath);
-int ProteinSiteBuildNativeRotamer(Structure* pThis, int chainIndex, int resiIndex, ResiTopoSet* pResiTopos);
-int ProteinSiteBuildFlippedNativeRotamer(Structure* pStructure, int chainIndex, int resiIndex, ResiTopoSet* pResiTopos);
-int ProteinSiteExpandHydroxylRotamers(Structure* pStructure, int chainIndex, int resiIndex, ResiTopoSet* pTopos);
+int ProteinSiteWriteRotamers(Structure* pStruct, int chnNdx, int resNdx, char* file);
+int ProteinSiteBuildNativeRotamer(Structure* pStruct, int chnNdx, int resNdx, ResTopos* resiTopos);
+int ProteinSiteBuildFlippedNativeRotamer(Structure* pStruct, int chnNdx, int resNdx, ResTopos* resiTopos);
+int ProteinSiteExpandHydroxylRotamers(Structure* pStruct, int chnNdx, int resNdx, ResTopos* resiTopos);
+
+
+#define  SELF_ENERGY_THRESHOLD_SMALLMOL           30
+#define  SELF_ENERGY_THRESHOLD_SAME_AA_RES_TYPE   15
+#define  SELF_ENERGY_THRESHOLD_DIFF_AA_RES_TYPE   30
+
+typedef struct _RotamerList
+{
+  int desSiteNum;
+  int* rotNum;
+  int* remainRotNum;
+  BOOL** remainFlag;
+} RotamerList;
+
+int RotamerListCreateFromStructure(RotamerList* pList, Structure* pStruct);
+int RotamerListCreateFromFile(RotamerList* pList, char* file);
+void RotamerListDestroy(RotamerList* pList);
+int RotamerListCopy(RotamerList* pThis, RotamerList* pOther);
+int RotamerListRead(RotamerList* pList, char* file);
+int RotamerListWrite(RotamerList* pList, char* file);
+int RotamerListShow(RotamerList* pList);
+
+int RotamerOriginalIndexGet(RotamerList* pList, int siteNdx, int rotNdx, int* trueRotNdx);
+int RotamerReducedIndexGet(RotamerList* pList, int siteNdx, int trueRotNdx, int* reducedRotNdx);
+
+int SelfEnergyGenerate(Structure* pStruct, char* file);
+int SelfEnergyGenerate2(Structure* pStruct, AAppTable* pAAppTable, RamaTable* pRamaTable, char* file);
+int SelfEnergyReadAndCheck(Structure* pStruct, RotamerList* pList, char* file);
+
+int StructureShowDesignSites2(Structure* pStruct, RotamerList* pList);
+
 
 
 #endif

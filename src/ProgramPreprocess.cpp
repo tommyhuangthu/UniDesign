@@ -16,7 +16,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "ProgramPreprocess.h"
 #include "Residue.h"
-#include "SmallMolEEF1.h"
+//#include "SmallMolEEF1.h"
 #include "ErrorTracker.h"
 #include "EvoAminoName.h"
 #include <stdio.h>
@@ -24,13 +24,13 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdlib.h>
 #include <ctype.h>
 
-extern char PROGRAM_PATH[MAX_LEN_ONE_LINE_CONTENT + 1];
-extern char PROGRAM_NAME[MAX_LEN_FILE_NAME + 1];
-extern char PROGRAM_VERSION[MAX_LEN_FILE_NAME + 1];
-extern char PDBID[MAX_LEN_FILE_NAME + 1];
-extern char TGT_PRF[MAX_LEN_FILE_NAME + 1];
-extern char TGT_MSA[MAX_LEN_FILE_NAME + 1];
-extern char DES_CHAINS[MAX_LEN_ONE_LINE_CONTENT + 1];
+extern char PROGRAM_PATH[MAX_LEN_ONE_LINE_CONTENT+1];
+extern char PROGRAM_NAME[MAX_LEN_FILE_NAME+1];
+extern char PROGRAM_VERSION[MAX_LEN_FILE_NAME+1];
+extern char PDBID[MAX_LEN_FILE_NAME+1];
+extern char TGT_PRF[MAX_LEN_FILE_NAME+1];
+extern char TGT_MSA[MAX_LEN_FILE_NAME+1];
+extern char DES_CHAINS[MAX_LEN_ONE_LINE_CONTENT+1];
 extern float** PROT_PROFILE;
 
 using namespace CharSeq;
@@ -63,7 +63,7 @@ int ExtractPathAndName(char* fullpath, char* path, char* name)
 int GetPDBID(char* pdbfile, char* pdbid)
 {
   int result = Success;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int len = (int)strlen(pdbfile);
   if (len <= 4 || tolower(pdbfile[len - 1]) != 'b' || tolower(pdbfile[len - 2]) != 'd' || tolower(pdbfile[len - 3]) != 'p' || tolower(pdbfile[len - 4]) != '.')
   {
@@ -85,7 +85,7 @@ int GetPDBID(char* pdbfile, char* pdbid)
 
 int GenerateProfile(char* pdb)
 {
-  char cmd[MAX_LEN_ONE_LINE_CONTENT + 1] = "";
+  char cmd[MAX_LEN_ONE_LINE_CONTENT+1] = "";
   sprintf(cmd, "perl %s/extbin/GenerateProfile.pl %s", PROGRAM_PATH, pdb);
   system(cmd);
   return Success;
@@ -96,7 +96,7 @@ int ReadProfile(Chain* pChain)
 {
   //read profile
   FILE* pIn = fopen(TGT_PRF, "r");
-  int len = ChainGetResidueCount(pChain);
+  int len = ChainGetResidueNum(pChain);
   PROT_PROFILE = new float* [len];
   for (int i = 0; i < len; i++)
   {
@@ -130,7 +130,7 @@ int ReadProfile(Chain* pChain)
 
 int GenerateSingleSequenceFeatures(char* pdb)
 {
-  char cmd[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char cmd[MAX_LEN_ONE_LINE_CONTENT+1];
   printf("secondary structure prediction of target will be done by DSSP\n");
   printf("running DSSP ... \n");
   sprintf(cmd, "%s/extbin/dsspcmbi %s > dssp.txt 2>/dev/null", PROGRAM_PATH, pdb);
@@ -152,12 +152,12 @@ int GenerateSingleSequenceFeatures(char* pdb)
 int StructureDeployEvolutionInfo(Structure* pStructure)
 {
   Chain* pChain = StructureFindChainByName(pStructure, DES_CHAINS);
-  char TGT_CHAIN[MAX_LEN_FILE_NAME + 1];
+  char TGT_CHAIN[MAX_LEN_FILE_NAME+1];
   sprintf(TGT_CHAIN, "%s_TGTCHN.pdb", PDBID);
   FILE* pFile = fopen(TGT_CHAIN, "w");
   if (pFile != NULL)
   {
-    for (int i = 0;i < ChainGetResidueCount(pChain);i++)
+    for (int i = 0;i < ChainGetResidueNum(pChain);i++)
     {
       Residue* pResi = ChainGetResidue(pChain, i);
       AtomArrayShowInPDBFormat(&pResi->atoms, "ATOM", ResidueGetName(pResi), ChainGetName(pChain), 1, ResidueGetPosInChain(pResi), pFile);
@@ -167,23 +167,23 @@ int StructureDeployEvolutionInfo(Structure* pStructure)
   }
   else
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     sprintf(errMsg, "in file %s line %d, cannot create a temp pdb %s for chain %s", __FILE__, __LINE__, TGT_CHAIN, DES_CHAINS);
     TraceError(errMsg, IOError);
     exit(IOError);
   }
 
   FileReader frPrf;
-  if ((!FAILED(FileReaderCreate(&frPrf, TGT_PRF)) && FileReaderGetLineCount(&frPrf) != ChainGetResidueCount(pChain)) || FAILED(FileReaderCreate(&frPrf, TGT_PRF)))
+  if ((!FAILED(FileReaderCreate(&frPrf, TGT_PRF)) && FileReaderGetLineNum(&frPrf) != ChainGetResidueNum(pChain)) || FAILED(FileReaderCreate(&frPrf, TGT_PRF)))
   {
     FileReader frMSA;
-    if ((!FAILED(FileReaderCreate(&frMSA, TGT_MSA)) && FileReaderGetLineCount(&frMSA) != ChainGetResidueCount(pChain)) || FAILED(FileReaderCreate(&frMSA, TGT_MSA)))
+    if ((!FAILED(FileReaderCreate(&frMSA, TGT_MSA)) && FileReaderGetLineNum(&frMSA) != ChainGetResidueNum(pChain)) || FAILED(FileReaderCreate(&frMSA, TGT_MSA)))
     {
       GenerateProfile(TGT_CHAIN);
     }
     else
     {
-      char cmd[MAX_LEN_ONE_LINE_CONTENT + 1];
+      char cmd[MAX_LEN_ONE_LINE_CONTENT+1];
       printf("make profile from msa file %s\n", TGT_MSA);
       sprintf(cmd, "%s/extbin/profile/mkprf %s > %s 2>/dev/null", PROGRAM_PATH, TGT_MSA, TGT_PRF);
       system(cmd);

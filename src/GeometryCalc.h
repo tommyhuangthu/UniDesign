@@ -33,29 +33,27 @@ typedef struct _XYZ
 int XYZShow(XYZ* pThis);
 int XYZScale(XYZ* pThis, double ratio);
 int XYZAdd(XYZ* pThis, XYZ* pOther);
-int XYZMinus(XYZ* pThis, XYZ* pOther);
+int XYZSubtract(XYZ* pThis, XYZ* pOther);
 XYZ XYZSum(XYZ* pThis, XYZ* pOther);
-XYZ XYZDifference(XYZ* pThis, XYZ* pOther);
-double XYZNormalization(XYZ* pThis);
-double XYZDistance(XYZ* pThis, XYZ* pOther);
+XYZ XYZDiff(XYZ* pThis, XYZ* pOther);
+double XYZNorm(XYZ* pThis);
+double XYZDist(XYZ* pThis, XYZ* pOther);
 double XYZDotProduct(XYZ* pThis, XYZ* pOther);
 XYZ XYZCrossProduct(XYZ* pThis, XYZ* pOther);
 double XYZAngle(XYZ* pThis, XYZ* pOther);
 XYZ XYZRotateAround(XYZ* pThis, XYZ* axisFrom, XYZ* axisTo, double angle);
-int XYZRandomlyGenerate(XYZ* pThis, double range);
-
 
 typedef struct _XYZArray
 {
   XYZ* xyzs;
-  int xyzCount;
+  int xyzNum;
 } XYZArray;
 
 int XYZArrayCreate(XYZArray* pThis, int length);
 int XYZArrayDestroy(XYZArray* pThis);
 int XYZArrayCopy(XYZArray* pThis, XYZArray* pOther);
 int XYZArrayResize(XYZArray* pThis, int newLength);
-int XYZArrayGetLength(XYZArray* pThis);
+int XYZArrayGetNum(XYZArray* pThis);
 XYZ* XYZArrayGet(XYZArray* pThis, int index);
 int XYZArraySet(XYZArray* pThis, int index, XYZ* newXYZ);
 XYZ* XYZArrayGetAll(XYZArray* pThis);
@@ -71,7 +69,7 @@ typedef struct _FourXYZsGroup
 int FourXYZsGroupCreate(FourXYZsGroup* pThis, XYZ* pAtomA, XYZ* pAtomB, XYZ* pAtomC, XYZ* pAtomD);
 int FourXYZsGroupGetTorsionAngle(FourXYZsGroup* pThis, double* angle);
 int FourXYZsGroupGetFourthAtom(FourXYZsGroup* pThis, double* icParam, XYZ* pAtomD);
-int FourXYZsGroupGetFourthAtomNew(FourXYZsGroup* pThis, double* icParam, XYZ* pAtomD);
+int FourXYZsGroupGetFourthAtom2(FourXYZsGroup* pThis, double* icParam, XYZ* pAtomD);
 int FourXYZsGroupGetICParam(FourXYZsGroup* pThis, int torsionProperFlag, double* icParam);
 int GetFourthAtom(XYZ* pAtomA, XYZ* pAtomB, XYZ* pAtomC, double* icParam, XYZ* pAtomD);
 double GetTorsionAngle(XYZ* pAtomA, XYZ* pAtomB, XYZ* pAtomC, XYZ* pAtomD);

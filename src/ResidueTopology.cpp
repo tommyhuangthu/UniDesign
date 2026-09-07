@@ -48,7 +48,7 @@ int BondSetFromName(Bond* pThis, char* from)
 {
   if (strlen(from) > MAX_LEN_ATOM_NAME)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = ValueError;
     sprintf(errMsg, "in file %s line %d, name is too long", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
@@ -67,7 +67,7 @@ int BondSetToName(Bond* pThis, char* to)
 {
   if (strlen(to) > MAX_LEN_ATOM_NAME)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = ValueError;
     sprintf(errMsg, "in file %s line %d, name is too long", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
@@ -86,7 +86,7 @@ int BondSetType(Bond* pThis, Type_Bond newType)
 {
   if (newType<Type_Bond_Single || newType>Type_Bond_None)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = ValueError;
     sprintf(errMsg, "in file %s line %d, name is too long", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
@@ -98,7 +98,7 @@ int BondSetType(Bond* pThis, Type_Bond newType)
 
 int BondShow(Bond* pThis)
 {
-  char bondType[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char bondType[MAX_LEN_ONE_LINE_CONTENT+1];
   switch (BondGetType(pThis))
   {
   case Type_Bond_None:
@@ -117,35 +117,32 @@ int BondShow(Bond* pThis)
 }
 
 
-
-
-
-int BondSetCreate(BondSet* pThis)
+int BondsCreate(Bonds* pThis)
 {
-  pThis->count = 0;
+  pThis->num = 0;
   pThis->bonds = NULL;
   return Success;
 }
 
-int BondSetDestroy(BondSet* pThis)
+int BondsDestroy(Bonds* pThis)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
     BondDestroy(&pThis->bonds[i]);
   }
   free(pThis->bonds);
   pThis->bonds = NULL;
-  pThis->count = 0;
+  pThis->num = 0;
   return Success;
 }
 
-int BondSetCopy(BondSet* pThis, BondSet* pOther)
+int BondsCopy(Bonds* pThis, Bonds* pOther)
 {
-  BondSetDestroy(pThis);
-  BondSetCreate(pThis);
-  pThis->count = pOther->count;
-  pThis->bonds = (Bond*)malloc(sizeof(Bond) * pOther->count);
-  for (int i = 0;i < pThis->count;i++)
+  BondsDestroy(pThis);
+  BondsCreate(pThis);
+  pThis->num = pOther->num;
+  pThis->bonds = (Bond*)malloc(sizeof(Bond) * pOther->num);
+  for (int i = 0;i < pThis->num;i++)
   {
     BondCreate(&pThis->bonds[i]);
     BondCopy(&pThis->bonds[i], &pOther->bonds[i]);
@@ -153,21 +150,23 @@ int BondSetCopy(BondSet* pThis, BondSet* pOther)
   return Success;
 }
 
-int BondSetGetCount(BondSet* pThis)
+int BondsGetNum(Bonds* pThis)
 {
-  return pThis->count;
+  return pThis->num;
 }
 
-int BondSetAdd(BondSet* pThis, char* atom1, char* atom2, Type_Bond bondType)
+int BondsAdd(Bonds* pThis, char* atom1, char* atom2, Type_Bond bondType)
 {
-  if (BondSetFind(pThis, atom1, atom2) == Type_Bond_None)
+  if (BondsFind(pThis, atom1, atom2) == Type_Bond_None)
   {
     Bond* pNewlyAddedBond;
-    (pThis->count)++;
-    pThis->bonds = (Bond*)realloc(pThis->bonds, sizeof(Bond) * pThis->count);
-    pNewlyAddedBond = &pThis->bonds[pThis->count - 1];
+    (pThis->num)++;
+    pThis->bonds = (Bond*)realloc(pThis->bonds, sizeof(Bond) * pThis->num);
+    pNewlyAddedBond = &pThis->bonds[pThis->num - 1];
     BondCreate(pNewlyAddedBond);
-    if (FAILED(BondSetFromName(pNewlyAddedBond, atom1)) || FAILED(BondSetToName(pNewlyAddedBond, atom2)) || FAILED(BondSetType(pNewlyAddedBond, bondType)))
+    if (FAILED(BondSetFromName(pNewlyAddedBond, atom1)) || 
+      FAILED(BondSetToName(pNewlyAddedBond, atom2)) || 
+      FAILED(BondSetType(pNewlyAddedBond, bondType)))
     {
       return ValueError;
     }
@@ -175,30 +174,30 @@ int BondSetAdd(BondSet* pThis, char* atom1, char* atom2, Type_Bond bondType)
   return Success;
 }
 
-int BondSetRemove(BondSet* pThis, char* atom1, char* atom2)
+int BondsRemove(Bonds* pThis, char* atom1, char* atom2)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
     Bond* pCurBond = &pThis->bonds[i];
-    if ((strcmp(BondGetFromName(pCurBond), atom1) == 0 && strcmp(BondGetToName(pCurBond), atom2) == 0) || (strcmp(BondGetFromName(pCurBond), atom2) == 0 && strcmp(BondGetToName(pCurBond), atom1) == 0))
+    if ((strcmp(BondGetFromName(pCurBond), atom1) == 0 && strcmp(BondGetToName(pCurBond), atom2) == 0) || 
+      (strcmp(BondGetFromName(pCurBond), atom2) == 0 && strcmp(BondGetToName(pCurBond), atom1) == 0))
     {
-      // Remove this bond, swap this bond with the last one in the set, and decrease the bond counter
-      // Because these is at least one bond when reaching here, the operations are safe
-      BondCopy(pCurBond, &pThis->bonds[pThis->count - 1]);
-      BondDestroy(&pThis->bonds[pThis->count - 1]);
-      (pThis->count)--;
+      BondCopy(pCurBond, &pThis->bonds[pThis->num - 1]);
+      BondDestroy(&pThis->bonds[pThis->num - 1]);
+      (pThis->num)--;
       return Success;
     }
   }
   return DataNotExistError;
 }
 
-Type_Bond BondSetFind(BondSet* pThis, char* atom1, char* atom2)
+Type_Bond BondsFind(Bonds* pThis, char* atom1, char* atom2)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
     Bond* pCurBond = &pThis->bonds[i];
-    if ((strcmp(BondGetFromName(pCurBond), atom1) == 0 && strcmp(BondGetToName(pCurBond), atom2) == 0) || (strcmp(BondGetFromName(pCurBond), atom2) == 0 && strcmp(BondGetToName(pCurBond), atom1) == 0))
+    if ((strcmp(BondGetFromName(pCurBond), atom1) == 0 && strcmp(BondGetToName(pCurBond), atom2) == 0) || 
+      (strcmp(BondGetFromName(pCurBond), atom2) == 0 && strcmp(BondGetToName(pCurBond), atom1) == 0))
     {
       return BondGetType(pCurBond);
     }
@@ -206,18 +205,18 @@ Type_Bond BondSetFind(BondSet* pThis, char* atom1, char* atom2)
   return Type_Bond_None;
 }
 
-Bond* BondSetGet(BondSet* pThis, int index)
+Bond* BondsGet(Bonds* pThis, int index)
 {
-  if (index < 0 || index >= pThis->count)
+  if (index < 0 || index >= pThis->num)
   {
     return NULL;
   }
   return &pThis->bonds[index];
 }
 
-int BondSetShow(BondSet* pThis)
+int BondsShow(Bonds* pThis)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
     BondShow(&pThis->bonds[i]);
     printf("\n");
@@ -238,9 +237,9 @@ int CharmmICCreate(CharmmIC* pThis)
 int CharmmICCreateFromStringArray(CharmmIC* pThis, StringArray* params)
 {
   CharmmICCreate(pThis);
-  if (StringArrayGetCount(params) != 10)
+  if (StringArrayGetNum(params) != 10)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = ValueError;
     sprintf(errMsg, "in file %s line %d, error format", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
@@ -251,7 +250,7 @@ int CharmmICCreateFromStringArray(CharmmIC* pThis, StringArray* params)
   {
     if (strlen(StringArrayGet(params, i + 1)) > MAX_LEN_ATOM_NAME)
     {
-      char errMsg[MAX_LEN_ERR_MSG + 1];
+      char errMsg[MAX_LEN_ERR_MSG+1];
       int errorCode = ValueError;
       sprintf(errMsg, "in file %s line %d, name is too long", __FILE__, __LINE__);
       TraceError(errMsg, errorCode);
@@ -270,17 +269,17 @@ int CharmmICCreateFromStringArray(CharmmIC* pThis, StringArray* params)
     }
   }
 
-  char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
   strcpy(buffer, CharmmICGetAtomC(pThis));
   // deal with improper torsion angle
   if (buffer[0] == '*')
   {
-    pThis->torsionProperFlag = FALSE;
+    pThis->torFlag = FALSE;
     strcpy(pThis->atomNames[2], buffer + 1);
   }
   else
   {
-    pThis->torsionProperFlag = TRUE;
+    pThis->torFlag = TRUE;
   }
   return Success;
 }
@@ -331,7 +330,7 @@ int CharmmICSetTorsionAngle(CharmmIC* pThis, double newTorsionAngle)
 
 BOOL CharmmICGetTorsionProperFlag(CharmmIC* pThis)
 {
-  return pThis->torsionProperFlag;
+  return pThis->torFlag;
 }
 
 int CharmmICCalcXYZ(CharmmIC* pThis, AtomArray* atomArray, XYZ* pDestXYZ)
@@ -357,7 +356,12 @@ int CharmmICCalcXYZ(CharmmIC* pThis, AtomArray* atomArray, XYZ* pDestXYZ)
 
 int CharmmICShow(CharmmIC* pThis)
 {
-  printf("IC  %-7.7s %-7.7s %c%-7.7s %-7.7s  ", CharmmICGetAtomA(pThis), CharmmICGetAtomB(pThis), CharmmICGetTorsionProperFlag(pThis) ? ' ' : '*', CharmmICGetAtomC(pThis), CharmmICGetAtomD(pThis));
+  printf("IC  %-7.7s %-7.7s %c%-7.7s %-7.7s  ", 
+    CharmmICGetAtomA(pThis), 
+    CharmmICGetAtomB(pThis), 
+    CharmmICGetTorsionProperFlag(pThis) ? ' ' : '*', 
+    CharmmICGetAtomC(pThis), 
+    CharmmICGetAtomD(pThis));
   printf("%8.3f ", pThis->icParam[0]);
   for (int i = 1;i < 4;i++)
   {
@@ -368,92 +372,92 @@ int CharmmICShow(CharmmIC* pThis)
 }
 
 
-int ResidueTopologyCreate(ResidueTopology* pThis)
+int ResTopologyCreate(ResTopology* pThis)
 {
   StringArrayCreate(&pThis->atoms);
-  StringArrayCreate(&pThis->deletes);
-  BondSetCreate(&pThis->bonds);
-  pThis->icCount = 0;
+  StringArrayCreate(&pThis->dels);
+  BondsCreate(&pThis->bonds);
+  pThis->icNum = 0;
   pThis->ics = NULL;
   return Success;
 }
 
-int ResidueTopologyCreateFromFileReader(ResidueTopology* pThis, FileReader* pFileReader)
+int ResTopologyCreateFromFileReader(ResTopology* pThis, FileReader* fr)
 {
-  BOOL residueNameAlreadySet = FALSE;
-  ResidueTopologyCreate(pThis);
-  while (!FileReaderEndOfFile(pFileReader))
+  BOOL resNameAlreadySet = FALSE;
+  ResTopologyCreate(pThis);
+  while (FileReaderEndOfFile(fr) == FALSE)
   {
-    char line[MAX_LEN_ONE_LINE_CONTENT + 1];
+    char line[MAX_LEN_ONE_LINE_CONTENT+1];
     char* keyword;
-    StringArray wordsInLine;
-    StringArrayCreate(&wordsInLine);
+    StringArray strs;
+    StringArrayCreate(&strs);
 
-    FileReaderGetNextLine(pFileReader, line);
-    StringArraySplitString(&wordsInLine, line, ' ');
-    keyword = StringArrayGet(&wordsInLine, 0);
+    FileReaderGetNextLine(fr, line);
+    StringArraySplitString(&strs, line, ' ');
+    keyword = StringArrayGet(&strs, 0);
 
     if (strcmp(keyword, "RESI") == 0 || strcmp(keyword, "PRES") == 0)
     {
-      if (residueNameAlreadySet)
+      if (resNameAlreadySet == TRUE)
       {
-        FileReaderSetCurrentPos(pFileReader, FileReaderGetCurrentPos(pFileReader) - 1);
-        StringArrayDestroy(&wordsInLine);
+        FileReaderSetCurrentPos(fr, FileReaderGetCurrentPos(fr) - 1);
+        StringArrayDestroy(&strs);
         return Success;
       }
       else
       {
-        char* residueName = StringArrayGet(&wordsInLine, 1);
-        if (residueName == NULL || FAILED(ResidueTopologySetName(pThis, residueName)))
+        char* resName = StringArrayGet(&strs, 1);
+        if (resName == NULL || FAILED(ResTopologySetName(pThis, resName)))
         {
-          char errMsg[MAX_LEN_ERR_MSG + 1];
-          int errorCode = ValueError;
+          char errMsg[MAX_LEN_ERR_MSG+1];
+          int errCode = ValueError;
           sprintf(errMsg, "in file %s line %d, failed to set residue name", __FILE__, __LINE__);
-          TraceError(errMsg, errorCode);
-          return errorCode;
+          TraceError(errMsg, errCode);
+          return errCode;
         }
-        residueNameAlreadySet = TRUE;
+        resNameAlreadySet = TRUE;
       }
     }
     else if (strcmp(keyword, "ATOM") == 0)
     {
-      char* atomName = StringArrayGet(&wordsInLine, 1);
+      char* atomName = StringArrayGet(&strs, 1);
       if (atomName == NULL || FAILED(StringArrayAppend(&pThis->atoms, atomName)))
       {
-        char errMsg[MAX_LEN_ERR_MSG + 1];
-        int errorCode = ValueError;
+        char errMsg[MAX_LEN_ERR_MSG+1];
+        int errCode = ValueError;
         sprintf(errMsg, "in file %s line %d, failed to add atom name", __FILE__, __LINE__);
-        TraceError(errMsg, errorCode);
-        return errorCode;
+        TraceError(errMsg, errCode);
+        return errCode;
       }
     }
     else if (strcmp(keyword, "DELETE") == 0)
     {
-      char* deleteAtomName = StringArrayGet(&wordsInLine, 2);
-      if (deleteAtomName == NULL || FAILED(StringArrayAppend(&pThis->deletes, deleteAtomName)))
+      char* delAtomName = StringArrayGet(&strs, 2);
+      if (delAtomName == NULL || FAILED(StringArrayAppend(&pThis->dels, delAtomName)))
       {
-        char errMsg[MAX_LEN_ERR_MSG + 1];
-        int errorCode = ValueError;
+        char errMsg[MAX_LEN_ERR_MSG+1];
+        int errCode = ValueError;
         sprintf(errMsg, "in file %s line %d, failed to add atom name", __FILE__, __LINE__);
-        TraceError(errMsg, errorCode);
-        return errorCode;
+        TraceError(errMsg, errCode);
+        return errCode;
       }
     }
     else if (strcmp(keyword, "BOND") == 0 || strcmp(keyword, "DOUBLE") == 0 || strcmp(keyword, "TRIPLE") == 0)
     {
-      for (int i = 1;i < StringArrayGetCount(&wordsInLine);i += 2)
+      for (int i = 1;i < StringArrayGetNum(&strs);i += 2)
       {
-        char* atomFromName = StringArrayGet(&wordsInLine, i);
-        char* atomToName = StringArrayGet(&wordsInLine, i + 1);
+        char* atomFromName = StringArrayGet(&strs, i);
+        char* atomToName = StringArrayGet(&strs, i + 1);
         Type_Bond bondType;
 
         if (atomFromName == NULL || atomToName == NULL)
         {
-          char errMsg[MAX_LEN_ERR_MSG + 1];
-          int errorCode = ValueError;
+          char errMsg[MAX_LEN_ERR_MSG+1];
+          int errCode = ValueError;
           sprintf(errMsg, "in file %s line %d, atom %s or %s cannot be found", __FILE__, __LINE__, atomFromName, atomToName);
-          TraceError(errMsg, errorCode);
-          return errorCode;
+          TraceError(errMsg, errCode);
+          return errCode;
         }
         if (strcmp(keyword, "BOND") == 0)
         {
@@ -468,65 +472,65 @@ int ResidueTopologyCreateFromFileReader(ResidueTopology* pThis, FileReader* pFil
           bondType = Type_Bond_Triple;
         }
 
-        if (FAILED(BondSetAdd(&pThis->bonds, atomFromName, atomToName, bondType)))
+        if (FAILED(BondsAdd(&pThis->bonds, atomFromName, atomToName, bondType)))
         {
-          char errMsg[MAX_LEN_ERR_MSG + 1];
-          int errorCode = ValueError;
+          char errMsg[MAX_LEN_ERR_MSG+1];
+          int errCode = ValueError;
           sprintf(errMsg, "in file %s line %d, cannot add bond to set", __FILE__, __LINE__);
-          TraceError(errMsg, errorCode);
-          return errorCode;
+          TraceError(errMsg, errCode);
+          return errCode;
         }
       }
     }
     else if (strcmp(keyword, "IC") == 0)
     {
-      CharmmIC newIC;
-      if (FAILED(CharmmICCreateFromStringArray(&newIC, &wordsInLine)) || FAILED(ResidueTopologyAddCharmmIC(pThis, &newIC)))
+      CharmmIC ic;
+      if (FAILED(CharmmICCreateFromStringArray(&ic, &strs)) || FAILED(ResTopologyAddCharmmIC(pThis, &ic)))
       {
-        char errMsg[MAX_LEN_ERR_MSG + 1];
-        int errorCode = ValueError;
+        char errMsg[MAX_LEN_ERR_MSG+1];
+        int errCode = ValueError;
         sprintf(errMsg, "in file %s line %d, IC error", __FILE__, __LINE__);
-        TraceError(errMsg, errorCode);
-        return errorCode;
+        TraceError(errMsg, errCode);
+        return errCode;
       }
-      CharmmICDestroy(&newIC);
+      CharmmICDestroy(&ic);
     }
     else
     {
-      // neglect other unrecognized keyword in topology file
+      ;
     }
-    StringArrayDestroy(&wordsInLine);
+    StringArrayDestroy(&strs);
   }
   return Success;
 }
 
-int ResidueTopologyDestroy(ResidueTopology* pThis)
+int ResTopologyDestroy(ResTopology* pThis)
 {
   StringArrayDestroy(&pThis->atoms);
-  StringArrayDestroy(&pThis->deletes);
-  BondSetDestroy(&pThis->bonds);
+  StringArrayDestroy(&pThis->dels);
+  BondsDestroy(&pThis->bonds);
 
-  for (int i = 0;i < pThis->icCount;i++)
+  for (int i = 0;i < pThis->icNum;i++)
   {
     CharmmICDestroy(&pThis->ics[i]);
   }
   free(pThis->ics);
   pThis->ics = NULL;
-  pThis->icCount = 0;
+  pThis->icNum = 0;
   return Success;
 }
 
-int ResidueTopologyCopy(ResidueTopology* pThis, ResidueTopology* pOther)
+int ResTopologyCopy(ResTopology* pThis, ResTopology* pOther)
 {
-  ResidueTopologyDestroy(pThis);
-  ResidueTopologyCreate(pThis);
-  ResidueTopologySetName(pThis, ResidueTopologyGetName(pOther));
+  ResTopologyDestroy(pThis);
+  ResTopologyCreate(pThis);
+  ResTopologySetName(pThis, ResTopologyGetName(pOther));
   StringArrayCopy(&pThis->atoms, &pOther->atoms);
-  StringArrayCopy(&pThis->deletes, &pOther->deletes);
-  BondSetCopy(&pThis->bonds, &pOther->bonds);
-  pThis->icCount = pOther->icCount;
-  pThis->ics = (CharmmIC*)malloc(sizeof(CharmmIC) * pThis->icCount);
-  for (int i = 0;i < pThis->icCount;i++)
+  StringArrayCopy(&pThis->dels, &pOther->dels);
+  BondsCopy(&pThis->bonds, &pOther->bonds);
+  pThis->icNum = pOther->icNum;
+  pThis->ics = (CharmmIC*)malloc(sizeof(CharmmIC) * pThis->icNum);
+  for (int i = 0;i < pThis->icNum;i++)
   {
     CharmmICCreate(&pThis->ics[i]);
     CharmmICCopy(&pThis->ics[i], &pOther->ics[i]);
@@ -534,100 +538,98 @@ int ResidueTopologyCopy(ResidueTopology* pThis, ResidueTopology* pOther)
   return Success;
 }
 
-char* ResidueTopologyGetName(ResidueTopology* pThis)
+char* ResTopologyGetName(ResTopology* pThis)
 {
-  return pThis->residueName;
+  return pThis->resName;
 }
 
-int ResidueTopologySetName(ResidueTopology* pThis, char* newName)
+int ResTopologySetName(ResTopology* pThis, char* newName)
 {
   if (strlen(newName) > MAX_LEN_RES_NAME)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int errorCode = ValueError;
     sprintf(errMsg, "in file %s line %d, name is too long", __FILE__, __LINE__);
     TraceError(errMsg, errorCode);
     return errorCode;
   }
-  strcpy(pThis->residueName, newName);
+  strcpy(pThis->resName, newName);
   return Success;
 }
 
-StringArray* ResidueTopologyGetAtoms(ResidueTopology* pThis)
+StringArray* ResTopologyGetAtoms(ResTopology* pThis)
 {
   return &pThis->atoms;
 }
 
-StringArray* ResidueTopologyGetDeletes(ResidueTopology* pThis)
+StringArray* ResTopologyGetDeletes(ResTopology* pThis)
 {
-  return &pThis->deletes;
+  return &pThis->dels;
 }
 
-BondSet* ResidueTopologyGetBonds(ResidueTopology* pThis)
+Bonds* ResTopologyGetBonds(ResTopology* pThis)
 {
   return &pThis->bonds;
 }
 
-int ResidueTopologyGetCharmmICCount(ResidueTopology* pThis)
+int ResTopologyGetCharmmICNum(ResTopology* pThis)
 {
-  return pThis->icCount;
+  return pThis->icNum;
 }
 
-int ResidueTopologyGetCharmmIC(ResidueTopology* pThis, int index, CharmmIC* pDestIC)
+int ResTopologyGetCharmmIC(ResTopology* pThis, int ndx, CharmmIC* ic)
 {
-  if (index < 0 || index >= pThis->icCount)
+  if (ndx < 0 || ndx >= pThis->icNum)
     return IndexError;
-  CharmmICCopy(pDestIC, &pThis->ics[index]);
+  CharmmICCopy(ic, &pThis->ics[ndx]);
   return Success;
 }
 
-int ResidueTopologyFindCharmmIC(ResidueTopology* pThis, char* atomDName, CharmmIC* pDestIC)
+int ResTopologyFindCharmmIC(ResTopology* pThis, char* atomDName, CharmmIC* ic)
 {
-  int i;
-  for (i = 0;i < pThis->icCount;i++)
+  for (int i = 0;i < pThis->icNum;i++)
   {
     if (strcmp(CharmmICGetAtomD(&pThis->ics[i]), atomDName) == 0)
     {
-      CharmmICCopy(pDestIC, &pThis->ics[i]);
+      CharmmICCopy(ic, &pThis->ics[i]);
       return Success;
     }
   }
   return DataNotExistError;
 }
 
-int ResidueTopologyFindCharmmICIndex(ResidueTopology* pThis, char* atomDName, int* index)
+int ResTopologyFindCharmmICIndex(ResTopology* pThis, char* atomName, int* ndx)
 {
-  for (int i = 0;i < pThis->icCount;i++)
+  for (int i = 0;i < pThis->icNum;i++)
   {
-    if (strcmp(CharmmICGetAtomD(&pThis->ics[i]), atomDName) == 0)
+    if (strcmp(CharmmICGetAtomD(&pThis->ics[i]), atomName) == 0)
     {
-      *index = i;
+      *ndx = i;
       return Success;
     }
   }
   return DataNotExistError;
 }
 
-int ResidueTopologyAddCharmmIC(ResidueTopology* pThis, CharmmIC* pNewIC)
+int ResTopologyAddCharmmIC(ResTopology* pThis, CharmmIC* ic)
 {
-  // Will not check if it already exists
-  int newICCount = pThis->icCount + 1;
-  pThis->ics = (CharmmIC*)realloc(pThis->ics, sizeof(CharmmIC) * newICCount);
-  CharmmICCreate(&pThis->ics[newICCount - 1]);
-  CharmmICCopy(&pThis->ics[newICCount - 1], pNewIC);
-  pThis->icCount = newICCount;
+  int num = pThis->icNum + 1;
+  pThis->ics = (CharmmIC*)realloc(pThis->ics, sizeof(CharmmIC) * num);
+  CharmmICCreate(&pThis->ics[num - 1]);
+  CharmmICCopy(&pThis->ics[num - 1], ic);
+  pThis->icNum = num;
   return Success;
 }
 
-int ResidueTopologyShow(ResidueTopology* pThis)
+int ResTopologyShow(ResTopology* pThis)
 {
-  printf("RESI  %s\n", ResidueTopologyGetName(pThis));
-  for (int i = 0;i < StringArrayGetCount(&pThis->atoms);i++)
+  printf("RESI  %s\n", ResTopologyGetName(pThis));
+  for (int i = 0;i < StringArrayGetNum(&pThis->atoms);i++)
   {
     printf("ATOM   %s\n", StringArrayGet(&pThis->atoms, i));
   }
-  BondSetShow(&pThis->bonds);
-  for (int i = 0;i < pThis->icCount;i++)
+  BondsShow(&pThis->bonds);
+  for (int i = 0;i < pThis->icNum;i++)
   {
     CharmmICShow(&pThis->ics[i]);
     printf("\n");
@@ -636,56 +638,56 @@ int ResidueTopologyShow(ResidueTopology* pThis)
 }
 
 
-int ResiTopoSetCreate(ResiTopoSet* pThis)
+int ResToposCreate(ResTopos* pThis)
 {
-  pThis->count = 0;
+  pThis->num = 0;
   pThis->topos = NULL;
   return Success;
 }
 
-int ResiTopoSetDestroy(ResiTopoSet* pThis)
+int ResToposDestroy(ResTopos* pThis)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
-    ResidueTopologyDestroy(&pThis->topos[i]);
+    ResTopologyDestroy(&pThis->topos[i]);
   }
   free(pThis->topos);
   pThis->topos = NULL;
-  pThis->count = 0;
+  pThis->num = 0;
   return Success;
 }
 
-int ResiTopoSetCopy(ResiTopoSet* pThis, ResiTopoSet* pOther)
+int ResToposCopy(ResTopos* pThis, ResTopos* pOther)
 {
-  ResiTopoSetDestroy(pThis);
-  pThis->count = pOther->count;
-  pThis->topos = (ResidueTopology*)malloc(sizeof(ResidueTopology) * pThis->count);
-  for (int i = 0;i < pThis->count;i++)
+  ResToposDestroy(pThis);
+  pThis->num = pOther->num;
+  pThis->topos = (ResTopology*)malloc(sizeof(ResTopology) * pThis->num);
+  for (int i = 0;i < pThis->num;i++)
   {
-    ResidueTopologyCreate(&pThis->topos[i]);
-    ResidueTopologyCopy(&pThis->topos[i], &pOther->topos[i]);
+    ResTopologyCreate(&pThis->topos[i]);
+    ResTopologyCopy(&pThis->topos[i], &pOther->topos[i]);
   }
   return Success;
 }
 
-int ResiTopoSetGet(ResiTopoSet* pThis, char* resiName, ResidueTopology* pDestTopo)
+int ResToposGet(ResTopos* pThis, char* resiName, ResTopology* pDestTopo)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
-    if (strcmp(ResidueTopologyGetName(&pThis->topos[i]), resiName) == 0)
+    if (strcmp(ResTopologyGetName(&pThis->topos[i]), resiName) == 0)
     {
-      ResidueTopologyCopy(pDestTopo, &pThis->topos[i]);
+      ResTopologyCopy(pDestTopo, &pThis->topos[i]);
       return Success;
     }
   }
   return DataNotExistError;
 }
 
-int ResiTopoSetGetTopologyIndex(ResiTopoSet* pThis, char* resiName, int* index)
+int ResToposFindIndexByName(ResTopos* pThis, char* resiName, int* index)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
-    if (strcmp(ResidueTopologyGetName(&pThis->topos[i]), resiName) == 0)
+    if (strcmp(ResTopologyGetName(&pThis->topos[i]), resiName) == 0)
     {
       *index = i;
       return Success;
@@ -694,33 +696,32 @@ int ResiTopoSetGetTopologyIndex(ResiTopoSet* pThis, char* resiName, int* index)
   return DataNotExistError;
 }
 
-int ResiTopoSetAdd(ResiTopoSet* pThis, ResidueTopology* pNewTopo)
+int ResToposAdd(ResTopos* pThis, ResTopology* pNewTopo)
 {
-  // If already exist, replace the original
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
-    if (strcmp(ResidueTopologyGetName(&pThis->topos[i]), ResidueTopologyGetName(pNewTopo)) == 0)
+    if (strcmp(ResTopologyGetName(&pThis->topos[i]), ResTopologyGetName(pNewTopo)) == 0)
     {
-      ResidueTopologyCopy(&pThis->topos[i], pNewTopo);
+      ResTopologyCopy(&pThis->topos[i], pNewTopo);
       return Success;
     }
   }
 
-  int newCount = pThis->count + 1;
-  pThis->topos = (ResidueTopology*)realloc(pThis->topos, sizeof(ResidueTopology) * newCount);
-  ResidueTopologyCreate(&pThis->topos[newCount - 1]);
-  ResidueTopologyCopy(&pThis->topos[newCount - 1], pNewTopo);
-  pThis->count = newCount;
+  int num = pThis->num + 1;
+  pThis->topos = (ResTopology*)realloc(pThis->topos, sizeof(ResTopology) * num);
+  ResTopologyCreate(&pThis->topos[num - 1]);
+  ResTopologyCopy(&pThis->topos[num - 1], pNewTopo);
+  pThis->num = num;
   return Success;
 }
 
-int ResiTopoSetAddFromFile(ResiTopoSet* pThis, char* filepath)
+int ResToposAddFromFile(ResTopos* pThis, char* filepath)
 {
   FileReader file;
   int result = FileReaderCreate(&file, filepath);
   if (FAILED(result))
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, filepath);
     TraceError(errMsg, result);
     return result;
@@ -728,26 +729,26 @@ int ResiTopoSetAddFromFile(ResiTopoSet* pThis, char* filepath)
 
   while (!FileReaderEndOfFile(&file))
   {
-    ResidueTopology newTopo;
-    result = ResidueTopologyCreateFromFileReader(&newTopo, &file);
+    ResTopology newTopo;
+    result = ResTopologyCreateFromFileReader(&newTopo, &file);
     if (FAILED(result))
     {
-      char errMsg[MAX_LEN_ERR_MSG + 1];
+      char errMsg[MAX_LEN_ERR_MSG+1];
       sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, filepath);
       TraceError(errMsg, result);
       return result;
     }
-    ResiTopoSetAdd(pThis, &newTopo);
-    ResidueTopologyDestroy(&newTopo);
+    ResToposAdd(pThis, &newTopo);
+    ResTopologyDestroy(&newTopo);
   }
   FileReaderDestroy(&file);
   return Success;
 }
 
 
-int ResiTopoSetRead(ResiTopoSet* pResiTopo, char* filePath)
+int ResToposRead(ResTopos* pResiTopo, char* filePath)
 {
-  if (filePath == NULL || FAILED(ResiTopoSetAddFromFile(pResiTopo, filePath)))
+  if (filePath == NULL || FAILED(ResToposAddFromFile(pResiTopo, filePath)))
   {
     return FormatError;
   }
@@ -755,13 +756,12 @@ int ResiTopoSetRead(ResiTopoSet* pResiTopo, char* filePath)
 }
 
 
-
-int ResiTopoSetShow(ResiTopoSet* pThis)
+int ResToposShow(ResTopos* pThis)
 {
-  for (int i = 0;i < pThis->count;i++)
+  for (int i = 0;i < pThis->num;i++)
   {
     printf("Residue No. %d\n", i);
-    ResidueTopologyShow(&pThis->topos[i]);
+    ResTopologyShow(&pThis->topos[i]);
   }
   return Success;
 }

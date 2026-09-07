@@ -14,86 +14,84 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRA
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
 
-#include "AtomParamsSet.h"
+#include "AtomParams.h"
 #include <string.h>
 
-int AtomParamsSetCreate(AtomParamsSet* pThis)
+int AtomParamsCreate(AtomParams* pThis)
 {
-  StringArrayCreate(&pThis->residueNames);
-  pThis->atomCount = NULL;
+  StringArrayCreate(&pThis->resNames);
+  pThis->atomNum = NULL;
   pThis->atoms = NULL;
   return Success;
 }
 
 
-int AtomParamsSetDestroy(AtomParamsSet* pThis)
+int AtomParamsDestroy(AtomParams* pThis)
 {
-  for (int i = 0;i < AtomParamsSetGetResidueCount(pThis);i++)
+  for (int i = 0;i < AtomParamsGetResidueNum(pThis);i++)
   {
-    for (int j = 0;j < pThis->atomCount[i];j++)
+    for (int j = 0;j < pThis->atomNum[i];j++)
     {
       AtomDestroy(&pThis->atoms[i][j]);
     }
     free(pThis->atoms[i]);
   }
   free(pThis->atoms);
-  free(pThis->atomCount);
-  StringArrayDestroy(&pThis->residueNames);
+  free(pThis->atomNum);
+  StringArrayDestroy(&pThis->resNames);
   return Success;
 }
 
 
-int AtomParamsSetAdd(AtomParamsSet* pThis, char* residueName, Atom* pNewAtom)
+int AtomParamsAdd(AtomParams* pThis, char* resName, Atom* pAtom)
 {
-  if (strlen(residueName) > MAX_LEN_RES_NAME)
+  if (strlen(resName) > MAX_LEN_RES_NAME)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int result = ValueError;
     sprintf(errMsg, "in file %s line %d, residue name is too long", __FILE__, __LINE__);
     TraceError(errMsg, result);
     return result;
   }
 
-  int resiIndex;
-  int atomIndex;
-  int result = StringArrayFind(&pThis->residueNames, residueName, &resiIndex);
-  // new residue
+  int resNdx;
+  int atomNdx;
+  int result = StringArrayFind(&pThis->resNames, resName, &resNdx);
+
   if (FAILED(result))
   {
-    int newResidueCount = AtomParamsSetGetResidueCount(pThis) + 1;
-    pThis->atoms = (Atom**)realloc(pThis->atoms, sizeof(Atom*) * newResidueCount);
-    pThis->atoms[newResidueCount - 1] = NULL;
-    StringArrayAppend(&pThis->residueNames, residueName);
-    pThis->atomCount = (int*)realloc(pThis->atomCount, sizeof(int) * newResidueCount);
-    pThis->atomCount[newResidueCount - 1] = 0;
-    resiIndex = AtomParamsSetGetResidueCount(pThis) - 1;
+    int newResNum = AtomParamsGetResidueNum(pThis) + 1;
+    pThis->atoms = (Atom**)realloc(pThis->atoms, sizeof(Atom*) * newResNum);
+    pThis->atoms[newResNum - 1] = NULL;
+    StringArrayAppend(&pThis->resNames, resName);
+    pThis->atomNum = (int*)realloc(pThis->atomNum, sizeof(int) * newResNum);
+    pThis->atomNum[newResNum - 1] = 0;
+    resNdx = AtomParamsGetResidueNum(pThis) - 1;
   }
 
-  for (atomIndex = 0;atomIndex < pThis->atomCount[resiIndex];atomIndex++)
+  for (atomNdx = 0;atomNdx < pThis->atomNum[resNdx];atomNdx++)
   {
-    if (strcmp(pThis->atoms[resiIndex][atomIndex].name, pNewAtom->name) == 0)
+    if (strcmp(pThis->atoms[resNdx][atomNdx].name, pAtom->name) == 0)
     {
       break;
     }
   }
-  // new atom
-  if (atomIndex == pThis->atomCount[resiIndex])
+  if (atomNdx == pThis->atomNum[resNdx])
   {
-    int newAtomCount = pThis->atomCount[resiIndex] + 1;
-    pThis->atoms[resiIndex] = (Atom*)realloc(pThis->atoms[resiIndex], sizeof(Atom) * newAtomCount);
-    pThis->atomCount[resiIndex]++;
+    int newAtomNum = pThis->atomNum[resNdx] + 1;
+    pThis->atoms[resNdx] = (Atom*)realloc(pThis->atoms[resNdx], sizeof(Atom) * newAtomNum);
+    pThis->atomNum[resNdx]++;
   }
 
-  AtomCopy(&pThis->atoms[resiIndex][atomIndex], pNewAtom);
-  //AtomShowParams(&pThis->atoms[resNdx][atomIndex]);
+  AtomCopy(&pThis->atoms[resNdx][atomNdx], pAtom);
 
   return Success;
 }
 
 
-int AtomParamsSetAddFromFile(AtomParamsSet* pThis, char* filePath)
+int AtomParamsAddFromFile(AtomParams* pThis, char* filePath)
 {
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   FileReader file;
   int result = FileReaderCreate(&file, filePath);
   if (FAILED(result))
@@ -103,7 +101,7 @@ int AtomParamsSetAddFromFile(AtomParamsSet* pThis, char* filePath)
     return result;
   }
 
-  char line[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char line[MAX_LEN_ONE_LINE_CONTENT+1];
   while (!FAILED(FileReaderGetNextLine(&file, line)))
   {
     Atom atom;
@@ -112,7 +110,7 @@ int AtomParamsSetAddFromFile(AtomParamsSet* pThis, char* filePath)
     StringArrayCreate(&params);
     StringArraySplitString(&params, line, ' ');
     char* resiName = StringArrayGet(&params, 0);
-    if (resiName == NULL || FAILED(AtomSetParamsByStringArray(&atom, &params)) || FAILED(AtomParamsSetAdd(pThis, resiName, &atom)))
+    if (resiName == NULL || FAILED(AtomSetParamsByStringArray(&atom, &params)) || FAILED(AtomParamsAdd(pThis, resiName, &atom)))
     {
       sprintf(errMsg, "in file %s line %d, wrong format in file %s line \n%s", __FILE__, __LINE__, filePath, line);
       result = FormatError;
@@ -128,15 +126,15 @@ int AtomParamsSetAddFromFile(AtomParamsSet* pThis, char* filePath)
 }
 
 
-int AtomParamsSetGetResidueCount(AtomParamsSet* pThis)
+int AtomParamsGetResidueNum(AtomParams* pThis)
 {
-  return StringArrayGetCount(&pThis->residueNames);
+  return StringArrayGetNum(&pThis->resNames);
 }
 
 
-int AtomParamsSetGetResidueName(AtomParamsSet* pThis, int index, char* residueName)
+int AtomParamsGetResidueName(AtomParams* pThis, int index, char* residueName)
 {
-  char* name = StringArrayGet(&pThis->residueNames, index);
+  char* name = StringArrayGet(&pThis->resNames, index);
   if (!name) return DataNotExistError;
   else
   {
@@ -146,22 +144,22 @@ int AtomParamsSetGetResidueName(AtomParamsSet* pThis, int index, char* residueNa
 }
 
 
-int AtomParamsSetGetAtomCount(AtomParamsSet* pThis, char* residueName, int* pCount)
+int AtomParamsGetAtomNumOfResidue(AtomParams* pThis, char* residueName, int* num)
 {
   int pos;
-  int result = StringArrayFind(&pThis->residueNames, residueName, &pos);
+  int result = StringArrayFind(&pThis->resNames, residueName, &pos);
   if (FAILED(result)) return result;
-  *pCount = pThis->atomCount[pos];
+  *num = pThis->atomNum[pos];
   return Success;
 }
 
 
-int AtomParamsSetGetAtomParam(AtomParamsSet* pThis, char* residueName, int index, Atom* pDestAtom)
+int AtomParamsGetAtomParamOfResidue(AtomParams* pThis, char* residueName, int index, Atom* pDestAtom)
 {
   int pos;
-  int result = StringArrayFind(&pThis->residueNames, residueName, &pos);
+  int result = StringArrayFind(&pThis->resNames, residueName, &pos);
   if (FAILED(result)) return result;
-  if (index < 0 || index >= pThis->atomCount[pos])
+  if (index < 0 || index >= pThis->atomNum[pos])
   {
     return IndexError;
   }
@@ -170,16 +168,16 @@ int AtomParamsSetGetAtomParam(AtomParamsSet* pThis, char* residueName, int index
 }
 
 
-int AtomParamsSetGetAtomParamByName(AtomParamsSet* pThis, char* residueName, char* atomName, Atom* pDestAtom)
+int AtomParamsGetAtomParamByResidueName(AtomParams* pThis, char* residueName, char* atomName, Atom* pDestAtom)
 {
   int pos, atomIndex;
-  int result = StringArrayFind(&pThis->residueNames, residueName, &pos);
+  int result = StringArrayFind(&pThis->resNames, residueName, &pos);
   if (FAILED(result))  return result;
-  for (atomIndex = 0;atomIndex < pThis->atomCount[pos];atomIndex++)
+  for (atomIndex = 0;atomIndex < pThis->atomNum[pos];atomIndex++)
   {
     if (strcmp(pThis->atoms[pos][atomIndex].name, atomName) == 0) break;
   }
-  if (atomIndex == pThis->atomCount[pos])
+  if (atomIndex == pThis->atomNum[pos])
   { // atom not found
     return DataNotExistError;
   }
@@ -188,13 +186,13 @@ int AtomParamsSetGetAtomParamByName(AtomParamsSet* pThis, char* residueName, cha
 }
 
 
-int AtomParameterRead(AtomParamsSet* pAtomParam, char* filePath)
+int AtomParamsRead(AtomParams* pAtomParam, char* file)
 {
-  char errMsg[MAX_LEN_ERR_MSG + 1];
-  int result = AtomParamsSetAddFromFile(pAtomParam, filePath);
+  char errMsg[MAX_LEN_ERR_MSG+1];
+  int result = AtomParamsAddFromFile(pAtomParam, file);
   if (FAILED(result))
   {
-    sprintf(errMsg, "in file %s line %d, failed to read parameter file %s", __FILE__, __LINE__, filePath);
+    sprintf(errMsg, "in file %s line %d, failed to read parameter file %s", __FILE__, __LINE__, file);
     TraceError(errMsg, result);
     return result;
   }

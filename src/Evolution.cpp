@@ -20,8 +20,8 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 /*                                xtd-seqali                                  */
 /*                                                                            */
 /* Computes the optimum alignment between two amino acid sequences (S1 & S2). */
-/* The score of each pair (i,j) of positions takes into account not only      */
-/* the similarity between the amino acids but also other features that        */
+/* The score of each pair (i,j) of positions takes into consideration not     */
+/* only the similarity between the amino acids but also other features that   */
 /* characterize those positions.                                              */
 /*                                                                            */
 /* In the current implementation, the score of each pair (i,j) of positions   */
@@ -86,12 +86,12 @@ float wang = 1.00;
 using namespace CharSeq;
 
 extern float** PROT_PROFILE;
-extern char PROGRAM_PATH[MAX_LEN_ONE_LINE_CONTENT + 1];
-extern char TGT_PRF[MAX_LEN_FILE_NAME + 1];
-extern char TGT_SA[MAX_LEN_FILE_NAME + 1];
-extern char TGT_SS[MAX_LEN_FILE_NAME + 1];
-extern char TGT_SEQ[MAX_LEN_FILE_NAME + 1];
-extern char TGT_PHIPSI[MAX_LEN_FILE_NAME + 1];
+extern char PROGRAM_PATH[MAX_LEN_ONE_LINE_CONTENT+1];
+extern char TGT_PRF[MAX_LEN_FILE_NAME+1];
+extern char TGT_SA[MAX_LEN_FILE_NAME+1];
+extern char TGT_SS[MAX_LEN_FILE_NAME+1];
+extern char TGT_SEQ[MAX_LEN_FILE_NAME+1];
+extern char TGT_PHIPSI[MAX_LEN_FILE_NAME+1];
 
 namespace Text
 {

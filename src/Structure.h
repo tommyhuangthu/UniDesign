@@ -26,60 +26,56 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 typedef struct _Structure
 {
-  char name[MAX_LEN_STRUCTURE_NAME + 1];
+  char name[MAX_LEN_STRUCTURE_NAME+1];
   Chain* chains;
-  DesignSite* designSites;
-  int chainNum;
-  int desSiteCount;
+  DesignSite* desSites;
+  int chnNum;
+  int desSiteNum;
 } Structure;
 
-int StructureCreate(Structure* pThis);
-int StructureDestroy(Structure* pThis);
-char* StructureGetName(Structure* pThis);
-int StructureSetName(Structure* pThis, char* newName);
-int StructureGetChainCount(Structure* pThis);
-Chain* StructureGetChain(Structure* pThis, int index);
-Chain* StructureFindChainByName(Structure* pThis, char* chainName);
-int StructureFindChainIndex(Structure* pThis, char* chainName, int* index);
-int StructureFindSmallMol(Structure* pThis, Residue** ppSmallMol);
-int StructureAddChain(Structure* pThis, Chain* newChain);
-int StructureDeleteChain(Structure* pThis, char* chainName);
-int StructureShowInPDBFormat(Structure* pThis, FILE* pFile);
+int StructureCreate(Structure* pStruct);
+int StructureDestroy(Structure* pStruct);
+char* StructureGetName(Structure* pStruct);
+int StructureSetName(Structure* pStruct, char* newName);
+int StructureGetChainNum(Structure* pStruct);
+Chain* StructureGetChain(Structure* pStruct, int index);
+Chain* StructureFindChainByName(Structure* pStruct, char* chainName);
+int StructureFindChainIndex(Structure* pStruct, char* chainName, int* index);
+int StructureFindSmallMol(Structure* pStruct, Residue** ppSmallMol);
+int StructureAddChain(Structure* pStruct, Chain* newChain);
+int StructureDeleteChain(Structure* pStruct, char* chainName);
+int StructureShowInPDBFormat(Structure* pStruct, FILE* pFile);
 
-// deal with design sites
-int StructureGetDesignSiteCount(Structure* pStructure);
-DesignSite* StructureGetDesignSite(Structure* pStructure, int index);
-int StructureFindDesignSiteIndexByChainNameAndPosInChain(Structure* pStructure, char* chainName, int posInChain);
-int StructureGetDesignSiteIndex(Structure* pStructure, int chainIndex, int resiIndex);
-DesignSite* StructureFindDesignSite(Structure* pStructure, int chainIndex, int resiIndex);
-DesignSite* StructureFindDesignSiteByChainName(Structure* pStructure, char* chainName, int posInChain);
+int StructureGetDesignSiteNum(Structure* pStruct);
+DesignSite* StructureGetDesignSite(Structure* pStruct, int index);
+int StructureFindDesignSiteIndexByChainNameAndPosInChain(Structure* pStruct, char* chainName, int posInChain);
+int StructureGetDesignSiteIndex(Structure* pStruct, int chainIndex, int resiIndex);
+DesignSite* StructureFindDesignSite(Structure* pStruct, int chainIndex, int resiIndex);
+DesignSite* StructureFindDesignSiteByChainName(Structure* pStruct, char* chainName, int posInChain);
 
-int StructureShowDesignSites(Structure* pThis);
+int StructureShowDesignSites(Structure* pStruct);
 
-int ProteinSiteAddDesignSite(Structure* pThis, int chainIndex, int resiIndex);
-int ProteinSiteRemoveDesignSite(Structure* pThis, int chainIndex, int resiIndex);
-int StructureRemoveAllDesignSites(Structure* pThis);
+int ProteinSiteAddDesignSite(Structure* pStruct, int chainIndex, int resiIndex);
+int ProteinSiteRemoveDesignSite(Structure* pStruct, int chainIndex, int resiIndex);
+int StructureRemoveAllDesignSites(Structure* pStruct);
 
-// other functions
-int ChainComputeResiduePosition(Structure* pStructure, int chainIndex);
-int StructureComputeResiduePosition(Structure* pStructure);
+int ChainComputeResiduePosition(Structure* pStruct, int chainIndex);
+int StructureComputeResiduePosition(Structure* pStruct);
 
-// debuggers
-int StructureShowAtomParameter(Structure* pStructure);
-int StructureShowBondInformation(Structure* pStructure);
+int StructureShowAtomParameter(Structure* pStruct);
+int StructureShowBondInformation(Structure* pStruct);
 
-int StructureReadPDB(Structure* pStructure, char* pdbFile, AtomParamsSet* pAtomParams, ResiTopoSet* pResiTopos);
-int StructureReadMol2(Structure* pStructure, char* mol2file, AtomParamsSet* pAtomParams, ResiTopoSet* pTopos);
+int StructureReadPDB(Structure* pStruct, char* pdbfile, AtomParams* pParams, ResTopos* pTops);
+int StructureReadMol2(Structure* pStruct, char* mol2file, AtomParams* pParams, ResTopos* pTops);
 
-int StructureCalcProteinResidueSidechainTorsion(Structure* pThis, ResiTopoSet* pResiTopos);
+int StructureCalcProteinResidueSidechainTorsion(Structure* pStruct, ResTopos* pTops);
 
-int StructureCalcPhiPsi(Structure* pStructure);
-int StructureCopy(Structure* pThis, Structure* pOther);
-Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery);
-int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pStructure, AtomParamsSet* pAtomParaSet, ResiTopoSet* pResiTopos);
-int StructureCalcAminoAcidPropensityAndRamaEnergy(Structure* pStructure, AAppTable* pAAPP, RamaTable* pRama);
-int StructureCalcAminoAcidDunbrackEnergy(Structure* pStructure, BBdepRotamerLib* pBBdep);
+int StructureCalcPhiPsi(Structure* pStruct);
+int StructureCopy(Structure* pStruct1, Structure* pStruct2);
+Residue* StructureFindNucleotidePair(Structure* pStruct, Residue* pRes);
+int StructureMutateNucleotide(Residue* pRes, char oneLetterName, Structure* pStruct, AtomParams* pParams, ResTopos* pTops);
+int StructureCalcAminoAcidPropensityAndRamaEnergy(Structure* pStruct, AAppTable* pAAPP, RamaTable* pRama);
+int StructureCalcAminoAcidDunbrackEnergy(Structure* pStruct, BBdepRotLib* pLib);
 
-//deal with nucleic acid
 
 #endif // STRUCTURE_H

@@ -30,7 +30,7 @@ BOOL FAILED(int errorCode)
 
 int TraceError(char* errMsg, int errorCode)
 {
-  char defaultMsg[MAX_LEN_ERR_MSG + 1];
+  char defaultMsg[MAX_LEN_ERR_MSG+1];
 
   if (errorCode == Success)
   {

@@ -27,310 +27,44 @@ extern double CUT_PPI_DIST_SHELL1;
 extern double CUT_PPI_DIST_SHELL2;
 extern double CUT_PLI_DIST_SHELL1;
 extern double CUT_PLI_DIST_SHELL2;
-
-
-extern BOOL FLAG_MONOMER;
-extern BOOL FLAG_PPI;
-extern BOOL FLAG_PROT_LIG;
-extern BOOL FLAG_ENZYME;
-
+extern BOOL FLAG_DESIGN_MON;
+extern BOOL FLAG_DESIGN_PPI;
+extern BOOL FLAG_DESIGN_PLI;
+extern BOOL FLAG_DESIGN_ENZ;
 extern BOOL FLAG_USE_INPUT_SC;
 extern BOOL FLAG_ROTATE_HYDROXYL;
 extern BOOL FLAG_WILDTYPE_ONLY;
-extern char DES_CHAINS[MAX_LEN_ONE_LINE_CONTENT + 1];
-
+extern char DES_CHAINS[MAX_LEN_ONE_LINE_CONTENT+1];
 extern BOOL FLAG_EXCL_CYS_ROTS;
 
-#define DEAL_WITH_PROTEIN_ROTAMERS_BBIND
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// functions used to deal with sidechain rots, sidechain repacking and protein design
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int ProteinSiteBuildAllRotamers(Structure* pStruct, int chnNdx, int resNdx, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
+int StructureGetTruncatedBackbone(Structure* pStruct, Residue* pSmallMol, double range, BOOL withH, AtomArray* pBackbone)
 {
-  int result = Success;
-  DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
-  if (pSite != NULL)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    DesignSiteRemoveRotamers(pSite);
-  }
-  else
-  {
-    (pStruct->desSiteCount)++;
-    pStruct->designSites = (DesignSite*)realloc(pStruct->designSites, sizeof(DesignSite) * pStruct->desSiteCount);
-    DesignSiteCreate(&pStruct->designSites[pStruct->desSiteCount - 1]);
-    pSite = StructureGetDesignSite(pStruct, pStruct->desSiteCount - 1);
-    Chain* pDestChain = StructureGetChain(pStruct, chnNdx);
-    Residue* pDestResidue = ChainGetResidue(pDestChain, resNdx);
-    pSite->pRes = pDestResidue;
-    pSite->chnNdx = chnNdx;
-    pSite->resNdx = resNdx;
-  }
-
-  // set design types - 20 AA types;
-  StringArray designTypes;
-  StringArray patchTypes;
-  StringArrayCreate(&designTypes);
-  StringArrayCreate(&patchTypes);
-  StringArrayAppend(&designTypes, "ALA"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "ARG"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "ASN"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "ASP"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "CYS"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "GLN"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "GLU"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "GLY"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "HSD"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "HSE"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "ILE"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "LEU"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "LYS"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "MET"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "PHE"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "PRO"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "SER"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "THR"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "TRP"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "TYR"); StringArrayAppend(&patchTypes, "");
-  StringArrayAppend(&designTypes, "VAL"); StringArrayAppend(&patchTypes, "");
-  result = RotamerSetOfProteinGenerate(DesignSiteGetRotamers(pSite), pSite->pRes, &designTypes, &patchTypes, rotlib, atomParams, resiTopos);
-  ResidueSetDesignType(pSite->pRes, Type_DesType_Mutable);
-  StringArrayDestroy(&patchTypes);
-  StringArrayDestroy(&designTypes);
-
-  return result;
-}
-
-
-int ProteinSiteBuildMutatedRotamers(Structure* pStruct, int chnNdx, int resNdx, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, StringArray* pDesignTypes, StringArray* pPatchTypes)
-{
-  int result = Success;
-  DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
-  if (pSite != NULL)
-  {
-    DesignSiteRemoveRotamers(pSite);
-  }
-  else
-  {
-    (pStruct->desSiteCount)++;
-    pStruct->designSites = (DesignSite*)realloc(pStruct->designSites, sizeof(DesignSite) * pStruct->desSiteCount);
-    DesignSiteCreate(&pStruct->designSites[pStruct->desSiteCount - 1]);
-    pSite = StructureGetDesignSite(pStruct, pStruct->desSiteCount - 1);
-    Chain* pDestChain = StructureGetChain(pStruct, chnNdx);
-    Residue* pDestResidue = ChainGetResidue(pDestChain, resNdx);
-    pSite->pRes = pDestResidue;
-    pSite->chnNdx = chnNdx;
-    pSite->resNdx = resNdx;
-  }
-
-  result = RotamerSetOfProteinGenerate(DesignSiteGetRotamers(pSite), pSite->pRes, pDesignTypes, pPatchTypes, rotlib, atomParams, resiTopos);
-  ResidueSetDesignType(pSite->pRes, Type_DesType_Mutable);
-  return result;
-}
-
-
-int ProteinSiteBuildWildtypeRotamers(Structure* pThis, int chainIndex, int resiIndex, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
-{
-  int result = Success;
-  DesignSite* pSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
-  if (pSite != NULL)
-  {
-    DesignSiteRemoveRotamers(pSite);
-  }
-  else
-  {
-    (pThis->desSiteCount)++;
-    pThis->designSites = (DesignSite*)realloc(pThis->designSites, sizeof(DesignSite) * pThis->desSiteCount);
-    DesignSiteCreate(&pThis->designSites[pThis->desSiteCount - 1]);
-    pSite = StructureGetDesignSite(pThis, pThis->desSiteCount - 1);
-    Chain* pDestChn = StructureGetChain(pThis, chainIndex);
-    Residue* pDestRes = ChainGetResidue(pDestChn, resiIndex);
-    pSite->pRes = pDestRes;
-    pSite->chnNdx = chainIndex;
-    pSite->resNdx = resiIndex;
-  }
-
-  StringArray designTypes;
-  StringArray patchTypes;
-  StringArrayCreate(&designTypes);
-  StringArrayCreate(&patchTypes);
-  StringArrayAppend(&designTypes, ResidueGetName(pSite->pRes));
-  StringArrayAppend(&patchTypes, "");
-  if (strcmp(ResidueGetName(pSite->pRes), "HSD") == 0)
-  {
-    StringArrayAppend(&designTypes, "HSE");
-    StringArrayAppend(&patchTypes, "");
-  }
-  else if (strcmp(ResidueGetName(pSite->pRes), "HSE") == 0)
-  {
-    StringArrayAppend(&designTypes, "HSD");
-    StringArrayAppend(&patchTypes, "");
-  }
-
-  result = RotamerSetOfProteinGenerate(DesignSiteGetRotamers(pSite), pSite->pRes, &designTypes, &patchTypes, rotlib, atomParams, resiTopos);
-  ResidueSetDesignType(pSite->pRes, Type_DesType_Repackable);
-
-  StringArrayDestroy(&patchTypes);
-  StringArrayDestroy(&designTypes);
-
-  return result;
-}
-
-
-int ProteinSiteBuildSpecifiedRotamers(Structure* pThis, int chainIndex, int resiIndex, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, Type_ResidueDesignType type)
-{
-  int result = Success;
-  DesignSite* pCurrentDesignSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
-  if (pCurrentDesignSite != NULL)
-  {
-    DesignSiteRemoveRotamers(pCurrentDesignSite);
-  }
-  else
-  {
-    (pThis->desSiteCount)++;
-    pThis->designSites = (DesignSite*)realloc(pThis->designSites, sizeof(DesignSite) * pThis->desSiteCount);
-    DesignSiteCreate(&pThis->designSites[pThis->desSiteCount - 1]);
-    pCurrentDesignSite = StructureGetDesignSite(pThis, pThis->desSiteCount - 1);
-    Chain* pDestChain = StructureGetChain(pThis, chainIndex);
-    Residue* pDestResidue = ChainGetResidue(pDestChain, resiIndex);
-    pCurrentDesignSite->pRes = pDestResidue;
-    pCurrentDesignSite->chnNdx = chainIndex;
-    pCurrentDesignSite->resNdx = resiIndex;
-  }
-
-  StringArray designTypes;
-  StringArray patchTypes;
-  StringArrayCreate(&designTypes);
-  StringArrayCreate(&patchTypes);
-  if (type == Type_DesType_Mutable)
-  {
-    StringArrayAppend(&designTypes, "ALA"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "ARG"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "ASN"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "ASP"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "CYS"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "GLN"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "GLU"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "GLY"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "HSD"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "HSE"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "ILE"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "LEU"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "LYS"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "MET"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "PHE"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "PRO"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "SER"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "THR"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "TRP"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "TYR"); StringArrayAppend(&patchTypes, "");
-    StringArrayAppend(&designTypes, "VAL"); StringArrayAppend(&patchTypes, "");
-  }
-  else if (type == Type_DesType_Repackable || type == Type_DesType_Catalytic)
-  {
-    StringArrayAppend(&designTypes, ResidueGetName(pCurrentDesignSite->pRes)); StringArrayAppend(&patchTypes, "");
-  }
-  result = RotamerSetOfProteinGenerate(DesignSiteGetRotamers(pCurrentDesignSite), pCurrentDesignSite->pRes, &designTypes, &patchTypes, rotlib, atomParams, resiTopos);
-  StringArrayDestroy(&patchTypes);
-  StringArrayDestroy(&designTypes);
-
-  return result;
-}
-
-
-int StructureGenerateSpecifiedProteinRotamers(Structure* pStructure, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile)
-{
-  FileReader fr;
-  FileReaderCreate(&fr, resfile);
-  char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
-  while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-  {
-    char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
-    ExtractFirstStringFromSourceString(keyword, buffer);
-    if (strcmp(keyword, "SITES_CATALYTIC_START") == 0)
+    Chain* pChain = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      StringArray strings;
-      StringArrayCreate(&strings);
-      while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
+      Residue* pRes = ChainGetResidue(pChain, j);
+      if (strcmp(ResidueGetChainName(pRes), ResidueGetChainName(pSmallMol)) == 0 && ResidueGetPosInChain(pRes) == ResidueGetPosInChain(pSmallMol))
       {
-        StringArraySplitString(&strings, buffer, ' ');
-        if (strcmp(StringArrayGet(&strings, 0), "SITES_CATALYTIC_END") == 0)
-        {
-          break;
-        }
-        char* chnname = StringArrayGet(&strings, 0);
-        int posInChain = atoi(StringArrayGet(&strings, 1));
-        Chain* pChain = StructureFindChainByName(pStructure, chnname);
-        int resiIndex = -1;
-        ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-        if (resiIndex != -1)
-        {
-          ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_Catalytic;
-        }
+        continue;
       }
-      StringArrayDestroy(&strings);
-    }
-    else if (strcmp(keyword, "SITES_DESIGN_START") == 0)
-    {
-      StringArray strings;
-      StringArrayCreate(&strings);
-      while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
+      if (AtomArrayCalcMinDistance(ResidueGetAllAtoms(pRes), ResidueGetAllAtoms(pSmallMol)) > range)
       {
-        StringArraySplitString(&strings, buffer, ' ');
-        if (strcmp(StringArrayGet(&strings, 0), "SITES_DESIGN_END") == 0)
-        {
-          break;
-        }
-        char* chnname = StringArrayGet(&strings, 0);
-        int posInChain = atoi(StringArrayGet(&strings, 1));
-        Chain* pChain = StructureFindChainByName(pStructure, chnname);
-        int resiIndex = -1;
-        ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-        if (resiIndex != -1)
-        {
-          ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_Mutable;
-        }
+        continue;
       }
-      StringArrayDestroy(&strings);
-    }
-    else if (strcmp(keyword, "SITES_REPACK_START") == 0)
-    {
-      StringArray strings;
-      StringArrayCreate(&strings);
-      while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
+      for (int k = 0; k < ResidueGetAtomNum(pRes); k++)
       {
-        StringArraySplitString(&strings, buffer, ' ');
-        if (strcmp(StringArrayGet(&strings, 0), "SITES_REPACK_END") == 0)
+        Atom* pAtom = ResidueGetAtom(pRes, k);
+        if (AtomIsHydrogen(pAtom) == TRUE && withH == FALSE)
         {
-          break;
+          continue;
         }
-        char* chnname = StringArrayGet(&strings, 0);
-        int posInChain = atoi(StringArrayGet(&strings, 1));
-        Chain* pChain = StructureFindChainByName(pStructure, chnname);
-        int resiIndex = -1;
-        ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-        if (resiIndex != -1)
+        if (pAtom->isBBAtom == FALSE && strcmp(AtomGetName(pAtom), "CB") != 0)
         {
-          ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_Repackable;
+          continue;
         }
-      }
-      StringArrayDestroy(&strings);
-    }
-  }
-  FileReaderDestroy(&fr);
-
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-    {
-      Residue* pResi = ChainGetResidue(pChainI, j);
-      if (pResi->desType != Type_DesType_Fixed)
-      {
-        //printf("generate rots for residue %d\n", j);
-        ProteinSiteBuildSpecifiedRotamers(pStructure, i, j, rotlib, atomParams, resiTopos, pResi->desType);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+        AtomArrayAppend(pBackbone, pAtom);
       }
     }
   }
@@ -339,60 +73,30 @@ int StructureGenerateSpecifiedProteinRotamers(Structure* pStructure, BBindRotame
 }
 
 
-int StructureGenerateAllRotamers(Structure* pStructure, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
+int StructureGetTruncatedBackbone2(Structure* pStruct, Residue* pSmallMol, BOOL withH, AtomArray* pBackbone)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+    Chain* pChain = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResi = ChainGetResidue(pChainI, j);
-      if (pResi->desType != Type_DesType_Fixed) continue;
-      ResidueSetDesignType(pResi, Type_DesType_Mutable);
-      ProteinSiteBuildSpecifiedRotamers(pStructure, i, j, rotlib, atomParams, resiTopos, pResi->desType);
-      if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-      if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-    }
-  }
-
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-    {
-      Residue* pResi = ChainGetResidue(pChainI, j);
-      if (pResi->desType != Type_DesType_Fixed) continue;
-      Atom* pAtomCA1 = ResidueGetAtomByName(pResi, "CA");
-      BOOL interResi = FALSE;
-      for (int k = 0; k < StructureGetChainCount(pStructure); k++)
+      Residue* pRes = ChainGetResidue(pChain, j);
+      if (strcmp(ResidueGetChainName(pRes), ResidueGetChainName(pSmallMol)) == 0 && ResidueGetPosInChain(pRes) == ResidueGetPosInChain(pSmallMol))
       {
-        if (k == i)continue;
-        Chain* pChainK = StructureGetChain(pStructure, k);
-        if (ChainGetType(pChainK) != Type_Chain_Protein)continue;
-        if (strstr(DES_CHAINS, ChainGetName(pChainK)) == NULL)continue;
-        for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+        continue;
+      }
+      for (int k = 0; k < ResidueGetAtomNum(pRes); k++)
+      {
+        Atom* pAtom = ResidueGetAtom(pRes, k);
+        if (AtomIsHydrogen(pAtom) == TRUE && withH == FALSE)
         {
-          Residue* pResidueKS = ChainGetResidue(pChainK, s);
-          Atom* pAtomCA2 = ResidueGetAtomByName(pResidueKS, "CA");
-          if (XYZDistance(&pAtomCA2->xyz, &pAtomCA1->xyz) > 15.0) continue;
-          if (AtomArrayCalcMinDistance(&pResi->atoms, &pResidueKS->atoms) < CUT_PPI_DIST_SHELL1)
-          {
-            interResi = TRUE;
-            break;
-          }
+          continue;
         }
-        if (interResi) break;
-      }
-      if (interResi)
-      {
-        ResidueSetDesignType(pResi, Type_DesType_Repackable);
-        ProteinSiteBuildSpecifiedRotamers(pStructure, i, j, rotlib, atomParams, resiTopos, pResi->desType);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+        if (pAtom->isBBAtom == FALSE && strcmp(AtomGetName(pAtom), "CB") != 0)
+        {
+          continue;
+        }
+        AtomArrayAppend(pBackbone, pAtom);
       }
     }
   }
@@ -401,61 +105,13 @@ int StructureGenerateAllRotamers(Structure* pStructure, BBindRotamerLib* rotlib,
 }
 
 
-
-#define DEAL_WITH_LIGAND_ROTAMERS
-
-int StructureGetTruncatedBackbone(Structure* pThis, Residue* pSmallMol, double activeSiteRange, BOOL withHydrogen, AtomArray* pBackboneAtoms)
+int StructureDeployCataConsSitePair(Structure* pStruct, CataConsSitePair* pCataConsSitePair)
 {
-  for (int chainIndex = 0; chainIndex < StructureGetChainCount(pThis); chainIndex++)
-  {
-    Chain* pChain = StructureGetChain(pThis, chainIndex);
-    for (int resiIndex = 0; resiIndex < ChainGetResidueCount(pChain); resiIndex++)
-    {
-      Residue* pResi = ChainGetResidue(pChain, resiIndex);
-      if (strcmp(ResidueGetChainName(pResi), ResidueGetChainName(pSmallMol)) == 0 && ResidueGetPosInChain(pResi) == ResidueGetPosInChain(pSmallMol)) continue;
-      double minDist = AtomArrayCalcMinDistance(ResidueGetAllAtoms(pResi), ResidueGetAllAtoms(pSmallMol));
-      if (minDist > activeSiteRange) continue;
-      for (int atomIndex = 0;atomIndex < ResidueGetAtomCount(pResi);atomIndex++)
-      {
-        Atom* pAtom = ResidueGetAtom(pResi, atomIndex);
-        if (AtomIsHydrogen(pAtom) && !withHydrogen) continue;
-        if (pAtom->isBBAtom == FALSE && strcmp(AtomGetName(pAtom), "CB") != 0) continue;
-        AtomArrayAppend(pBackboneAtoms, pAtom);
-      }
-    }
-  }
-  return Success;
-}
-
-int StructureGetTruncatedBackboneNew(Structure* pThis, Residue* pSmallMol, BOOL withHydrogen, AtomArray* pBackboneAtoms)
-{
-  for (int chainIndex = 0; chainIndex < StructureGetChainCount(pThis); chainIndex++)
-  {
-    Chain* pChain = StructureGetChain(pThis, chainIndex);
-    for (int resiIndex = 0; resiIndex < ChainGetResidueCount(pChain); resiIndex++)
-    {
-      Residue* pResi = ChainGetResidue(pChain, resiIndex);
-      if (strcmp(ResidueGetChainName(pResi), ResidueGetChainName(pSmallMol)) == 0 && ResidueGetPosInChain(pResi) == ResidueGetPosInChain(pSmallMol)) continue;
-      for (int atomIndex = 0;atomIndex < ResidueGetAtomCount(pResi);atomIndex++)
-      {
-        Atom* pAtom = ResidueGetAtom(pResi, atomIndex);
-        if (AtomIsHydrogen(pAtom) == TRUE && withHydrogen == FALSE) continue;
-        if (pAtom->isBBAtom == FALSE && strcmp(AtomGetName(pAtom), "CB") != 0) continue;
-        AtomArrayAppend(pBackboneAtoms, pAtom);
-      }
-    }
-  }
-  return Success;
-}
-
-
-int StructureDeployCataConsSitePair(Structure* pThis, CataConsSitePair* pCataConsSitePair)
-{
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   Residue* pSmallMol = NULL;
-  RotamerSet* pRotSetOfFirstAndSecondSite[2] = { NULL,NULL };
+  Rotamers* pRotSetOfFirstAndSecondSite[2] = {NULL, NULL};
 
-  int result = StructureFindSmallMol(pThis, &pSmallMol);
+  int result = StructureFindSmallMol(pStruct, &pSmallMol);
   if (FAILED(result))
   {
     sprintf(errMsg, "in file %s line %d, cannot find small molecule", __FILE__, __LINE__);
@@ -463,15 +119,15 @@ int StructureDeployCataConsSitePair(Structure* pThis, CataConsSitePair* pCataCon
     return result;
   }
 
-  RotamerSet tempSmallMolRotamerSet;
-  RotamerSetCreate(&tempSmallMolRotamerSet);
-  Rotamer tempSmallMolRotamer;
-  RotamerCreate(&tempSmallMolRotamer);
-  RotamerSetType(&tempSmallMolRotamer, ResidueGetName(pSmallMol));
-  RotamerAddAtoms(&tempSmallMolRotamer, ResidueGetAllAtoms(pSmallMol));
-  RotamerSetAdd(&tempSmallMolRotamerSet, &tempSmallMolRotamer);
-  RotamerDestroy(&tempSmallMolRotamer);
-  for (int i = 0;i < 2;i++)
+  Rotamers tempSmallRotSet;
+  RotamersCreate(&tempSmallRotSet);
+  Rotamer tempSmallRot;
+  RotamerCreate(&tempSmallRot);
+  RotamerSetType(&tempSmallRot, ResidueGetName(pSmallMol));
+  RotamerAddAtoms(&tempSmallRot, ResidueGetAllAtoms(pSmallMol));
+  RotamersAdd(&tempSmallRotSet, &tempSmallRot);
+  RotamerDestroy(&tempSmallRot);
+  for (int i = 0; i < 2; i++)
   {
     int posInChain;
     char* chainName;
@@ -492,14 +148,14 @@ int StructureDeployCataConsSitePair(Structure* pThis, CataConsSitePair* pCataCon
     pRotSetOfFirstAndSecondSite[i] = NULL;
     if (posInChain == ResidueGetPosInChain(pSmallMol) && strcmp(chainName, ResidueGetChainName(pSmallMol)) == 0)
     {
-      pRotSetOfFirstAndSecondSite[i] = &tempSmallMolRotamerSet;
+      pRotSetOfFirstAndSecondSite[i] = &tempSmallRotSet;
     }
     else
     {
       int chainIndex = -1, resiIndex = -1;
-      StructureFindChainIndex(pThis, chainName, &chainIndex);
-      ChainFindResidueByPosInChain(StructureGetChain(pThis, chainIndex), posInChain, &resiIndex);
-      DesignSite* pDesignSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
+      StructureFindChainIndex(pStruct, chainName, &chainIndex);
+      ChainFindResidueIndexByPosInChain(StructureGetChain(pStruct, chainIndex), posInChain, &resiIndex);
+      DesignSite* pDesignSite = StructureFindDesignSite(pStruct, chainIndex, resiIndex);
       pRotSetOfFirstAndSecondSite[i] = DesignSiteGetRotamers(pDesignSite);
     }
     if (pRotSetOfFirstAndSecondSite[i] == NULL)
@@ -520,19 +176,19 @@ int StructureDeployCataConsSitePair(Structure* pThis, CataConsSitePair* pCataCon
     return result;
   }
 
-  RotamerSetDestroy(&tempSmallMolRotamerSet);
+  RotamersDestroy(&tempSmallRotSet);
   return result;
 }
 
 
-int StructurePlaceSmallMol(Structure* pThis, PlacingRule* pRule, CataConsSitePairArray* pConsArray, int siteCount, DesignSite** ppSites, RotamerSet* pSmallSet)
+int StructurePlaceSmallMol(Structure* pStruct, PlacingRule* pRule, CataConsSitePairArray* pConsArray, int siteNum, DesignSite** ppSites, Rotamers* pSmallSet)
 {
   int result;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   int chnNdx = -1, resNdx = -1;
-  StructureFindChainIndex(pThis, PlacingRuleGetChainName(pRule), &chnNdx);
-  ChainFindResidueByPosInChain(StructureGetChain(pThis, chnNdx), PlacingRuleGetPosInChain(pRule), &resNdx);
-  DesignSite* pStartSite = StructureFindDesignSite(pThis, chnNdx, resNdx);
+  StructureFindChainIndex(pStruct, PlacingRuleGetChainName(pRule), &chnNdx);
+  ChainFindResidueIndexByPosInChain(StructureGetChain(pStruct, chnNdx), PlacingRuleGetPosInChain(pRule), &resNdx);
+  DesignSite* pStartSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
   if (pStartSite == NULL)
   {
     result = DataNotExistError;
@@ -542,7 +198,7 @@ int StructurePlaceSmallMol(Structure* pThis, PlacingRule* pRule, CataConsSitePai
     return result;
   }
 
-  result = PlacingRulePlaceSmallMol(pRule, pConsArray, pStartSite, siteCount, ppSites, pSmallSet);
+  result = PlacingRulePlaceSmallMol(pRule, pConsArray, pStartSite, siteNum, ppSites, pSmallSet);
   if (FAILED(result))
   {
     result = DataNotExistError;
@@ -555,26 +211,26 @@ int StructurePlaceSmallMol(Structure* pThis, PlacingRule* pRule, CataConsSitePai
 }
 
 
-int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char* fileLigPlacing)
+int StructureGenerateSmallMolRotamers(Structure* pStruct, char* cataconsFile, char* ligplaceFile)
 {
   int result = Success;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
 
   printf("make ligand poses for ligand pose sampling in enzyme design\n");
 
   printf("1. read and deploy catalytic constraints ...\n");
   CataConsSitePairArray cataCons;
-  result = CataConsSitePairArrayCreate(&cataCons, fileCataCons);
+  result = CataConsSitePairArrayCreate(&cataCons, cataconsFile);
   if (FAILED(result))
   {
-    sprintf(errMsg, "in file %s line %d, failed to read catalytic-constraint file %s", __FILE__, __LINE__, fileCataCons);
+    sprintf(errMsg, "in file %s line %d, failed to read catalytic-constraint file %s", __FILE__, __LINE__, cataconsFile);
     result = ValueError;
     TraceError(errMsg, result);
     return result;
   }
-  for (int i = 0;i < CataConsSitePairArrayGetCount(&cataCons);i++)
+  for (int i = 0;i < CataConsSitePairArrayGetNum(&cataCons);i++)
   {
-    result = StructureDeployCataConsSitePair(pThis, CataConsSitePairArrayGet(&cataCons, i));
+    result = StructureDeployCataConsSitePair(pStruct, CataConsSitePairArrayGet(&cataCons, i));
     if (FAILED(result))
     {
       sprintf(errMsg, "in file %s line %d, failed to deploy catalytic constraints", __FILE__, __LINE__);
@@ -586,16 +242,16 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
 
   printf("2. read and deploy ligand placing rules ... \n");
   PlacingRule placingRule;
-  result = PlacingRuleCreate(&placingRule, fileLigPlacing);
+  result = PlacingRuleCreate(&placingRule, ligplaceFile);
   if (FAILED(result))
   {
-    sprintf(errMsg, "in file %s line %d, failed to read ligand-placing file %s", __FILE__, __LINE__, fileLigPlacing);
+    sprintf(errMsg, "in file %s line %d, failed to read ligand-placing file %s", __FILE__, __LINE__, ligplaceFile);
     result = ValueError;
     return result;
   }
 
   Residue* pSmallMol = NULL;
-  result = StructureFindSmallMol(pThis, &pSmallMol);
+  result = StructureFindSmallMol(pStruct, &pSmallMol);
   if (FAILED(result))
   {
     sprintf(errMsg, "in file %s line %d, cannot find small molecule", __FILE__, __LINE__);
@@ -604,12 +260,12 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
   }
   AtomArray truncBackbone;
   AtomArrayCreate(&truncBackbone);
-  //StructureGetTruncatedBackbone(pThis, pSmallMol, PlacingRuleGetTruncatedBackboneRange(&placingRule), TRUE, &truncBackbone);
-  StructureGetTruncatedBackboneNew(pThis, pSmallMol, TRUE, &truncBackbone);
+  //StructureGetTruncatedBackbone(pStruct, pSmallMol, PlacingRuleGetTruncatedBackboneRange(&placingRule), TRUE, &truncBackbone);
+  StructureGetTruncatedBackbone2(pStruct, pSmallMol, TRUE, &truncBackbone);
 
   int nRelatedSites = 0;
   DesignSite** ppRelatedSites = NULL;
-  for (int i = 0; i < CataConsSitePairArrayGetCount(&cataCons); i++)
+  for (int i = 0; i < CataConsSitePairArrayGetNum(&cataCons); i++)
   {
     CataConsSitePair* pSitePair = CataConsSitePairArrayGet(&cataCons, i);
     for (int k = 0; k < 2; k++)
@@ -622,9 +278,9 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
           continue;
         }
         int chainIndex = -1, resiIndex = -1;
-        StructureFindChainIndex(pThis, pSitePair->chnName1, &chainIndex);
-        ChainFindResidueByPosInChain(StructureGetChain(pThis, chainIndex), pSitePair->pos1, &resiIndex);
-        pSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
+        StructureFindChainIndex(pStruct, pSitePair->chnName1, &chainIndex);
+        ChainFindResidueIndexByPosInChain(StructureGetChain(pStruct, chainIndex), pSitePair->pos1, &resiIndex);
+        pSite = StructureFindDesignSite(pStruct, chainIndex, resiIndex);
       }
       else
       {
@@ -633,16 +289,16 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
           continue;
         }
         int chainIndex = -1, resiIndex = -1;
-        StructureFindChainIndex(pThis, pSitePair->chnName2, &chainIndex);
-        ChainFindResidueByPosInChain(StructureGetChain(pThis, chainIndex), pSitePair->pos2, &resiIndex);
-        pSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
+        StructureFindChainIndex(pStruct, pSitePair->chnName2, &chainIndex);
+        ChainFindResidueIndexByPosInChain(StructureGetChain(pStruct, chainIndex), pSitePair->pos2, &resiIndex);
+        pSite = StructureFindDesignSite(pStruct, chainIndex, resiIndex);
       }
-      //smallmol design site is excluded
+      // small molecule site is excluded
       BOOL designsiteExist = FALSE;
       for (int j = 0; j < nRelatedSites; j++)
       {
         DesignSite* pSite1 = ppRelatedSites[j];
-        //skip the identical sites
+        // skip identical sites
         if (pSite1 == pSite)
         {
           designsiteExist = TRUE;
@@ -667,25 +323,25 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
   }
 
   printf("3. start placing ligand poses ...\n");
-  RotamerSet ligRots;
-  RotamerSetCreate(&ligRots);
-  result = StructurePlaceSmallMol(pThis, &placingRule, &cataCons, nRelatedSites, ppRelatedSites, &ligRots);
+  Rotamers ligRots;
+  RotamersCreate(&ligRots);
+  result = StructurePlaceSmallMol(pStruct, &placingRule, &cataCons, nRelatedSites, ppRelatedSites, &ligRots);
   if (FAILED(result))
   {
     sprintf(errMsg, "in file %s line %d, failed to place ligand poses", __FILE__, __LINE__);
     result = ValueError;
     return result;
   }
-  if (RotamerSetGetCount(&ligRots) > 0)
+  if (RotamersGetNum(&ligRots) > 0)
   {
     BOOL smallmolRotSetGenerated = FALSE;
     for (int i = 0;i < nRelatedSites;i++)
     {
       if (ppRelatedSites[i]->pRes == pSmallMol)
       {
-        for (int j = 0;j < RotamerSetGetCount(&ligRots);j++)
+        for (int j = 0;j < RotamersGetNum(&ligRots);j++)
         {
-          RotamerSetAdd(DesignSiteGetRotamers(ppRelatedSites[i]), RotamerSetGet(&ligRots, j));
+          RotamersAdd(DesignSiteGetRotamers(ppRelatedSites[i]), RotamersGet(&ligRots, j));
         }
         smallmolRotSetGenerated = TRUE;
         break;
@@ -694,14 +350,14 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
     if (smallmolRotSetGenerated == FALSE)
     {
       int chnNdx = -1, resNdx = -1;
-      StructureFindChainIndex(pThis, ResidueGetChainName(pSmallMol), &chnNdx);
-      ChainFindResidueByPosInChain(StructureGetChain(pThis, chnNdx), ResidueGetPosInChain(pSmallMol), &resNdx);
-      ProteinSiteAddDesignSite(pThis, chnNdx, resNdx);
-      RotamerSetCopy(DesignSiteGetRotamers(StructureGetDesignSite(pThis, pThis->desSiteCount - 1)), &ligRots);
+      StructureFindChainIndex(pStruct, ResidueGetChainName(pSmallMol), &chnNdx);
+      ChainFindResidueIndexByPosInChain(StructureGetChain(pStruct, chnNdx), ResidueGetPosInChain(pSmallMol), &resNdx);
+      ProteinSiteAddDesignSite(pStruct, chnNdx, resNdx);
+      RotamersCopy(DesignSiteGetRotamers(StructureGetDesignSite(pStruct, pStruct->desSiteNum - 1)), &ligRots);
     }
   }
 
-  RotamerSetDestroy(&ligRots);
+  RotamersDestroy(&ligRots);
   PlacingRuleDestroy(&placingRule);
   CataConsSitePairArrayDestroy(&cataCons);
   AtomArrayDestroy(&truncBackbone);
@@ -712,12 +368,12 @@ int StructureGenerateSmallMolRotamers(Structure* pThis, char* fileCataCons, char
 }
 
 
-int StructureWriteSmallMolRotamers(Structure* pThis, char* fileSmallMol)
+int StructureWriteSmallMolRotamers(Structure* pStruct, char* smallmolFile)
 {
   int result;
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   Residue* pSmallMol = NULL;
-  StructureFindSmallMol(pThis, &pSmallMol);
+  StructureFindSmallMol(pStruct, &pSmallMol);
   if (pSmallMol == NULL)
   {
     result = DataNotExistError;
@@ -726,10 +382,10 @@ int StructureWriteSmallMolRotamers(Structure* pThis, char* fileSmallMol)
     return result;
   }
   int chainIndex = -1, resiIndex = -1;
-  StructureFindChainIndex(pThis, ResidueGetChainName(pSmallMol), &chainIndex);
-  ChainFindResidueByPosInChain(StructureGetChain(pThis, chainIndex), ResidueGetPosInChain(pSmallMol), &resiIndex);
-  DesignSite* pSmallSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
-  RotamerSet* pSmallSet = DesignSiteGetRotamers(pSmallSite);
+  StructureFindChainIndex(pStruct, ResidueGetChainName(pSmallMol), &chainIndex);
+  ChainFindResidueIndexByPosInChain(StructureGetChain(pStruct, chainIndex), ResidueGetPosInChain(pSmallMol), &resiIndex);
+  DesignSite* pSmallSite = StructureFindDesignSite(pStruct, chainIndex, resiIndex);
+  Rotamers* pSmallSet = DesignSiteGetRotamers(pSmallSite);
   if (pSmallSet == NULL)
   {
     result = DataNotExistError;
@@ -739,25 +395,25 @@ int StructureWriteSmallMolRotamers(Structure* pThis, char* fileSmallMol)
   }
 
   FILE* outputFile = NULL;
-  if (fileSmallMol == NULL || strcmp(fileSmallMol, "") == 0) outputFile = NULL;
+  if (smallmolFile == NULL || strcmp(smallmolFile, "") == 0) outputFile = NULL;
   else
   {
-    outputFile = fopen(fileSmallMol, "w");
+    outputFile = fopen(smallmolFile, "w");
     if (outputFile == NULL)
     {
-      sprintf(errMsg, "In file %s line %d, cannot write to file %s", __FILE__, __LINE__, fileSmallMol);
+      sprintf(errMsg, "In file %s line %d, cannot write to file %s", __FILE__, __LINE__, smallmolFile);
       result = IOError;
       TraceError(errMsg, result);
       return result;
     }
   }
 
-  for (int i = 0; i < RotamerSetGetCount(pSmallSet); i++)
+  for (int i = 0; i < RotamersGetNum(pSmallSet); i++)
   {
     Rotamer newRot;
     RotamerCreate(&newRot);
     Model(i + 1, outputFile);
-    RotamerCopy(&newRot, RotamerSetGet(pSmallSet, i));
+    RotamerCopy(&newRot, RotamersGet(pSmallSet, i));
     RotamerRestore(&newRot, pSmallSet);
     RotamerShowInPDBFormat(&newRot, "ATOM", ResidueGetChainName(pSmallMol), 1, 1, outputFile);
     RotamerExtract(&newRot);
@@ -772,11 +428,11 @@ int StructureWriteSmallMolRotamers(Structure* pThis, char* fileSmallMol)
 }
 
 
-int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char* smallMolFile)
+int StructureReadSmallMolRotamers(Structure* pStruct, ResTopos* resTopos, char* smallmolFile)
 {
-  char errMsg[MAX_LEN_ERR_MSG + 1];
+  char errMsg[MAX_LEN_ERR_MSG+1];
   Residue* pSmallMol = NULL;
-  int result = StructureFindSmallMol(pThis, &pSmallMol);
+  int result = StructureFindSmallMol(pStruct, &pSmallMol);
   if (FAILED(result))
   {
     sprintf(errMsg, "in file %s line %d, cannot find small molecule", __FILE__, __LINE__);
@@ -784,30 +440,30 @@ int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char
     return result;
   }
 
-  int chainIndex = -1, resiIndex = -1;
-  StructureFindChainIndex(pThis, ResidueGetChainName(pSmallMol), &chainIndex);
-  ChainFindResidueByPosInChain(StructureGetChain(pThis, chainIndex), ResidueGetPosInChain(pSmallMol), &resiIndex);
-  DesignSite* pSmallMolSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
+  int chnNdx = -1, resNdx = -1;
+  StructureFindChainIndex(pStruct, ResidueGetChainName(pSmallMol), &chnNdx);
+  ChainFindResidueIndexByPosInChain(StructureGetChain(pStruct, chnNdx), ResidueGetPosInChain(pSmallMol), &resNdx);
+  DesignSite* pSmallMolSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
   if (pSmallMolSite == NULL)
   {
-    ProteinSiteAddDesignSite(pThis, chainIndex, resiIndex);
-    pSmallMolSite = StructureGetDesignSite(pThis, pThis->desSiteCount - 1);
+    ProteinSiteAddDesignSite(pStruct, chnNdx, resNdx);
+    pSmallMolSite = StructureGetDesignSite(pStruct, pStruct->desSiteNum - 1);
   }
   ResidueSetDesignType(pSmallMol, Type_DesType_SmallMol);
 
   FileReader fr;
-  result = FileReaderCreate(&fr, smallMolFile);
+  result = FileReaderCreate(&fr, smallmolFile);
   if (FAILED(result))
   {
-    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, smallMolFile);
+    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, smallmolFile);
     TraceError(errMsg, result);
     FileReaderDestroy(&fr);
     return result;
   }
   while (!FileReaderEndOfFile(&fr))
   {
-    char line[MAX_LEN_ONE_LINE_CONTENT + 1];
-    char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
+    char line[MAX_LEN_ONE_LINE_CONTENT+1];
+    char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
     FileReaderGetNextLine(&fr, line);
     ExtractFirstStringFromSourceString(keyword, line);
     if (strcmp(keyword, "MODEL") != 0) continue;
@@ -815,20 +471,20 @@ int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char
     Residue tmpRes;
     ResidueCreate(&tmpRes);
     ResidueCopy(&tmpRes, pSmallMol);
-    for (int i = 0;i < ResidueGetAtomCount(&tmpRes);i++)
+    for (int i = 0;i < ResidueGetAtomNum(&tmpRes);i++)
     {
       ResidueGetAtom(&tmpRes, i)->isXyzValid = FALSE;
     }
     if (FAILED(ResidueReadXYZFromPDB(&tmpRes, &fr)))
     {
-      sprintf(errMsg, "in file %s line %d, error encountered when reading the ligand pose file", __FILE__, __LINE__);
+      sprintf(errMsg, "in file %s line %d, error reading the ligand pose file", __FILE__, __LINE__);
       result = FormatError;
       TraceError(errMsg, result);
       return result;
     }
 
     ResidueCheckAtomCoordinateValidity(&tmpRes);
-    result = ResidueCalcAllAtomXYZ(&tmpRes, resiTopos, NULL, NULL);
+    result = ResidueCalcAllAtomXYZ(&tmpRes, resTopos, NULL, NULL);
     if (FAILED(result))
     {
       sprintf(errMsg, "in file %s line %d, not all coordinates can be calculated", __FILE__, __LINE__);
@@ -842,7 +498,7 @@ int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char
       RotamerCreate(&newRot);
       strcpy(newRot.type, ResidueGetName(&tmpRes));
       RotamerAddAtoms(&newRot, ResidueGetAllAtoms(&tmpRes));
-      BondSetCopy(RotamerGetBonds(&newRot), ResidueGetBonds(&tmpRes));
+      BondsCopy(RotamerGetBonds(&newRot), ResidueGetBonds(&tmpRes));
       RotamerSetChainName(&newRot, ResidueGetChainName(&tmpRes));
       //read the energy from smallmol rotamer file
       newRot.vdwInternal = tmpRes.internalEnergy;
@@ -850,7 +506,7 @@ int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char
       //set smallmol internal energy as self energy and recalculate backbone energy later
       //newRot.selfEnergy = tmpRes.internalEnergy;
       RotamerSetPosInChain(&newRot, ResidueGetPosInChain(&tmpRes));
-      RotamerSetAdd(DesignSiteGetRotamers(pSmallMolSite), &newRot);
+      RotamersAdd(DesignSiteGetRotamers(pSmallMolSite), &newRot);
       RotamerDestroy(&newRot);
     }
     ResidueDestroy(&tmpRes);
@@ -886,13 +542,13 @@ int StructureReadSmallMolRotamers(Structure* pThis, ResiTopoSet* resiTopos, char
 // (1) in one BIND_SITE_GROUP, all BIND_SITEs must satisfy dist(CATA_ATOM, CA_ATOM_OF_BIND_SITE) <= dist(BIND_ATOM, CA_ATOM_OF_BIND_SITE)
 // (2) if multi BIND_SITE_GROUPs, it is okay to have any one satisfy (1)
 //////////////////////////////////////////////////////////////////////////////////////////
-int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTopo, char* oldConfsFile, char* newConfsFile, char* orntRuleFile)
+int StructureSmallmolOrientationScreen(Structure* pStruct, ResTopos* resTopos, char* oldposeFile, char* newposeFile, char* orientRuleFile)
 {
   typedef struct _BindSite
   {
-    char chainName[MAX_LEN_CHAIN_NAME + 1];
+    char chainName[MAX_LEN_CHAIN_NAME+1];
     int  posInChain;
-    char resiName[MAX_LEN_RES_NAME + 1];
+    char resiName[MAX_LEN_RES_NAME+1];
   } BindSite;
 
   typedef struct _BindSiteGroup
@@ -901,20 +557,20 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
     BindSite* pSites;
   } BindSiteGroup;
 
-  char           cataAtomName[MAX_LEN_ATOM_NAME + 1];
-  char           bindAtomName[MAX_LEN_ATOM_NAME + 1];
-  int            groupCounter;
+  char           cataAtomName[MAX_LEN_ATOM_NAME+1];
+  char           bindAtomName[MAX_LEN_ATOM_NAME+1];
+  int            groupNum;
   BindSiteGroup* pGroups = NULL;
   double         MIN_DELTA_DIST = 0;
 
   FileReader     file;
-  FileReaderCreate(&file, orntRuleFile);
-  groupCounter = 0;
+  FileReaderCreate(&file, orientRuleFile);
+  groupNum = 0;
   while (!FileReaderEndOfFile(&file))
   {
     BOOL doneInThisGroup = FALSE;
     int siteNum;
-    char           line[MAX_LEN_ONE_LINE_CONTENT + 1];
+    char           line[MAX_LEN_ONE_LINE_CONTENT+1];
     while (!FAILED(FileReaderGetNextLine(&file, line)))
     {
       StringArray wordsInLine;
@@ -937,21 +593,21 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
       else if (strcmp(StringArrayGet(&wordsInLine, 0), "BIND_SITE_GROUP") == 0 && doneInThisGroup == FALSE)
       {
         doneInThisGroup = TRUE;
-        groupCounter++;
-        pGroups = (BindSiteGroup*)realloc(pGroups, sizeof(BindSiteGroup) * groupCounter);
+        groupNum++;
+        pGroups = (BindSiteGroup*)realloc(pGroups, sizeof(BindSiteGroup) * groupNum);
         siteNum = 0;
-        pGroups[groupCounter - 1].siteNum = 0;
-        pGroups[groupCounter - 1].pSites = NULL;
+        pGroups[groupNum - 1].siteNum = 0;
+        pGroups[groupNum - 1].pSites = NULL;
         continue;
       }
       else if (strcmp(StringArrayGet(&wordsInLine, 0), "BIND_SITE") == 0)
       {
         siteNum++;
-        pGroups[groupCounter - 1].pSites = (BindSite*)realloc(pGroups[groupCounter - 1].pSites, sizeof(BindSite) * siteNum);
-        strcpy(pGroups[groupCounter - 1].pSites[siteNum - 1].chainName, StringArrayGet(&wordsInLine, 1));
-        strcpy(pGroups[groupCounter - 1].pSites[siteNum - 1].resiName, StringArrayGet(&wordsInLine, 2));
-        pGroups[groupCounter - 1].pSites[siteNum - 1].posInChain = atoi(StringArrayGet(&wordsInLine, 3));
-        pGroups[groupCounter - 1].siteNum = siteNum;
+        pGroups[groupNum - 1].pSites = (BindSite*)realloc(pGroups[groupNum - 1].pSites, sizeof(BindSite) * siteNum);
+        strcpy(pGroups[groupNum - 1].pSites[siteNum - 1].chainName, StringArrayGet(&wordsInLine, 1));
+        strcpy(pGroups[groupNum - 1].pSites[siteNum - 1].resiName, StringArrayGet(&wordsInLine, 2));
+        pGroups[groupNum - 1].pSites[siteNum - 1].posInChain = atoi(StringArrayGet(&wordsInLine, 3));
+        pGroups[groupNum - 1].siteNum = siteNum;
       }
       else if (strcmp(StringArrayGet(&wordsInLine, 0), "MIN_DELTA_DIST") == 0)
       {
@@ -961,25 +617,25 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
   }
   FileReaderDestroy(&file);
 
-  char errMsg[MAX_LEN_ERR_MSG + 1];
-  printf("reading ligand poses from file %s\n", oldConfsFile);
-  FILE* pIn = fopen(oldConfsFile, "r");
+  char errMsg[MAX_LEN_ERR_MSG+1];
+  printf("reading ligand poses from file %s\n", oldposeFile);
+  FILE* pIn = fopen(oldposeFile, "r");
   if (pIn == NULL)
   {
-    sprintf(errMsg, "in file %s line %d, can not open file %s for reading", __FILE__, __LINE__, oldConfsFile);
+    sprintf(errMsg, "in file %s line %d, can not open file %s for reading", __FILE__, __LINE__, oldposeFile);
     TraceError(errMsg, IOError);
     return IOError;
   }
-  FILE* pOut = fopen(newConfsFile, "w");
+  FILE* pOut = fopen(newposeFile, "w");
   if (pOut == NULL)
   {
-    sprintf(errMsg, "in file %s line %d, can not open file %s for reading", __FILE__, __LINE__, newConfsFile);
+    sprintf(errMsg, "in file %s line %d, can not open file %s for reading", __FILE__, __LINE__, newposeFile);
     TraceError(errMsg, IOError);
     return IOError;
   }
 
   char badOrntPoseFile[MAX_LEN_FILE_NAME+1];
-  sprintf(badOrntPoseFile, "%s_BAD_ORNT.pdb",newConfsFile);
+  sprintf(badOrntPoseFile, "%s_BAD_ORNT.pdb",newposeFile);
   FILE* pOutBad = fopen(badOrntPoseFile, "w");
   if (pOutBad == NULL)
   {
@@ -988,8 +644,8 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
     return IOError;
   }
 
-  int totalRotamerCounter = 0;
-  int acceptedRotamerNdx = 0;
+  int totRotNum = 0;
+  int accRotNdx = 0;
   int rejectedRotamerNdx = 0;
   XYZ xyzCataAtom;
   XYZ xyzBindAtom;
@@ -997,7 +653,7 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
   BOOL bindAtomExist = FALSE;
   StringArray buffer;
   StringArrayCreate(&buffer);
-  char           line[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char           line[MAX_LEN_ONE_LINE_CONTENT+1];
   while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
   {
     char keyword[10] = "";
@@ -1006,13 +662,13 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
     {
       if (cataAtomExist == FALSE || bindAtomExist == FALSE)
       {
-        sprintf(errMsg, "in file %s line %d, CataAtom or BindAtom does not exist in file %s", __FILE__, __LINE__, oldConfsFile);
+        sprintf(errMsg, "in file %s line %d, CataAtom or BindAtom does not exist in file %s", __FILE__, __LINE__, oldposeFile);
         TraceError(errMsg, FormatError);
         return FormatError;
       }
 
       BOOL curRotamerAccepted = FALSE;
-      for (int i = 0; i < groupCounter; i++)
+      for (int i = 0; i < groupNum; i++)
       {
         curRotamerAccepted = TRUE;
         for (int j = 0; j < pGroups[i].siteNum; j++)
@@ -1020,7 +676,7 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
           //05/09/2023, fix the bug for finding the binding residues
           int resNdx = -1;
           Chain* pChain = StructureFindChainByName(pStruct, pGroups[i].pSites[j].chainName);
-          ChainFindResidueByPosInChain(pChain, pGroups[i].pSites[j].posInChain, &resNdx);
+          ChainFindResidueIndexByPosInChain(pChain, pGroups[i].pSites[j].posInChain, &resNdx);
           if (resNdx == -1)
           {
             sprintf(errMsg, "in file %s line %d, can not find binding site pos %d on chain %s", __FILE__, __LINE__, pGroups[i].pSites[j].posInChain, pGroups[i].pSites[j].chainName);
@@ -1030,7 +686,7 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
           Residue* pResidue = ChainGetResidue(pChain, resNdx);
           XYZ* pXyzCA = &ResidueGetAtomByName(pResidue, "CA")->xyz;
           // check the distance criterion
-          if ( XYZDistance(&xyzCataAtom, pXyzCA) - XYZDistance(&xyzBindAtom, pXyzCA) < MIN_DELTA_DIST)
+          if ( XYZDist(&xyzCataAtom, pXyzCA) - XYZDist(&xyzBindAtom, pXyzCA) < MIN_DELTA_DIST)
           {
             curRotamerAccepted = FALSE;
             break;
@@ -1038,13 +694,13 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
         }
         if (curRotamerAccepted == TRUE)
         {
-          fprintf(pOut, "MODEL     %d\n", acceptedRotamerNdx + 1);
-          for (int j = 0; j < StringArrayGetCount(&buffer); j++)
+          fprintf(pOut, "MODEL     %d\n", accRotNdx + 1);
+          for (int j = 0; j < StringArrayGetNum(&buffer); j++)
           {
             fprintf(pOut, "%s", StringArrayGet(&buffer, j));
           }
           fprintf(pOut, "ENDMDL\n");
-          acceptedRotamerNdx++;
+          accRotNdx++;
           break;
         }
       }
@@ -1052,7 +708,7 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
       if (curRotamerAccepted == FALSE)
       {
         fprintf(pOutBad, "MODEL     %d\n", rejectedRotamerNdx + 1);
-        for (int j = 0; j < StringArrayGetCount(&buffer); j++)
+        for (int j = 0; j < StringArrayGetNum(&buffer); j++)
         {
           fprintf(pOutBad, "%s", StringArrayGet(&buffer, j));
         }
@@ -1060,28 +716,28 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
         rejectedRotamerNdx++;
       }
 
-      printf("%d / %d rotamers have been processed      \r", acceptedRotamerNdx, totalRotamerCounter);
+      printf("%d / %d rotamers have been processed      \r", accRotNdx, totRotNum);
       //fflush(stdout);
     }
     else if (strcmp(keyword, "MODE") == 0)
     {
       StringArrayDestroy(&buffer);
       StringArrayCreate(&buffer);
-      totalRotamerCounter++;
+      totRotNum++;
     }
     else if (strcmp(keyword, "ATOM") == 0)
     {
-      char atomName[MAX_LEN_ATOM_NAME + 1];
-      char strX[MAX_LEN_ONE_LINE_CONTENT + 1];
-      char strY[MAX_LEN_ONE_LINE_CONTENT + 1];
-      char strZ[MAX_LEN_ONE_LINE_CONTENT + 1];
+      char atomName[MAX_LEN_ATOM_NAME+1];
+      char strX[MAX_LEN_ONE_LINE_CONTENT+1];
+      char strY[MAX_LEN_ONE_LINE_CONTENT+1];
+      char strZ[MAX_LEN_ONE_LINE_CONTENT+1];
       ExtractTargetStringFromSourceString(atomName, line, 12, 4);
       // 05/08/2023: add this if(){} to reformat the atom name
       if (isdigit(atomName[0]) && isalpha(atomName[1]))
       {
-        char tempName[MAX_LEN_ATOM_NAME + 1];
-        strcpy(tempName, atomName + 1);
-        tempName[strlen(atomName) - 1] = atomName[0];
+        char tempName[MAX_LEN_ATOM_NAME+1];
+        strcpy(tempName, atomName);
+        tempName[strlen(atomName)-1] = atomName[0];
         tempName[strlen(atomName)] = '\0';
         strcpy(atomName, tempName);
       }
@@ -1119,7 +775,7 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
   fclose(pOutBad);
 
   StringArrayDestroy(&buffer);
-  for (int j = 0; j < groupCounter; j++)
+  for (int j = 0; j < groupNum; j++)
   {
     free(pGroups[j].pSites);
     pGroups[j].siteNum = 0;
@@ -1130,32 +786,27 @@ int StructureSmallmolOrientationScreen(Structure* pStruct, ResiTopoSet* pResiTop
 }
 
 
-#define DEAL_WITH_PROTEIN_ROTAMERS_BBDEP
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//build backbone dependent rots
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int ProteinSiteBuildAllRotamersByBBdepRotLib(Structure* pThis, int chainIndex, int resiIndex, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
+int ProteinSiteBuildAllRotamersByBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos)
 {
   int result = Success;
-  DesignSite* pSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
+  DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
   if (pSite != NULL)
   {
     DesignSiteRemoveRotamers(pSite);
   }
   else
   {
-    (pThis->desSiteCount)++;
-    pThis->designSites = (DesignSite*)realloc(pThis->designSites, sizeof(DesignSite) * pThis->desSiteCount);
-    DesignSiteCreate(&pThis->designSites[pThis->desSiteCount - 1]);
-    pSite = StructureGetDesignSite(pThis, pThis->desSiteCount - 1);
-    Chain* pDestChain = StructureGetChain(pThis, chainIndex);
-    Residue* pDestResidue = ChainGetResidue(pDestChain, resiIndex);
+    (pStruct->desSiteNum)++;
+    pStruct->desSites = (DesignSite*)realloc(pStruct->desSites, sizeof(DesignSite) * pStruct->desSiteNum);
+    DesignSiteCreate(&pStruct->desSites[pStruct->desSiteNum - 1]);
+    pSite = StructureGetDesignSite(pStruct, pStruct->desSiteNum - 1);
+    Chain* pDestChain = StructureGetChain(pStruct, chnNdx);
+    Residue* pDestResidue = ChainGetResidue(pDestChain, resNdx);
     pSite->pRes = pDestResidue;
-    pSite->chnNdx = chainIndex;
-    pSite->resNdx = resiIndex;
+    pSite->chnNdx = chnNdx;
+    pSite->resNdx = resNdx;
   }
 
-  // set design types - 20 AA types;
   StringArray designTypes;
   StringArray patchTypes;
   StringArrayCreate(&designTypes);
@@ -1190,55 +841,54 @@ int ProteinSiteBuildAllRotamersByBBdepRotLib(Structure* pThis, int chainIndex, i
 }
 
 
-int ProteinSiteBuildMutatedRotamersByBBdepRotLib(Structure* pThis, int chainIndex, int resiIndex, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, StringArray* pDesignTypes, StringArray* pPatchTypes)
+int ProteinSiteBuildMutatedRotamersByBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos, StringArray* pDesTypes, StringArray* pPatchTypes)
 {
   int result = Success;
-  DesignSite* pCurrentDesignSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
-  if (pCurrentDesignSite != NULL)
+  DesignSite* pCurSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
+  if (pCurSite != NULL)
   {
-    DesignSiteRemoveRotamers(pCurrentDesignSite);
+    DesignSiteRemoveRotamers(pCurSite);
   }
   else
   {
-    (pThis->desSiteCount)++;
-    pThis->designSites = (DesignSite*)realloc(pThis->designSites, sizeof(DesignSite) * pThis->desSiteCount);
-    DesignSiteCreate(&pThis->designSites[pThis->desSiteCount - 1]);
-    pCurrentDesignSite = StructureGetDesignSite(pThis, pThis->desSiteCount - 1);
-    Chain* pDestChain = StructureGetChain(pThis, chainIndex);
-    Residue* pDestResidue = ChainGetResidue(pDestChain, resiIndex);
-    pCurrentDesignSite->pRes = pDestResidue;
-    pCurrentDesignSite->chnNdx = chainIndex;
-    pCurrentDesignSite->resNdx = resiIndex;
+    (pStruct->desSiteNum)++;
+    pStruct->desSites = (DesignSite*)realloc(pStruct->desSites, sizeof(DesignSite) * pStruct->desSiteNum);
+    DesignSiteCreate(&pStruct->desSites[pStruct->desSiteNum - 1]);
+    pCurSite = StructureGetDesignSite(pStruct, pStruct->desSiteNum - 1);
+    Chain* pDestChain = StructureGetChain(pStruct, chnNdx);
+    Residue* pDestRes = ChainGetResidue(pDestChain, resNdx);
+    pCurSite->pRes = pDestRes;
+    pCurSite->chnNdx = chnNdx;
+    pCurSite->resNdx = resNdx;
   }
 
-  result = RotamerSetOfProteinGenerateByBBdepRotLib(DesignSiteGetRotamers(pCurrentDesignSite), pCurrentDesignSite->pRes, pDesignTypes, pPatchTypes, rotlib, atomParams, resiTopos);
-  ResidueSetDesignType(pCurrentDesignSite->pRes, Type_DesType_Mutable);
+  result = RotamerSetOfProteinGenerateByBBdepRotLib(DesignSiteGetRotamers(pCurSite), pCurSite->pRes, pDesTypes, pPatchTypes, rotlib, atomParams, resiTopos);
+  ResidueSetDesignType(pCurSite->pRes, Type_DesType_Mutable);
   return result;
 }
 
 
-int ProteinSiteBuildWildtypeRotamersByBBdepRotLib(Structure* pThis, int chainIndex, int resiIndex, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
+int ProteinSiteBuildWildtypeRotamersByBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos)
 {
   int result = Success;
-  DesignSite* pSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
+  DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
   if (pSite != NULL)
   {
     DesignSiteRemoveRotamers(pSite);
   }
   else
   {
-    (pThis->desSiteCount)++;
-    pThis->designSites = (DesignSite*)realloc(pThis->designSites, sizeof(DesignSite) * pThis->desSiteCount);
-    DesignSiteCreate(&pThis->designSites[pThis->desSiteCount - 1]);
-    pSite = StructureGetDesignSite(pThis, pThis->desSiteCount - 1);
-    Chain* pDestChain = StructureGetChain(pThis, chainIndex);
-    Residue* pResidue = ChainGetResidue(pDestChain, resiIndex);
+    (pStruct->desSiteNum)++;
+    pStruct->desSites = (DesignSite*)realloc(pStruct->desSites, sizeof(DesignSite) * pStruct->desSiteNum);
+    DesignSiteCreate(&pStruct->desSites[pStruct->desSiteNum - 1]);
+    pSite = StructureGetDesignSite(pStruct, pStruct->desSiteNum - 1);
+    Chain* pDestChain = StructureGetChain(pStruct, chnNdx);
+    Residue* pResidue = ChainGetResidue(pDestChain, resNdx);
     pSite->pRes = pResidue;
-    pSite->chnNdx = chainIndex;
-    pSite->resNdx = resiIndex;
+    pSite->chnNdx = chnNdx;
+    pSite->resNdx = resNdx;
   }
 
-  // set native design types;
   StringArray designTypes;
   StringArray patchTypes;
   StringArrayCreate(&designTypes);
@@ -1265,20 +915,15 @@ int ProteinSiteBuildWildtypeRotamersByBBdepRotLib(Structure* pThis, int chainInd
 }
 
 
-int ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
+int ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos)
 {
-  int result = Success;
   DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
-  if (pSite != NULL)
-  {
-    DesignSiteRemoveRotamers(pSite);
-  }
-  else
-  {
-    (pStruct->desSiteCount)++;
-    pStruct->designSites = (DesignSite*)realloc(pStruct->designSites, sizeof(DesignSite) * pStruct->desSiteCount);
-    DesignSiteCreate(&pStruct->designSites[pStruct->desSiteCount - 1]);
-    pSite = StructureGetDesignSite(pStruct, pStruct->desSiteCount - 1);
+  if (pSite != NULL) DesignSiteRemoveRotamers(pSite);
+  else {
+    (pStruct->desSiteNum)++;
+    pStruct->desSites = (DesignSite*)realloc(pStruct->desSites, sizeof(DesignSite) * pStruct->desSiteNum);
+    DesignSiteCreate(&pStruct->desSites[pStruct->desSiteNum - 1]);
+    pSite = StructureGetDesignSite(pStruct, pStruct->desSiteNum - 1);
     Chain* pDestChn = StructureGetChain(pStruct, chnNdx);
     Residue* pDestRes = ChainGetResidue(pDestChn, resNdx);
     pSite->pRes = pDestRes;
@@ -1286,148 +931,144 @@ int ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(Structure* pStruct, int chnNd
     pSite->resNdx = resNdx;
   }
 
-
-  if (ResidueGetDesignType(pSite->pRes) == Type_DesType_Fixed ||
-    ResidueGetDesignType(pSite->pRes) == Type_DesType_NatRot)
-  {
+  if (ResidueGetDesignType(pSite->pRes) == Type_DesType_Fixed || ResidueGetDesignType(pSite->pRes) == Type_DesType_NatRot){
     ;
   }
-  else
-  {
+  else {
     StringArray designTypes;
     StringArray patchTypes;
     StringArrayCreate(&designTypes);
     StringArrayCreate(&patchTypes);
-    if (ResidueGetDesignType(pSite->pRes) == Type_DesType_Mutable)
-    {
-      int len = strlen(pSite->pRes->designAATypes);
+    if (ResidueGetDesignType(pSite->pRes) == Type_DesType_Mutable) {
+      int len = strlen(pSite->pRes->desAATypes);
       char* desStr = "ACDEFGHIKLMNPQRSTVWY";
-      if (!len)
-      {
-        for (int i = 0;i < 20;i++)
-        {
+      if (len == 0) {
+        for (int i = 0;i < 20;i++) {
           char aa = desStr[i];
-          char rotType[MAX_LEN_RES_NAME + 1];
+          char rotType[MAX_LEN_RES_NAME+1];
           AA1ToAA3(aa, rotType);
           if (aa == 'C' && FLAG_EXCL_CYS_ROTS) continue;
-          else if (aa == 'H')
-          {
-            StringArrayAppend(&designTypes, "HSD"); StringArrayAppend(&patchTypes, "");
-            StringArrayAppend(&designTypes, "HSE"); StringArrayAppend(&patchTypes, "");
+          else if (aa == 'H') {
+            StringArrayAppend(&designTypes, "HSD"); 
+            StringArrayAppend(&patchTypes, "");
+            StringArrayAppend(&designTypes, "HSE"); 
+            StringArrayAppend(&patchTypes, "");
           }
-          else if (aa != 'X') { StringArrayAppend(&designTypes, rotType); StringArrayAppend(&patchTypes, ""); }
+          else if (aa != 'X') { 
+            StringArrayAppend(&designTypes, rotType); 
+            StringArrayAppend(&patchTypes, ""); 
+          }
         }
       }
-      else
-      {
-        for (int i = 0;i < len;i++)
-        {
-          char aa = pSite->pRes->designAATypes[i];
-          char rotType[MAX_LEN_RES_NAME + 1];
+      else {
+        for (int i = 0;i < len;i++) {
+          char aa = pSite->pRes->desAATypes[i];
+          char rotType[MAX_LEN_RES_NAME+1];
           AA1ToAA3(aa, rotType);
           if (aa == 'C' && FLAG_EXCL_CYS_ROTS) continue;
-          else if (aa == 'H')
-          {
-            StringArrayAppend(&designTypes, "HSD"); StringArrayAppend(&patchTypes, "");
-            StringArrayAppend(&designTypes, "HSE"); StringArrayAppend(&patchTypes, "");
+          else if (aa == 'H') {
+            StringArrayAppend(&designTypes, "HSD"); 
+            StringArrayAppend(&patchTypes, "");
+            StringArrayAppend(&designTypes, "HSE"); 
+            StringArrayAppend(&patchTypes, "");
           }
-          else if (aa != 'X') { StringArrayAppend(&designTypes, rotType); StringArrayAppend(&patchTypes, ""); }
+          else if (aa != 'X') { 
+            StringArrayAppend(&designTypes, rotType); 
+            StringArrayAppend(&patchTypes, ""); 
+          }
         }
       }
     }
     else if (ResidueGetDesignType(pSite->pRes) == Type_DesType_Catalytic)
     {
-      int len = strlen(pSite->pRes->designAATypes);
-      if (!len)
-      {
-        StringArrayAppend(&designTypes, ResidueGetName(pSite->pRes)); StringArrayAppend(&patchTypes, "");
+      int len = strlen(pSite->pRes->desAATypes);
+      if (len == 0) {
+        StringArrayAppend(&designTypes, ResidueGetName(pSite->pRes)); 
+        StringArrayAppend(&patchTypes, "");
       }
-      else
-      {
-        for (int i = 0;i < len;i++)
-        {
-          char aa = pSite->pRes->designAATypes[i];
-          char rotType[MAX_LEN_RES_NAME + 1];
+      else {
+        for (int i = 0;i < len;i++) {
+          char aa = pSite->pRes->desAATypes[i];
+          char rotType[MAX_LEN_RES_NAME+1];
           AA1ToAA3(aa, rotType);
-          if (aa == 'H')
-          {
-            StringArrayAppend(&designTypes, "HSD"); StringArrayAppend(&patchTypes, "");
-            StringArrayAppend(&designTypes, "HSE"); StringArrayAppend(&patchTypes, "");
+          if (aa == 'H') {
+            StringArrayAppend(&designTypes, "HSD"); 
+            StringArrayAppend(&patchTypes, "");
+            StringArrayAppend(&designTypes, "HSE"); 
+            StringArrayAppend(&patchTypes, "");
           }
-          else if (aa != 'X') { StringArrayAppend(&designTypes, rotType); StringArrayAppend(&patchTypes, ""); }
+          else if (aa != 'X') { 
+            StringArrayAppend(&designTypes, rotType); 
+            StringArrayAppend(&patchTypes, ""); 
+          }
         }
       }
     }
-    else if (ResidueGetDesignType(pSite->pRes) == Type_DesType_Repackable)
-    {
-      if (IsResidueHistidine(ResidueGetName(pSite->pRes)))
-      {
-        StringArrayAppend(&designTypes, "HSD"); StringArrayAppend(&patchTypes, "");
-        StringArrayAppend(&designTypes, "HSE"); StringArrayAppend(&patchTypes, "");
+    else if (ResidueGetDesignType(pSite->pRes) == Type_DesType_Repackable) {
+      if (IsResidueHistidine(ResidueGetName(pSite->pRes))) {
+        StringArrayAppend(&designTypes, "HSD"); 
+        StringArrayAppend(&patchTypes, "");
+        StringArrayAppend(&designTypes, "HSE"); 
+        StringArrayAppend(&patchTypes, "");
       }
-      else StringArrayAppend(&designTypes, ResidueGetName(pSite->pRes)); StringArrayAppend(&patchTypes, "");
+      else {
+        StringArrayAppend(&designTypes, ResidueGetName(pSite->pRes)); 
+        StringArrayAppend(&patchTypes, "");
+      }
     }
-    result = RotamerSetOfProteinGenerateByBBdepRotLib(DesignSiteGetRotamers(pSite), pSite->pRes, &designTypes, &patchTypes, rotlib, atomParams, resiTopos);
+    RotamerSetOfProteinGenerateByBBdepRotLib(DesignSiteGetRotamers(pSite), pSite->pRes, &designTypes, &patchTypes, rotlib, atomParams, resiTopos);
     StringArrayDestroy(&patchTypes);
     StringArrayDestroy(&designTypes);
   }
 
-  return result;
+  return Success;
 }
 
 
-int StructureBuildAllRotamersByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
+int StructureBuildAllRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-    {
-      Residue* pResidue = ChainGetResidue(pChainI, j);
-      if (pResidue->desType != Type_DesType_Fixed) continue;
-      if (FLAG_WILDTYPE_ONLY) ResidueSetDesignType(pResidue, Type_DesType_Repackable);
-      else ResidueSetDesignType(pResidue, Type_DesType_Mutable);
-      ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-      if (FLAG_USE_INPUT_SC && pResidue->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-      if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+    Chain* pChnI = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChnI) != Type_Chain_Protein) continue;
+    if (strstr(DES_CHAINS, ChainGetName(pChnI)) == NULL) continue;
+    for (int j = 0; j < ChainGetResidueNum(pChnI); j++) {
+      Residue* pRes = ChainGetResidue(pChnI, j);
+      if (pRes->desType != Type_DesType_Fixed) continue;
+      if (FLAG_WILDTYPE_ONLY == TRUE) ResidueSetDesignType(pRes, Type_DesType_Repackable);
+      else ResidueSetDesignType(pRes, Type_DesType_Mutable);
+      ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resiTopos);
+      if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) ProteinSiteBuildNativeRotamer(pStruct, i, j, resiTopos);
+      if (FLAG_ROTATE_HYDROXYL == TRUE) ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resiTopos);
     }
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-    {
-      Residue* pResidue = ChainGetResidue(pChainI, j);
-      if (pResidue->desType != Type_DesType_Fixed) continue;
-      BOOL interResi = FALSE;
-      for (int k = 0; k < StructureGetChainCount(pStructure); k++)
-      {
-        if (k == i)continue;
-        Chain* pChainK = StructureGetChain(pStructure, k);
-        if (ChainGetType(pChainK) != Type_Chain_Protein)continue;
-        if (strstr(DES_CHAINS, ChainGetName(pChainK)) == 0)continue;
-        for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
-        {
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+    Chain* pChnI = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChnI) != Type_Chain_Protein) continue;
+    if (strstr(DES_CHAINS, ChainGetName(pChnI)) != NULL) continue;
+    for (int j = 0; j < ChainGetResidueNum(pChnI); j++) {
+      Residue* pRes = ChainGetResidue(pChnI, j);
+      if (pRes->desType != Type_DesType_Fixed) continue;
+      BOOL isInteract = FALSE;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++) {
+        if (k == i) continue;
+        Chain* pChainK = StructureGetChain(pStruct, k);
+        if (ChainGetType(pChainK) != Type_Chain_Protein) continue;
+        if (strstr(DES_CHAINS, ChainGetName(pChainK)) == 0) continue;
+        for (int s = 0;s < ChainGetResidueNum(pChainK);s++) {
           Residue* pResidueKS = ChainGetResidue(pChainK, s);
-          if (AtomArrayCalcMinDistance(&pResidue->atoms, &pResidueKS->atoms) < CUT_PPI_DIST_SHELL1)
-          {
-            interResi = TRUE;
+          if (AtomArrayCalcMinDistance(&pRes->atoms, &pResidueKS->atoms) < CUT_PPI_DIST_SHELL1) {
+            isInteract = TRUE;
             break;
           }
         }
-        if (interResi) break;
+        if (isInteract == TRUE) break;
       }
-      if (interResi)
-      {
-        ResidueSetDesignType(pResidue, Type_DesType_Repackable);
-        ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResidue->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+      if (isInteract == TRUE) {
+        ResidueSetDesignType(pRes, Type_DesType_Repackable);
+        ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resiTopos);
+        if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) ProteinSiteBuildNativeRotamer(pStruct, i, j, resiTopos);
+        if (FLAG_ROTATE_HYDROXYL == TRUE) ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resiTopos);
       }
     }
   }
@@ -1436,314 +1077,231 @@ int StructureBuildAllRotamersByBBdepRotLib(Structure* pStructure, BBdepRotamerLi
 }
 
 
-int StructureBuildPPIRotamersByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
+int StructureBuildPPIRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resTopos)
 {
-  if (StructureGetChainCount(pStructure) < 2)
-  {
+  if (StructureGetChainNum(pStruct) < 2) {
     printf("there is only one chain in the whole structure, no protein-protein interface found\n");
     exit(ValueError);
   }
 
-  IntArray* arrayFlagMutated = (IntArray*)malloc(sizeof(IntArray) * StructureGetChainCount(pStructure));
-  IntArray* arrayFlagRotameric = (IntArray*)malloc(sizeof(IntArray) * StructureGetChainCount(pStructure));
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    IntArrayCreate(&arrayFlagMutated[i], pChainI->residueNum);
-    IntArrayCreate(&arrayFlagRotameric[i], pChainI->residueNum);
-    for (int j = 0;j < pChainI->residueNum;j++)
-    {
-      IntArraySet(&arrayFlagMutated[i], j, 0);
-      IntArraySet(&arrayFlagRotameric[i], j, 0);
+  IntArray* flagMutable = (IntArray*)malloc(sizeof(IntArray) * StructureGetChainNum(pStruct));
+  IntArray* flagRepackable = (IntArray*)malloc(sizeof(IntArray) * StructureGetChainNum(pStruct));
+  for (int i = 0;i < StructureGetChainNum(pStruct);i++) {
+    Chain* pChnI = StructureGetChain(pStruct, i);
+    IntArrayCreate(&flagMutable[i], pChnI->resNum);
+    IntArrayCreate(&flagRepackable[i], pChnI->resNum);
+    for (int j = 0; j < ChainGetResidueNum(pChnI); j++) {
+      IntArraySet(&flagMutable[i], j, 0);
+      IntArraySet(&flagRepackable[i], j, 0);
     }
   }
 
-  //1. specify mutated and rotameric positions
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    //if(ChainGetType(pChainI)!=Type_Chain_Protein) continue;
-    for (int k = i + 1; k < StructureGetChainCount(pStructure); k++)
-    {
-      Chain* pChainK = StructureGetChain(pStructure, k);
-      //if(ChainGetType(pChainK)!=Type_Chain_Protein) continue;
-      for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-      {
-        Residue* pResiIJ = ChainGetResidue(pChainI, j);
-        for (int s = 0; s < ChainGetResidueCount(pChainK); s++)
-        {
-          Residue* pResiKS = ChainGetResidue(pChainK, s);
-          if (AtomArrayCalcMinDistance(&pResiIJ->atoms, &pResiKS->atoms) < CUT_PPI_DIST_SHELL1)
-          {
-            if (strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL) IntArraySet(&arrayFlagMutated[i], j, 1);
-            else IntArraySet(&arrayFlagRotameric[i], j, 1);
-            if (strstr(DES_CHAINS, ChainGetName(pChainK)) != NULL) IntArraySet(&arrayFlagMutated[k], s, 1);
-            else IntArraySet(&arrayFlagRotameric[k], s, 1);
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+    Chain* pChnI = StructureGetChain(pStruct, i);
+    for (int k = i + 1; k < StructureGetChainNum(pStruct); k++) {
+      Chain* pChnK = StructureGetChain(pStruct, k);
+      for (int j = 0; j < ChainGetResidueNum(pChnI); j++) {
+        Residue* pResIJ = ChainGetResidue(pChnI, j);
+        for (int s = 0; s < ChainGetResidueNum(pChnK); s++) {
+          Residue* pResKS = ChainGetResidue(pChnK, s);
+          if (AtomArrayCalcMinDistance(&pResIJ->atoms, &pResKS->atoms) < CUT_PPI_DIST_SHELL1) {
+            if (strstr(DES_CHAINS, ChainGetName(pChnI)) != NULL) IntArraySet(&flagMutable[i], j, 1);
+            else IntArraySet(&flagRepackable[i], j, 1);
+            if (strstr(DES_CHAINS, ChainGetName(pChnK)) != NULL) IntArraySet(&flagMutable[k], s, 1);
+            else IntArraySet(&flagRepackable[k], s, 1);
           }
-          else if (AtomArrayCalcMinDistance(&pResiIJ->atoms, &pResiKS->atoms) < CUT_PPI_DIST_SHELL2)
-          {
-            if (strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL) IntArraySet(&arrayFlagRotameric[i], j, 1);
-            if (strstr(DES_CHAINS, ChainGetName(pChainK)) != NULL) IntArraySet(&arrayFlagRotameric[k], s, 1);
+          else if (AtomArrayCalcMinDistance(&pResIJ->atoms, &pResKS->atoms) < CUT_PPI_DIST_SHELL2) {
+            if (strstr(DES_CHAINS, ChainGetName(pChnI)) != NULL) IntArraySet(&flagRepackable[i], j, 1);
+            if (strstr(DES_CHAINS, ChainGetName(pChnK)) != NULL) IntArraySet(&flagRepackable[k], s, 1);
           }
         }
       }
     }
   }
 
-  //2. create rots on the design chains
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL)
-    {
-      for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-      {
-        Residue* pResidue = ChainGetResidue(pChainI, j);
-        if (pResidue->desType != Type_DesType_Fixed) continue;
-        if (IntArrayGet(&arrayFlagMutated[i], j) == 1)
-        {
-          if (FLAG_WILDTYPE_ONLY) ResidueSetDesignType(pResidue, Type_DesType_Repackable);
-          else ResidueSetDesignType(pResidue, Type_DesType_Mutable);
-          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-          if (FLAG_USE_INPUT_SC && pResidue->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-          if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+    Chain* pChnI = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChnI) != Type_Chain_Protein) continue;
+    if (strstr(DES_CHAINS, ChainGetName(pChnI)) != NULL) {
+      for (int j = 0; j < ChainGetResidueNum(pChnI); j++) {
+        Residue* pRes = ChainGetResidue(pChnI, j);
+        if (pRes->desType != Type_DesType_Fixed) continue;
+        if (IntArrayGet(&flagMutable[i], j) == 1) {
+          if (FLAG_WILDTYPE_ONLY == TRUE) ResidueSetDesignType(pRes, Type_DesType_Repackable);
+          else ResidueSetDesignType(pRes, Type_DesType_Mutable);
+          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resTopos);
+          if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) ProteinSiteBuildNativeRotamer(pStruct, i, j, resTopos);
+          if (FLAG_ROTATE_HYDROXYL == TRUE) ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resTopos);
         }
-        else if (IntArrayGet(&arrayFlagRotameric[i], j) == 1)
-        {
-          ResidueSetDesignType(pResidue, Type_DesType_Repackable);
-          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-          if (FLAG_USE_INPUT_SC && pResidue->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-          if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+        else if (IntArrayGet(&flagRepackable[i], j) == 1) {
+          ResidueSetDesignType(pRes, Type_DesType_Repackable);
+          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resTopos);
+          if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) ProteinSiteBuildNativeRotamer(pStruct, i, j, resTopos);
+          if (FLAG_ROTATE_HYDROXYL == TRUE) ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resTopos);
         }
       }
     }
   }
 
-  //3. create rots on the non-design chains
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL)
-    {
-      for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-      {
-        Residue* pResidue = ChainGetResidue(pChainI, j);
-        if (pResidue->desType != Type_DesType_Fixed) continue;
-        if (IntArrayGet(&arrayFlagRotameric[i], j) == 1)
-        {
-          ResidueSetDesignType(pResidue, Type_DesType_Repackable);
-          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-          if (FLAG_USE_INPUT_SC && pResidue->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-          if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+    Chain* pChnI = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChnI) != Type_Chain_Protein) continue;
+    if (strstr(DES_CHAINS, ChainGetName(pChnI)) == NULL) {
+      for (int j = 0; j < ChainGetResidueNum(pChnI); j++) {
+        Residue* pRes = ChainGetResidue(pChnI, j);
+        if (pRes->desType != Type_DesType_Fixed) continue;
+        if (IntArrayGet(&flagRepackable[i], j) == 1) {
+          ResidueSetDesignType(pRes, Type_DesType_Repackable);
+          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resTopos);
+          if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) ProteinSiteBuildNativeRotamer(pStruct, i, j, resTopos);
+          if (FLAG_ROTATE_HYDROXYL == TRUE) ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resTopos);
         }
       }
     }
   }
 
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
-  {
-    IntArrayDestroy(&arrayFlagMutated[i]);
-    IntArrayDestroy(&arrayFlagRotameric[i]);
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+    IntArrayDestroy(&flagMutable[i]);
+    IntArrayDestroy(&flagRepackable[i]);
   }
-  free(arrayFlagMutated);
-  arrayFlagMutated = NULL;
-  free(arrayFlagRotameric);
-  arrayFlagRotameric = NULL;
+  free(flagMutable);
+  flagMutable = NULL;
+  free(flagRepackable);
+  flagRepackable = NULL;
 
   return Success;
 }
 
 
-int StructureBuildResfileRotamersByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile)
+int StructureBuildResfileRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* pLib, AtomParams* pParams, ResTopos* pTopos, char* resfile)
 {
   FileReader fr;
-  int result = FileReaderCreate(&fr, resfile);
   StringArray strings;
   StringArrayCreate(&strings);
-
-  // 1. read sites from file
-  if (!FAILED(result))
-  {
-    char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
-    while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-    {
-      char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
+  if (!FAILED(FileReaderCreate(&fr, resfile))) {
+    char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
+    while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
+      char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
       ExtractFirstStringFromSourceString(keyword, buffer);
-      if (!strcmp(keyword, "SITES_CATALYTIC_START"))
-      {
-        while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-        {
-          StringArraySplitString(&strings, buffer, ' ');
-          if (!strcmp(StringArrayGet(&strings, 0), "SITES_CATALYTIC_END")) break;
-          char* chnName = StringArrayGet(&strings, 0);
-          int posInChain = atoi(StringArrayGet(&strings, 1));
-          Chain* pChain = StructureFindChainByName(pStructure, chnName);
-          int resiIndex = -1;
-          ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-          if (resiIndex != -1)
-          {
-            if (StringArrayGetCount(&strings) == 3)
-            {
-              // deal with native rotamer (NATROT) for catalytic design sites
-              if (strcmp(StringArrayGet(&strings, 2), "NATROT") == 0)
-              {
-                ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_NatRot;
-              }
-              else
-              {
-                ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_Catalytic;
-                strcpy(ChainGetResidue(pChain, resiIndex)->designAATypes, StringArrayGet(&strings, 2));
-              }
-            }
-          }
-        }
-      }
-      else if (!strcmp(keyword, "SITES_DESIGN_START"))
-      {
-        while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-        {
-          StringArraySplitString(&strings, buffer, ' ');
-          if (!strcmp(StringArrayGet(&strings, 0), "SITES_DESIGN_END")) break;
-          char* chnname = StringArrayGet(&strings, 0);
-          int posInChain = atoi(StringArrayGet(&strings, 1));
-          Chain* pChain = StructureFindChainByName(pStructure, chnname);
-          int resiIndex = -1;
-          ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-          if (resiIndex != -1)
-          {
-            ResidueSetDesignType(ChainGetResidue(pChain, resiIndex), Type_DesType_Mutable);
-            if (StringArrayGetCount(&strings) == 3)
-            {
-              strcpy(ChainGetResidue(pChain, resiIndex)->designAATypes, StringArrayGet(&strings, 2));
-            }
-          }
-        }
-      }
-      else if (!strcmp(keyword, "SITES_REPACK_START"))
-      {
-        while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-        {
-          StringArraySplitString(&strings, buffer, ' ');
-          if (!strcmp(StringArrayGet(&strings, 0), "SITES_REPACK_END")) break;
-          char* chnname = StringArrayGet(&strings, 0);
-          int posInChain = atoi(StringArrayGet(&strings, 1));
-          Chain* pChain = StructureFindChainByName(pStructure, chnname);
-          int resiIndex = -1;
-          ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-          if (resiIndex != -1)
-          {
-            ResidueSetDesignType(ChainGetResidue(pChain, resiIndex), Type_DesType_Repackable);
-          }
-        }
-      }
-      else if (!strcmp(keyword, "SITES_FIX_START"))
-      {
-        while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-        {
-          StringArraySplitString(&strings, buffer, ' ');
-          if (!strcmp(StringArrayGet(&strings, 0), "SITES_FIX_END")) break;
-          char* chnname = StringArrayGet(&strings, 0);
-          int posInChain = atoi(StringArrayGet(&strings, 1));
-          Chain* pChain = StructureFindChainByName(pStructure, chnname);
-          int resiIndex = -1;
-          ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-          if (resiIndex != -1)
-          {
-            ResidueSetDesignType(ChainGetResidue(pChain, resiIndex), Type_DesType_Fixed);
-          }
-        }
-      }
-    }
-    FileReaderDestroy(&fr);
-  }
-  StringArrayDestroy(&strings);
-
-  // 2. deal with site design type
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI);j++)
-    {
-      Residue* pResi = ChainGetResidue(pChainI, j);
-      if (ResidueGetDesignType(pResi) == Type_DesType_Fixed)
-      {
-        continue;
-      }
-      if (ResidueGetDesignType(pResi) == Type_DesType_Mutable && FLAG_WILDTYPE_ONLY)
-      {
-        ResidueSetDesignType(pResi, Type_DesType_Repackable);
-      }
-      if (ResidueGetDesignType(pResi) == Type_DesType_Repackable)
-      {
-        if (!strcmp(ResidueGetName(pResi), "ALA") || !strcmp(ResidueGetName(pResi), "GLY"))
-        {
-          ResidueSetDesignType(pResi, Type_DesType_Fixed);
-        }
-      }
-    }
-  }
-
-  // 3. build rotamers for each design site
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI);j++)
-    {
-      Residue* pResi = ChainGetResidue(pChainI, j);
-      if (ResidueGetDesignType(pResi) != Type_DesType_Fixed)
-      {
-        ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-      }
-    }
-  }
-
-  return Success;
-}
-
-
-int StructureBuildCatalyticRotamersByBBdepRotLib(Structure* pThis, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile)
-{
-  FileReader fr;
-  if (!FAILED(FileReaderCreate(&fr, resfile)))
-  {
-    BOOL flagCataSite = FALSE;
-    char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
-    while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-    {
-      char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
-      ExtractFirstStringFromSourceString(keyword, buffer);
-      if (!strcmp(keyword, "SITES_CATALYTIC_START"))
-      {
-        flagCataSite = TRUE;
-        StringArray strings;
-        StringArrayCreate(&strings);
-        while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-        {
+      if (strcmp(keyword, "SITES_CATALYTIC_START") == 0) {
+        while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
           StringArraySplitString(&strings, buffer, ' ');
           if (strcmp(StringArrayGet(&strings, 0), "SITES_CATALYTIC_END") == 0) break;
           char* chnName = StringArrayGet(&strings, 0);
           int posInChain = atoi(StringArrayGet(&strings, 1));
-          Chain* pChain = StructureFindChainByName(pThis, chnName);
-          int resiIndex = -1;
-          ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-          if (resiIndex != -1)
-          {
-            if (StringArrayGetCount(&strings) == 3)
-            {
-              if (strcmp(StringArrayGet(&strings, 2), "NATROT") == 0)
-              {
-                ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_NatRot;
+          Chain* pChain = StructureFindChainByName(pStruct, chnName);
+          int resNdx = -1;
+          ChainFindResidueIndexByPosInChain(pChain, posInChain, &resNdx);
+          if (resNdx != -1) {
+            if (StringArrayGetNum(&strings) == 3) {
+              if (strcmp(StringArrayGet(&strings, 2), "NATROT") == 0) 
+                ResidueSetDesignType(ChainGetResidue(pChain, resNdx), Type_DesType_NatRot);
+              else {
+                ResidueSetDesignType(ChainGetResidue(pChain, resNdx), Type_DesType_Catalytic);
+                strcpy(ChainGetResidue(pChain, resNdx)->desAATypes, StringArrayGet(&strings, 2));
               }
-              else
-              {
-                ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_Catalytic;
-                strcpy(ChainGetResidue(pChain, resiIndex)->designAATypes, StringArrayGet(&strings, 2));
+            }
+          }
+        }
+      }
+      else if (strcmp(keyword, "SITES_DESIGN_START") == 0) {
+        while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
+          StringArraySplitString(&strings, buffer, ' ');
+          if (strcmp(StringArrayGet(&strings, 0), "SITES_DESIGN_END") == 0) break;
+          char* chnName = StringArrayGet(&strings, 0);
+          int posInChain = atoi(StringArrayGet(&strings, 1));
+          Chain* pChain = StructureFindChainByName(pStruct, chnName);
+          int resNdx = -1;
+          ChainFindResidueIndexByPosInChain(pChain, posInChain, &resNdx);
+          if (resNdx != -1) {
+            ResidueSetDesignType(ChainGetResidue(pChain, resNdx), Type_DesType_Mutable);
+            if (StringArrayGetNum(&strings) == 3) strcpy(ChainGetResidue(pChain, resNdx)->desAATypes, StringArrayGet(&strings, 2));
+          }
+        }
+      }
+      else if (strcmp(keyword, "SITES_REPACK_START") == 0) {
+        while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
+          StringArraySplitString(&strings, buffer, ' ');
+          if (strcmp(StringArrayGet(&strings, 0), "SITES_REPACK_END") == 0) break;
+          char* chnName = StringArrayGet(&strings, 0);
+          int posInChain = atoi(StringArrayGet(&strings, 1));
+          Chain* pChain = StructureFindChainByName(pStruct, chnName);
+          int resNdx = -1;
+          ChainFindResidueIndexByPosInChain(pChain, posInChain, &resNdx);
+          if (resNdx != -1) {
+            ResidueSetDesignType(ChainGetResidue(pChain, resNdx), Type_DesType_Repackable);
+            if (StringArrayGetNum(&strings) == 3) strcpy(ChainGetResidue(pChain, resNdx)->desAATypes, StringArrayGet(&strings, 2));
+          }
+        }
+      }
+      else if (strcmp(keyword, "SITES_FIX_START") == 0) {
+        while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
+          StringArraySplitString(&strings, buffer, ' ');
+          if (strcmp(StringArrayGet(&strings, 0), "SITES_FIX_END") == 0) break;
+          char* chnName = StringArrayGet(&strings, 0);
+          int posInChain = atoi(StringArrayGet(&strings, 1));
+          Chain* pChain = StructureFindChainByName(pStruct, chnName);
+          int resNdx = -1;
+          ChainFindResidueIndexByPosInChain(pChain, posInChain, &resNdx);
+          if (resNdx != -1) ResidueSetDesignType(ChainGetResidue(pChain, resNdx), Type_DesType_Fixed);
+        }
+      }
+    }
+  }
+  FileReaderDestroy(&fr);
+  StringArrayDestroy(&strings);
+
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+    Chain* pChain = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChain) != Type_Chain_Protein) continue;
+    for (int j = 0; j < ChainGetResidueNum(pChain);j++) {
+      Residue* pRes = ChainGetResidue(pChain, j);
+      if (ResidueGetDesignType(pRes) == Type_DesType_Mutable && FLAG_WILDTYPE_ONLY == TRUE) 
+        ResidueSetDesignType(pRes, Type_DesType_Repackable);
+      if (ResidueGetDesignType(pRes) == Type_DesType_Repackable && (strcmp(ResidueGetName(pRes), "ALA") == 0 || strcmp(ResidueGetName(pRes), "GLY") == 0)) 
+        ResidueSetDesignType(pRes, Type_DesType_Fixed);
+      if (ResidueGetDesignType(pRes) == Type_DesType_Fixed) 
+        continue; // skip if current site is fixed
+      ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, pLib, pParams, pTopos);
+      if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) 
+        ProteinSiteBuildNativeRotamer(pStruct, i, j, pTopos);
+      if (FLAG_ROTATE_HYDROXYL == TRUE) 
+        ProteinSiteExpandHydroxylRotamers(pStruct, i, j, pTopos);
+    }
+  }
+
+  return Success;
+}
+
+int StructureBuildCatalyticRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resTopos, char* resfile)
+{
+  FileReader fr;
+  if (!FAILED(FileReaderCreate(&fr, resfile))) {
+    BOOL flagCataSite = FALSE;
+    char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
+    while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
+      char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
+      ExtractFirstStringFromSourceString(keyword, buffer);
+      if (strcmp(keyword, "SITES_CATALYTIC_START") == 0) {
+        flagCataSite = TRUE;
+        StringArray strings;
+        StringArrayCreate(&strings);
+        while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
+          StringArraySplitString(&strings, buffer, ' ');
+          if (strcmp(StringArrayGet(&strings, 0), "SITES_CATALYTIC_END") == 0) 
+            break;
+          char* chnName = StringArrayGet(&strings, 0);
+          int posInChain = atoi(StringArrayGet(&strings, 1));
+          Chain* pChain = StructureFindChainByName(pStruct, chnName);
+          int resNdx = -1;
+          ChainFindResidueIndexByPosInChain(pChain, posInChain, &resNdx);
+          if (resNdx != -1) {
+            if (StringArrayGetNum(&strings) == 3) {
+              if (strcmp(StringArrayGet(&strings, 2), "NATROT") == 0) 
+                ResidueSetDesignType(ChainGetResidue(pChain, resNdx), Type_DesType_NatRot);
+              else {
+                ResidueSetDesignType(ChainGetResidue(pChain, resNdx), Type_DesType_Catalytic);
+                strcpy(ChainGetResidue(pChain, resNdx)->desAATypes, StringArrayGet(&strings, 2));
               }
             }
           }
@@ -1753,32 +1311,31 @@ int StructureBuildCatalyticRotamersByBBdepRotLib(Structure* pThis, BBdepRotamerL
     }
     FileReaderDestroy(&fr);
 
-    if (flagCataSite == FALSE)
-    {
-      char errMsg[MAX_LEN_ERR_MSG + 1];
+    if (flagCataSite == FALSE) {
+      char errMsg[MAX_LEN_ERR_MSG+1];
       sprintf(errMsg, "in file %s line %d, catalytic sites were not designated. Note: user should specify catalytic sites using keyword 'SITES_CATALYTIC_START' "
-        "and 'SITES_CATALYTIC_END' in the resfile; in most cases, catalytic site are not designable", __FILE__, __LINE__);
+        "and 'SITES_CATALYTIC_END' in the resfile; in most cases, a catalytic site is not designable", __FILE__, __LINE__);
       TraceError(errMsg, FormatError);
       return FormatError;
     }
 
-    for (int i = 0; i < StructureGetChainCount(pThis); i++)
-    {
-      Chain* pChainI = StructureGetChain(pThis, i);
-      if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-      for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-      {
-        Residue* pResi = ChainGetResidue(pChainI, j);
-        if (ResidueGetDesignType(pResi) == Type_DesType_Fixed) continue;
-        ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pThis, i, j, rotlib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pThis, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pThis, i, j, resiTopos);
+    for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+      Chain* pChain = StructureGetChain(pStruct, i);
+      if (ChainGetType(pChain) != Type_Chain_Protein) continue;
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++) {
+        Residue* pRes = ChainGetResidue(pChain, j);
+        if (ResidueGetDesignType(pRes) == Type_DesType_NatRot || ResidueGetDesignType(pRes) == Type_DesType_Catalytic) {
+          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resTopos);
+          if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) 
+            ProteinSiteBuildNativeRotamer(pStruct, i, j, resTopos);
+          if (FLAG_ROTATE_HYDROXYL == TRUE) 
+            ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resTopos);
+        }        
       }
     }
   }
-  else
-  {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+  else {
+    char errMsg[MAX_LEN_ERR_MSG+1];
     sprintf(errMsg, "in file %s line %d, catalytic sites were not designated. Note: user should specify catalytic sites using keyword 'SITES_CATALYTIC_START' "
       "and 'SITES_CATALYTIC_END' in the resfile; in most cases, a catalytic site is not designable", __FILE__, __LINE__);
     TraceError(errMsg, FormatError);
@@ -1789,40 +1346,39 @@ int StructureBuildCatalyticRotamersByBBdepRotLib(Structure* pThis, BBdepRotamerL
 }
 
 
-int StructureBuildPLIShell1RotamersByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile)
+int StructureBuildPLIShell1RotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos, char* resfile)
 {
   FileReader fr;
-  int result = FileReaderCreate(&fr, resfile);
-  int mutaSiteCount = 0;
-  if (!FAILED(result))
-  {
-    char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
-    while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-    {
-      char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
+  int mutSiteNum = 0;
+  if (!FAILED(FileReaderCreate(&fr, resfile))) {
+    char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
+    while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
+      char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
       ExtractFirstStringFromSourceString(keyword, buffer);
-      if (!strcmp(keyword, "SITES_DESIGN_START"))
-      {
+      if (strcmp(keyword, "SITES_DESIGN_START") == 0) {
         StringArray strings;
         StringArrayCreate(&strings);
-        while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-        {
+        while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
           StringArraySplitString(&strings, buffer, ' ');
-          if (!strcmp(StringArrayGet(&strings, 0), "SITES_DESIGN_END")) break;
+          if (strcmp(StringArrayGet(&strings, 0), "SITES_DESIGN_END") == 0) break;
           char* chain = StringArrayGet(&strings, 0);
           int posInChain = atoi(StringArrayGet(&strings, 1));
-          Chain* pChain = StructureFindChainByName(pStructure, chain);
-          int resiIndex = -1;
-          ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-          if (resiIndex != -1)
-          {
-            ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_Mutable;
-            if (StringArrayGetCount(&strings) == 3)
-            {
-              strcpy(ChainGetResidue(pChain, resiIndex)->designAATypes, StringArrayGet(&strings, 2));
+          Chain* pChain = StructureFindChainByName(pStruct, chain);
+          int resNdx = -1;
+          ChainFindResidueIndexByPosInChain(pChain, posInChain, &resNdx);
+          if (resNdx != -1) {
+            Residue* pRes = ChainGetResidue(pChain, resNdx);
+            ResidueSetDesignType(pRes, Type_DesType_Mutable);
+            if (StringArrayGetNum(&strings) == 3) {
+              strcpy(pRes->desAATypes, StringArrayGet(&strings, 2));
+              if ((strcmp(ResidueGetName(pRes), "ALA") == 0 && strlen(pRes->desAATypes) == 1 && pRes->desAATypes[0] == 'A')
+                || (strcmp(ResidueGetName(pRes), "GLY") == 0 && strlen(pRes->desAATypes) == 1 && pRes->desAATypes[0] == 'G')) {
+                ResidueSetDesignType(pRes, Type_DesType_Fixed);
+                continue;
+              }
             }
           }
-          mutaSiteCount++;
+          mutSiteNum++;
         }
         StringArrayDestroy(&strings);
       }
@@ -1830,51 +1386,58 @@ int StructureBuildPLIShell1RotamersByBBdepRotLib(Structure* pStructure, BBdepRot
     FileReaderDestroy(&fr);
   }
 
-  if (mutaSiteCount)
-  {
-    for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-    {
-      Chain* pChainI = StructureGetChain(pStructure, i);
-      if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-      for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-      {
-        Residue* pResi = ChainGetResidue(pChainI, j);
-        if (ResidueGetDesignType(pResi) == Type_DesType_Mutable)
-        {
-          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-          if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-          if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+  if (mutSiteNum > 0) { // Resfile has specified at least one mutable site; build rotamers for each of these mutable sites
+    for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+      Chain* pChain = StructureGetChain(pStruct, i);
+      if (ChainGetType(pChain) != Type_Chain_Protein) continue;
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++) {
+        Residue* pRes = ChainGetResidue(pChain, j);
+        if (ResidueGetDesignType(pRes) == Type_DesType_Mutable) {
+          if (FLAG_WILDTYPE_ONLY == TRUE) {
+            if (strcmp(ResidueGetName(pRes), "ALA") == 0 || strcmp(ResidueGetName(pRes), "GLY") == 0) {
+              ResidueSetDesignType(pRes, Type_DesType_Fixed);
+              continue;
+            }
+            else ResidueSetDesignType(pRes, Type_DesType_Repackable);
+          }
+          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resiTopos);
+          if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) ProteinSiteBuildNativeRotamer(pStruct, i, j, resiTopos);
+          if (FLAG_ROTATE_HYDROXYL == TRUE) ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resiTopos);
         }
       }
     }
   }
-  else
-  {
-    char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
+  else { // Resfile did not specify any mutable site; thus find mutable sites based on PLI distance and build rotamers for such
+    char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
     Residue* pSmallMol = NULL;
-    StructureFindSmallMol(pStructure, &pSmallMol);
-    if (pSmallMol == NULL)
-    {
+    StructureFindSmallMol(pStruct, &pSmallMol);
+    if (pSmallMol == NULL) {
       int result = DataNotExistError;
       sprintf(errMsg, "in file %s line %d, cannot find small molecule", __FILE__, __LINE__);
       TraceError(errMsg, result);
       return result;
     }
-    for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-    {
-      Chain* pChainI = StructureGetChain(pStructure, i);
-      if (!strcmp(ResidueGetChainName(pSmallMol), ChainGetName(pChainI))) continue;
-      if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-      for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-      {
-        Residue* pResi = ChainGetResidue(pChainI, j);
-        double minDist = AtomArrayCalcMinDistance(&pSmallMol->atoms, &pResi->atoms);
+    for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+      Chain* pChain = StructureGetChain(pStruct, i);
+      if (strcmp(ResidueGetChainName(pSmallMol), ChainGetName(pChain)) == 0) continue;
+      if (ChainGetType(pChain) != Type_Chain_Protein) continue;
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++) {
+        Residue* pRes = ChainGetResidue(pChain, j);
+        double minDist = AtomArrayCalcMinDistance(&pSmallMol->atoms, &pRes->atoms);
         if (minDist > CUT_PLI_DIST_SHELL1) continue;
-        if (ResidueGetDesignType(pResi) != Type_DesType_Fixed) continue;
-        ResidueSetDesignType(pResi, Type_DesType_Mutable);
-        ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+        if (ResidueGetDesignType(pRes) == Type_DesType_Fixed) {
+          ResidueSetDesignType(pRes, Type_DesType_Mutable);
+          if (FLAG_WILDTYPE_ONLY == TRUE) {
+            if (strcmp(ResidueGetName(pRes), "ALA") == 0 || strcmp(ResidueGetName(pRes), "GLY") == 0) {
+              ResidueSetDesignType(pRes, Type_DesType_Fixed);
+              continue;
+            }
+            else ResidueSetDesignType(pRes, Type_DesType_Repackable);
+          }
+          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resiTopos);
+          if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) ProteinSiteBuildNativeRotamer(pStruct, i, j, resiTopos);
+          if (FLAG_ROTATE_HYDROXYL == TRUE) ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resiTopos);
+        }
       }
     }
   }
@@ -1883,92 +1446,80 @@ int StructureBuildPLIShell1RotamersByBBdepRotLib(Structure* pStructure, BBdepRot
 }
 
 
-int StructureBuildPLIShell2RotamersByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* resfile)
+int StructureBuildPLIShell2RotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos, char* resfile)
 {
   FileReader fr;
-  int result = FileReaderCreate(&fr, resfile);
-  int rotaSiteCount = 0;
-  if (!FAILED(result))
-  {
-    char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
-    while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-    {
-      char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
+  int repackSiteNum = 0;
+  if (!FAILED(FileReaderCreate(&fr, resfile))) {
+    char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
+    while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
+      char keyword[MAX_LEN_ONE_LINE_CONTENT+1];
       ExtractFirstStringFromSourceString(keyword, buffer);
-      if (!strcmp(keyword, "SITES_REPACK_START"))
-      {
-        StringArray strings;
-        StringArrayCreate(&strings);
-        while (!FAILED(FileReaderGetNextLine(&fr, buffer)))
-        {
-          StringArraySplitString(&strings, buffer, ' ');
-          if (!strcmp(StringArrayGet(&strings, 0), "SITES_REPACK_END")) break;
-          char* chnname = StringArrayGet(&strings, 0);
-          int posInChain = atoi(StringArrayGet(&strings, 1));
-          Chain* pChain = StructureFindChainByName(pStructure, chnname);
-          int resiIndex = -1;
-          ChainFindResidueByPosInChain(pChain, posInChain, &resiIndex);
-          if (resiIndex != -1) ChainGetResidue(pChain, resiIndex)->desType = Type_DesType_Repackable;
-          rotaSiteCount++;
+      if (strcmp(keyword, "SITES_REPACK_START") == 0) {
+        StringArray strs;
+        StringArrayCreate(&strs);
+        while (!FAILED(FileReaderGetNextLine(&fr, buffer))) {
+          StringArraySplitString(&strs, buffer, ' ');
+          if (strcmp(StringArrayGet(&strs, 0), "SITES_REPACK_END") == 0) break;
+          char* chnname = StringArrayGet(&strs, 0);
+          int posInChain = atoi(StringArrayGet(&strs, 1));
+          Chain* pChain = StructureFindChainByName(pStruct, chnname);
+          int resNdx = -1;
+          ChainFindResidueIndexByPosInChain(pChain, posInChain, &resNdx);
+          if (resNdx != -1) ChainGetResidue(pChain, resNdx)->desType = Type_DesType_Repackable;
+          repackSiteNum++;
         }
-        StringArrayDestroy(&strings);
+        StringArrayDestroy(&strs);
       }
     }
     FileReaderDestroy(&fr);
   }
 
-  if (rotaSiteCount)
-  {
-    for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-    {
-      Chain* pChainI = StructureGetChain(pStructure, i);
-      if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-      for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-      {
-        Residue* pResi = ChainGetResidue(pChainI, j);
-        if (ResidueGetDesignType(pResi) == Type_DesType_Repackable)
-        {
-          if (!strcmp(ResidueGetName(pResi), "ALA") || !strcmp(ResidueGetName(pResi), "GLY"))
-          {
-            ResidueSetDesignType(pResi, Type_DesType_Fixed);
+  if (repackSiteNum > 0) { // Resfile has specified at least one mutable site; build rotamers for each of these mutable sites
+    for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+      Chain* pChain = StructureGetChain(pStruct, i);
+      if (ChainGetType(pChain) != Type_Chain_Protein) continue;
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++) {
+        Residue* pRes = ChainGetResidue(pChain, j);
+        if (ResidueGetDesignType(pRes) == Type_DesType_Repackable) {
+          if (strcmp(ResidueGetName(pRes), "ALA") == 0 || strcmp(ResidueGetName(pRes), "GLY") == 0) {
+            ResidueSetDesignType(pRes, Type_DesType_Fixed);
             continue;
           }
-          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-          if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-          if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resiTopos);
+          if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) ProteinSiteBuildNativeRotamer(pStruct, i, j, resiTopos);
+          if (FLAG_ROTATE_HYDROXYL == TRUE) ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resiTopos);
         }
       }
     }
   }
-  else
-  {
-    char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
+  else {
+    char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
     Residue* pSmallMol = NULL;
-    StructureFindSmallMol(pStructure, &pSmallMol);
-    if (pSmallMol == NULL)
-    {
+    StructureFindSmallMol(pStruct, &pSmallMol);
+    if (pSmallMol == NULL) {
       int result = DataNotExistError;
       sprintf(errMsg, "in file %s line %d, cannot find small molecule", __FILE__, __LINE__);
       TraceError(errMsg, result);
       return result;
     }
-
-    for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-    {
-      Chain* pChainI = StructureGetChain(pStructure, i);
-      if (!strcmp(ResidueGetChainName(pSmallMol), ChainGetName(pChainI))) continue;
+    for (int i = 0; i < StructureGetChainNum(pStruct); i++) {
+      Chain* pChainI = StructureGetChain(pStruct, i);
+      if (strcmp(ResidueGetChainName(pSmallMol), ChainGetName(pChainI)) == 0) continue;
       if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-      for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-      {
-        Residue* pResi = ChainGetResidue(pChainI, j);
-        double minDist = AtomArrayCalcMinDistance(&pSmallMol->atoms, &pResi->atoms);
-        if (minDist > CUT_PLI_DIST_SHELL2) continue;
-        if (ResidueGetDesignType(pResi) != Type_DesType_Fixed) continue;
-        if (!strcmp(ResidueGetName(pResi), "ALA") || !strcmp(ResidueGetName(pResi), "GLY")) continue;
-        ResidueSetDesignType(pResi, Type_DesType_Repackable);
-        ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+      for (int j = 0; j < ChainGetResidueNum(pChainI); j++) {
+        Residue* pRes = ChainGetResidue(pChainI, j);
+        if (AtomArrayCalcMinDistance(&pSmallMol->atoms, &pRes->atoms) > CUT_PLI_DIST_SHELL2) continue;
+        if (ResidueGetDesignType(pRes) == Type_DesType_Fixed) {
+          ResidueSetDesignType(pRes, Type_DesType_Repackable);
+          if (strcmp(ResidueGetName(pRes), "ALA") == 0 || strcmp(ResidueGetName(pRes), "GLY") == 0) {
+            ResidueSetDesignType(pRes, Type_DesType_Fixed);
+            continue;
+          }
+          ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resiTopos);
+          if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE) ProteinSiteBuildNativeRotamer(pStruct, i, j, resiTopos);
+          if (FLAG_ROTATE_HYDROXYL == TRUE) ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resiTopos);
+        }
       }
     }
   }
@@ -1977,68 +1528,64 @@ int StructureBuildPLIShell2RotamersByBBdepRotLib(Structure* pStructure, BBdepRot
 }
 
 
-
-#define CHECK_ROTAMER_CONF_IN_ROTLIB
-
-BOOL IsNativeRotamerInBBdepRotLib(Structure* pThis, int chainIndex, int resiIndex, ResiTopoSet* pResiTopos, BBdepRotamerLib* pBBdepRotLib, double torsionStd)
+BOOL IsNativeRotamerInBBdepRotLib(Structure* pStruct, int chnNdx, int resNdx, ResTopos* resiTopos, BBdepRotLib* rotlib, double cut)
 {
-  char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
-  Chain* pDestChain = StructureGetChain(pThis, chainIndex);
-  Residue* pDestResidue = ChainGetResidue(pDestChain, resiIndex);
-  if (pDestChain->type == Type_Chain_Protein)
+  char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
+  Chain* pChn = StructureGetChain(pStruct, chnNdx);
+  Residue* pRes = ChainGetResidue(pChn, resNdx);
+  if (pChn->type == Type_Chain_Protein)
   {
-    //do not add rotamer for residue ala and gly
-    if (strcmp(ResidueGetName(pDestResidue), "ALA") == 0 || strcmp(ResidueGetName(pDestResidue), "GLY") == 0)
+    if (strcmp(ResidueGetName(pRes), "ALA") == 0 || strcmp(ResidueGetName(pRes), "GLY") == 0)
     {
       return TRUE;
     }
 
-    //step1: calculate the X angles for the current residue
+    // 1. calculate all sidechain torsions for current residue
     double DUNBRACK_ENERGY = 0.0;
-    int torsionCount = 0;
-    char resname[MAX_LEN_RES_NAME + 1];
-    strcpy(resname, ResidueGetName(pDestResidue));
-    if (!strcmp(resname, "ALA")) { torsionCount = 0; }
-    else if (!strcmp(resname, "ARG")) { torsionCount = 4; }
-    else if (!strcmp(resname, "ASN")) { torsionCount = 2; }
-    else if (!strcmp(resname, "ASP")) { torsionCount = 2; }
-    else if (!strcmp(resname, "CYS")) { torsionCount = 1; }
-    else if (!strcmp(resname, "GLN")) { torsionCount = 3; }
-    else if (!strcmp(resname, "GLU")) { torsionCount = 3; }
-    else if (!strcmp(resname, "GLY")) { torsionCount = 0; }
-    else if (!strcmp(resname, "HSD")) { torsionCount = 2; }
-    else if (!strcmp(resname, "HSE")) { torsionCount = 2; }
-    else if (!strcmp(resname, "ILE")) { torsionCount = 2; }
-    else if (!strcmp(resname, "LEU")) { torsionCount = 2; }
-    else if (!strcmp(resname, "LYS")) { torsionCount = 4; }
-    else if (!strcmp(resname, "MET")) { torsionCount = 3; }
-    else if (!strcmp(resname, "PHE")) { torsionCount = 2; }
-    else if (!strcmp(resname, "PRO")) { torsionCount = 2; }
-    else if (!strcmp(resname, "SER")) { torsionCount = 1; }
-    else if (!strcmp(resname, "THR")) { torsionCount = 1; }
-    else if (!strcmp(resname, "TRP")) { torsionCount = 2; }
-    else if (!strcmp(resname, "TYR")) { torsionCount = 2; }
-    else if (!strcmp(resname, "VAL")) { torsionCount = 1; }
+    int torNum = 0;
+    char resName[MAX_LEN_RES_NAME+1];
+    strcpy(resName, ResidueGetName(pRes));
+    if (      strcmp(resName, "ALA") == 0 ) { torNum = 0; }
+    else if ( strcmp(resName, "ARG") == 0 ) { torNum = 4; }
+    else if ( strcmp(resName, "ASN") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "ASP") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "CYS") == 0 ) { torNum = 1; }
+    else if ( strcmp(resName, "GLN") == 0 ) { torNum = 3; }
+    else if ( strcmp(resName, "GLU") == 0 ) { torNum = 3; }
+    else if ( strcmp(resName, "GLY") == 0 ) { torNum = 0; }
+    else if ( strcmp(resName, "HSD") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "HSE") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "ILE") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "LEU") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "LYS") == 0 ) { torNum = 4; }
+    else if ( strcmp(resName, "MET") == 0 ) { torNum = 3; }
+    else if ( strcmp(resName, "PHE") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "PRO") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "SER") == 0 ) { torNum = 1; }
+    else if ( strcmp(resName, "THR") == 0 ) { torNum = 1; }
+    else if ( strcmp(resName, "TRP") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "TYR") == 0 ) { torNum = 2; }
+    else if ( strcmp(resName, "VAL") == 0 ) { torNum = 1; }
 
-    DoubleArray xangles;
-    DoubleArrayCreate(&xangles, 0);
-    ResidueTopology resiTop;
-    ResidueTopologyCreate(&resiTop);
-    ResiTopoSetGet(pResiTopos, resname, &resiTop);
-    for (int torsionIndex = 0;torsionIndex < torsionCount;torsionIndex++)
+    DoubleArray Xs;
+    DoubleArrayCreate(&Xs, 0);
+    ResTopology topo;
+    ResTopologyCreate(&topo);
+    ResToposGet(resiTopos, resName, &topo);
+    for (int ndx = 0; ndx < torNum; ndx++)
     {
-      Type_ProteinAtomOrder desiredAtomBOrder = Type_ProteinAtomOrder_FromInt(torsionIndex);
-      Type_ProteinAtomOrder desiredAtomCOrder = Type_ProteinAtomOrder_FromInt(torsionIndex + 1);
-      CharmmIC icOfCurrentTorsion;
-      CharmmICCreate(&icOfCurrentTorsion);
+      Type_ProteinAtomOrder desiredAtomBOrder = Type_ProteinAtomOrder_FromInt(ndx);
+      Type_ProteinAtomOrder desiredAtomCOrder = Type_ProteinAtomOrder_FromInt(ndx + 1);
+      CharmmIC curTorIC;
+      CharmmICCreate(&curTorIC);
       BOOL icFound = FALSE;
-      for (int icIndex = 0; icIndex < ResidueTopologyGetCharmmICCount(&resiTop); icIndex++)
+      for (int icNdx = 0; icNdx < ResTopologyGetCharmmICNum(&topo); icNdx++)
       {
         Type_ProteinAtomOrder atomBOrder;
         Type_ProteinAtomOrder atomCOrder;
-        ResidueTopologyGetCharmmIC(&resiTop, icIndex, &icOfCurrentTorsion);
-        atomBOrder = Type_ProteinAtomOrder_JudgedByAtomName(CharmmICGetAtomB(&icOfCurrentTorsion));
-        atomCOrder = Type_ProteinAtomOrder_JudgedByAtomName(CharmmICGetAtomC(&icOfCurrentTorsion));
+        ResTopologyGetCharmmIC(&topo, icNdx, &curTorIC);
+        atomBOrder = Type_ProteinAtomOrder_JudgedByAtomName(CharmmICGetAtomB(&curTorIC));
+        atomCOrder = Type_ProteinAtomOrder_JudgedByAtomName(CharmmICGetAtomC(&curTorIC));
         if (desiredAtomBOrder == atomBOrder && desiredAtomCOrder == atomCOrder)
         {
           icFound = TRUE;
@@ -2046,254 +1593,94 @@ BOOL IsNativeRotamerInBBdepRotLib(Structure* pThis, int chainIndex, int resiInde
         }
       }
 
-      if (!icFound)
+      if (icFound == FALSE)
       {
-        sprintf(errMsg, "in file %s line %d, cannot find IC of the %dth torsion for residue %s", __FILE__, __LINE__, torsionIndex + 1, resname);
+        sprintf(errMsg, "in file %s line %d, cannot find IC of the %dth torsion for residue %s", __FILE__, __LINE__, ndx + 1, resName);
         TraceError(errMsg, DataNotExistError);
-        CharmmICDestroy(&icOfCurrentTorsion);
+        CharmmICDestroy(&curTorIC);
         return DataNotExistError;
       }
 
-      Atom* pAtomA = ResidueGetAtomByName(pDestResidue, CharmmICGetAtomA(&icOfCurrentTorsion));
-      Atom* pAtomB = ResidueGetAtomByName(pDestResidue, CharmmICGetAtomB(&icOfCurrentTorsion));
-      Atom* pAtomC = ResidueGetAtomByName(pDestResidue, CharmmICGetAtomC(&icOfCurrentTorsion));
-      Atom* pAtomD = ResidueGetAtomByName(pDestResidue, CharmmICGetAtomD(&icOfCurrentTorsion));
-      double torsion = GetTorsionAngle(&pAtomA->xyz, &pAtomB->xyz, &pAtomC->xyz, &pAtomD->xyz);
-      DoubleArrayAppend(&xangles, torsion);
+      Atom* pAtomA = ResidueGetAtomByName(pRes, CharmmICGetAtomA(&curTorIC));
+      Atom* pAtomB = ResidueGetAtomByName(pRes, CharmmICGetAtomB(&curTorIC));
+      Atom* pAtomC = ResidueGetAtomByName(pRes, CharmmICGetAtomC(&curTorIC));
+      Atom* pAtomD = ResidueGetAtomByName(pRes, CharmmICGetAtomD(&curTorIC));
+      DoubleArrayAppend(&Xs, GetTorsionAngle(&pAtomA->xyz, &pAtomB->xyz, &pAtomC->xyz, &pAtomD->xyz));
 
-      CharmmICDestroy(&icOfCurrentTorsion);
+      CharmmICDestroy(&curTorIC);
     }
-    ResidueTopologyDestroy(&resiTop);
+    ResTopologyDestroy(&topo);
 
-    //step2: get the phi&psi angles for the current residue
-    int binindex = ((int)(pDestResidue->phipsi[0] + 180) / 10) * 36 + (int)(pDestResidue->phipsi[1] + 180) / 10;
-    RotLibPhiPsi* pRotLibPhiPsi = &pBBdepRotLib->rotlibphipsis[binindex];
-    int rotTypeIndex = -1;
-    StringArrayFind(&pRotLibPhiPsi->rotTypes, ResidueGetName(pDestResidue), &rotTypeIndex);
-    DoubleArray* pTorsionsArrayForTypeI = pRotLibPhiPsi->torsions[rotTypeIndex];
-    DoubleArray* pDeviationsArrayForTypeI = pRotLibPhiPsi->deviations[rotTypeIndex];
-    int matchIndex = -1;
-    for (int i = 0;i < IntArrayGet(&pRotLibPhiPsi->rotamerCounts, rotTypeIndex);i++)
+    // 2. get the phi, psi angles for current residue
+    int binNdx = ((int)(pRes->phipsi[0] + 180) / 10) * 36 + (int)(pRes->phipsi[1] + 180) / 10;
+    RotLibPhiPsi* pRotLibPhiPsi = &rotlib->pps[binNdx];
+    int rtNdx = -1, matchNdx = -1;
+    StringArrayFind(&pRotLibPhiPsi->rotTypes, ResidueGetName(pRes), &rtNdx);
+    DoubleArray* pTorsionsArrayForTypeI = pRotLibPhiPsi->tors[rtNdx];
+    DoubleArray* pDeviationsArrayForTypeI = pRotLibPhiPsi->devs[rtNdx];
+    for (int i = 0;i < IntArrayGet(&pRotLibPhiPsi->rotNums, rtNdx);i++)
     {
-      DoubleArray* pTorsions = &pTorsionsArrayForTypeI[i];
-      DoubleArray* pDeviations = &pDeviationsArrayForTypeI[i];
-      BOOL match = TRUE;
-      for (int j = 0;j < DoubleArrayGetLength(&xangles);j++)
+      DoubleArray* pTors = &pTorsionsArrayForTypeI[i];
+      DoubleArray* pDevs = &pDeviationsArrayForTypeI[i];
+      BOOL isMatched = TRUE;
+      for (int j = 0; j < DoubleArrayGetLength(&Xs); j++)
       {
-        double min = DoubleArrayGet(pTorsions, j) - DegToRad(torsionStd);
-        double max = DoubleArrayGet(pTorsions, j) + DegToRad(torsionStd);
-        double torsion = DoubleArrayGet(&xangles, j);
-        double torsionm2pi = torsion - 2 * PI;
-        double torsionp2pi = torsion + 2 * PI;
-        double torsion2 = torsion;
-        if ((strcmp(resname, "PHE") == 0 && j == 1) ||
-          (strcmp(resname, "TYR") == 0 && j == 1) ||
-          (strcmp(resname, "ASP") == 0 && j == 1) ||
-          strcmp(resname, "GLU") == 0 && j == 2)
+        double min = DoubleArrayGet(pTors, j) - DegToRad(cut);
+        double max = DoubleArrayGet(pTors, j) + DegToRad(cut);
+        double tor = DoubleArrayGet(&Xs, j);
+        double m2pi = tor - 2 * PI;
+        double p2pi = tor + 2 * PI;
+        double tor2 = tor;
+        if ( (strcmp(resName, "PHE") == 0 && j == 1) ||
+             (strcmp(resName, "TYR") == 0 && j == 1) ||
+             (strcmp(resName, "ASP") == 0 && j == 1) ||
+             (strcmp(resName, "GLU") == 0 && j == 2) )
         {
-          torsion2 = torsion + PI;
-          torsion2 = torsion > 0 ? torsion - PI : torsion2;
+          tor2 = tor + PI;
+          tor2 = tor > 0 ? tor - PI : tor2;
         }
-        double torsion2m2pi = torsion2 - 2 * PI;
-        double torsion2p2pi = torsion2 + 2 * PI;
-        if (!(
-          (torsion <= max && torsion >= min) ||
-          (torsionm2pi <= max && torsionm2pi >= min) ||
-          (torsionp2pi <= max && torsionp2pi >= min) ||
-          (torsion2 <= max && torsion2 >= min) ||
-          (torsion2m2pi <= max && torsion2m2pi >= min) ||
-          (torsion2p2pi <= max && torsion2p2pi >= min)
-          ))
+        double tor2m2pi = tor2 - 2 * PI;
+        double tor2p2pi = tor2 + 2 * PI;
+        if ( !( (tor <= max && tor >= min) ||
+                (m2pi <= max && m2pi >= min) ||
+                (p2pi <= max && p2pi >= min) ||
+                (tor2 <= max && tor2 >= min) ||
+                (tor2m2pi <= max && tor2m2pi >= min) ||
+                (tor2p2pi <= max && tor2p2pi >= min)
+             ) )
         {
-          match = FALSE;
+          isMatched = FALSE;
           break;
         }
       }
-      if (match)
+      if (isMatched == TRUE)
       {
-        matchIndex = i;
+        matchNdx = i;
         break;
       }
     }
-    DoubleArrayDestroy(&xangles);
+    DoubleArrayDestroy(&Xs);
 
-    if (matchIndex != -1)
+    if (matchNdx != -1)
     {
       return TRUE;
     }
-    else
-    {
-      return FALSE;
-    }
-
-  }
-
-  return Success;
-}
-
-BOOL IsNativeRotamerInBBindRotLib(Structure* pThis, int chainIndex, int resiIndex, ResiTopoSet* pResiTopos, BBindRotamerLib* pBBindRotLib, double torsionStd)
-{
-  char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
-  Chain* pDestChain = StructureGetChain(pThis, chainIndex);
-  Residue* pDestResidue = ChainGetResidue(pDestChain, resiIndex);
-  if (pDestChain->type == Type_Chain_Protein)
-  {
-    //do not add rotamer for residue ala and gly
-    if (strcmp(ResidueGetName(pDestResidue), "ALA") == 0 || strcmp(ResidueGetName(pDestResidue), "GLY") == 0)
-    {
-      return TRUE;
-    }
-
-    //step1: calculate the X angles for the current residue
-    double DUNBRACK_ENERGY = 0.0;
-    int torsionCount = 0;
-    char resname[MAX_LEN_RES_NAME + 1];
-    strcpy(resname, ResidueGetName(pDestResidue));
-    if (!strcmp(resname, "ALA")) { torsionCount = 0; }
-    else if (!strcmp(resname, "ARG")) { torsionCount = 4; }
-    else if (!strcmp(resname, "ASN")) { torsionCount = 2; }
-    else if (!strcmp(resname, "ASP")) { torsionCount = 2; }
-    else if (!strcmp(resname, "CYS")) { torsionCount = 1; }
-    else if (!strcmp(resname, "GLN")) { torsionCount = 3; }
-    else if (!strcmp(resname, "GLU")) { torsionCount = 3; }
-    else if (!strcmp(resname, "GLY")) { torsionCount = 0; }
-    else if (!strcmp(resname, "HSD")) { torsionCount = 2; }
-    else if (!strcmp(resname, "HSE")) { torsionCount = 2; }
-    else if (!strcmp(resname, "ILE")) { torsionCount = 2; }
-    else if (!strcmp(resname, "LEU")) { torsionCount = 2; }
-    else if (!strcmp(resname, "LYS")) { torsionCount = 4; }
-    else if (!strcmp(resname, "MET")) { torsionCount = 3; }
-    else if (!strcmp(resname, "PHE")) { torsionCount = 2; }
-    else if (!strcmp(resname, "PRO")) { torsionCount = 2; }
-    else if (!strcmp(resname, "SER")) { torsionCount = 1; }
-    else if (!strcmp(resname, "THR")) { torsionCount = 1; }
-    else if (!strcmp(resname, "TRP")) { torsionCount = 2; }
-    else if (!strcmp(resname, "TYR")) { torsionCount = 2; }
-    else if (!strcmp(resname, "VAL")) { torsionCount = 1; }
-
-    DoubleArray xangles;
-    DoubleArrayCreate(&xangles, 0);
-    ResidueTopology resiTop;
-    ResidueTopologyCreate(&resiTop);
-    ResiTopoSetGet(pResiTopos, resname, &resiTop);
-    for (int torsionIndex = 0;torsionIndex < torsionCount;torsionIndex++)
-    {
-      Type_ProteinAtomOrder desiredAtomBOrder = Type_ProteinAtomOrder_FromInt(torsionIndex);
-      Type_ProteinAtomOrder desiredAtomCOrder = Type_ProteinAtomOrder_FromInt(torsionIndex + 1);
-      CharmmIC icOfCurrentTorsion;
-      CharmmICCreate(&icOfCurrentTorsion);
-      BOOL icFound = FALSE;
-      for (int icIndex = 0; icIndex < ResidueTopologyGetCharmmICCount(&resiTop); icIndex++)
-      {
-        Type_ProteinAtomOrder atomBOrder;
-        Type_ProteinAtomOrder atomCOrder;
-        ResidueTopologyGetCharmmIC(&resiTop, icIndex, &icOfCurrentTorsion);
-        atomBOrder = Type_ProteinAtomOrder_JudgedByAtomName(CharmmICGetAtomB(&icOfCurrentTorsion));
-        atomCOrder = Type_ProteinAtomOrder_JudgedByAtomName(CharmmICGetAtomC(&icOfCurrentTorsion));
-        if (desiredAtomBOrder == atomBOrder && desiredAtomCOrder == atomCOrder)
-        {
-          icFound = TRUE;
-          break;
-        }
-      }
-
-      if (!icFound)
-      {
-        sprintf(errMsg, "in file %s line %d, cannot find IC of the %dth torsion for residue %s", __FILE__, __LINE__, torsionIndex + 1, resname);
-        TraceError(errMsg, DataNotExistError);
-        CharmmICDestroy(&icOfCurrentTorsion);
-        return DataNotExistError;
-      }
-
-      Atom* pAtomA = ResidueGetAtomByName(pDestResidue, CharmmICGetAtomA(&icOfCurrentTorsion));
-      Atom* pAtomB = ResidueGetAtomByName(pDestResidue, CharmmICGetAtomB(&icOfCurrentTorsion));
-      Atom* pAtomC = ResidueGetAtomByName(pDestResidue, CharmmICGetAtomC(&icOfCurrentTorsion));
-      Atom* pAtomD = ResidueGetAtomByName(pDestResidue, CharmmICGetAtomD(&icOfCurrentTorsion));
-      double torsion = GetTorsionAngle(&pAtomA->xyz, &pAtomB->xyz, &pAtomC->xyz, &pAtomD->xyz);
-      DoubleArrayAppend(&xangles, torsion);
-
-      CharmmICDestroy(&icOfCurrentTorsion);
-    }
-    ResidueTopologyDestroy(&resiTop);
-
-
-    //step2: check the torsions in rotamer library
-    int rotTypeIndex = -1, matchIndex = -1;
-    StringArrayFind(&pBBindRotLib->resTypeNames, ResidueGetName(pDestResidue), &rotTypeIndex);
-    int rotCount = IntArrayGet(&pBBindRotLib->rotCounts, rotTypeIndex);
-    DoubleArray torsions;
-    DoubleArrayCreate(&torsions, 0);
-    for (int i = 0;i < rotCount;i++)
-    {
-      BBindRotamerLibGet(pBBindRotLib, ResidueGetName(pDestResidue), i, &torsions);
-      BOOL match = TRUE;
-      for (int j = 0;j < DoubleArrayGetLength(&xangles);j++)
-      {
-        double min = DoubleArrayGet(&torsions, j) - DegToRad(torsionStd);
-        double max = DoubleArrayGet(&torsions, j) + DegToRad(torsionStd);
-        double torsion = DoubleArrayGet(&xangles, j);
-        double torsionm2pi = torsion - 2 * PI;
-        double torsionp2pi = torsion + 2 * PI;
-        double torsion2 = torsion;
-        if ((strcmp(resname, "PHE") == 0 && j == 1) ||
-          (strcmp(resname, "TYR") == 0 && j == 1) ||
-          (strcmp(resname, "ASP") == 0 && j == 1) ||
-          strcmp(resname, "GLU") == 0 && j == 2)
-        {
-          torsion2 = torsion + PI;
-          torsion2 = torsion > 0 ? torsion - PI : torsion2;
-        }
-        double torsion2m2pi = torsion2 - 2 * PI;
-        double torsion2p2pi = torsion2 + 2 * PI;
-        if (!(
-          (torsion <= max && torsion >= min) ||
-          (torsionm2pi <= max && torsionm2pi >= min) ||
-          (torsionp2pi <= max && torsionp2pi >= min) ||
-          (torsion2 <= max && torsion2 >= min) ||
-          (torsion2m2pi <= max && torsion2m2pi >= min) ||
-          (torsion2p2pi <= max && torsion2p2pi >= min)
-          ))
-        {
-          match = FALSE;
-          break;
-        }
-      }
-      if (match)
-      {
-        matchIndex = i;
-        break;
-      }
-    }
-    DoubleArrayDestroy(&torsions);
-    DoubleArrayDestroy(&xangles);
-
-    if (matchIndex != -1)
-    {
-      return TRUE;
-    }
-    else
-    {
-      return FALSE;
-    }
-
+    return FALSE;
   }
 
   return FALSE;
 }
 
-
-#define GENERAL_FUNCTIONS_FOR_BBDEP_AND_BBIND
-
-int ProteinSiteWriteRotamers(Structure* pStructure, int chainIndex, int resiIndex, char* filepath)
+int ProteinSiteWriteRotamers(Structure* pStruct, int chnNdx, int resNdx, char* file)
 {
-  DesignSite* pSite = StructureFindDesignSite(pStructure, chainIndex, resiIndex);
-  RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-  FILE* pOut = fopen(filepath, "w");
+  DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
+  Rotamers* pSet = DesignSiteGetRotamers(pSite);
+  FILE* pOut = fopen(file, "w");
   if (pOut != NULL)
   {
-    for (int i = 0; i < RotamerSetGetCount(pSet); i++)
+    for (int i = 0; i < RotamersGetNum(pSet); i++)
     {
-      Rotamer* pRotamer = RotamerSetGet(pSet, i);
+      Rotamer* pRotamer = RotamersGet(pSet, i);
       RotamerRestore(pRotamer, pSet);
       Model(i, pOut);
       RotamerShowInPDBFormat(pRotamer, "ATOM", RotamerGetChainName(pRotamer), 1, i, pOut);
@@ -2307,157 +1694,129 @@ int ProteinSiteWriteRotamers(Structure* pStructure, int chainIndex, int resiInde
 }
 
 
-int ProteinSiteBuildNativeRotamer(Structure* pThis, int chnNdx, int resNdx, ResiTopoSet* pResiTopos)
+int ProteinSiteBuildNativeRotamer(Structure* pStruct, int chnNdx, int resNdx, ResTopos* resiTopos)
 {
-  Chain* pChain = StructureGetChain(pThis, chnNdx);
-  Residue* pResi = ChainGetResidue(pChain, resNdx);
-  if (!strcmp(ResidueGetName(pResi), "ALA") || !strcmp(ResidueGetName(pResi), "GLY")) return Success;
+  Chain* pChn = StructureGetChain(pStruct, chnNdx);
+  Residue* pRes = ChainGetResidue(pChn, resNdx);
 
-  if (ChainGetType(pChain) == Type_Chain_Protein)
-  {
-    DesignSite* pSite = StructureFindDesignSite(pThis, chnNdx, resNdx);
-    if (!pSite)
-    {
-      (pThis->desSiteCount)++;
-      pThis->designSites = (DesignSite*)realloc(pThis->designSites, sizeof(DesignSite) * pThis->desSiteCount);
-      DesignSiteCreate(&pThis->designSites[pThis->desSiteCount - 1]);
-      pSite = StructureGetDesignSite(pThis, pThis->desSiteCount - 1);
-      pSite->pRes = pResi;
+  if (ChainGetType(pChn) == Type_Chain_Protein) {
+    DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
+    if (pSite == NULL) {
+      (pStruct->desSiteNum)++;
+      pStruct->desSites = (DesignSite*)realloc(pStruct->desSites, sizeof(DesignSite) * pStruct->desSiteNum);
+      DesignSiteCreate(&pStruct->desSites[pStruct->desSiteNum - 1]);
+      pSite = StructureGetDesignSite(pStruct, pStruct->desSiteNum - 1);
+      pSite->pRes = pRes;
       pSite->chnNdx = chnNdx;
       pSite->resNdx = resNdx;
     }
 
-    RotamerSet* pSetI = DesignSiteGetRotamers(pSite);
-    Rotamer tempRot;
-    RotamerCreate(&tempRot);
-    RotamerSetType(&tempRot, ResidueGetName(pSite->pRes));
-    RotamerSetChainName(&tempRot, ResidueGetChainName(pSite->pRes));
-    RotamerSetPosInChain(&tempRot, ResidueGetPosInChain(pSite->pRes));
-    Rotamer* pRepresentative = RotamerSetGetRepresentative(pSetI, RotamerGetType(&tempRot));
-    if (pRepresentative != NULL)
-    {
-      AtomArrayCopy(&tempRot.atoms, &pRepresentative->atoms);
-      for (int i = 0; i < RotamerGetAtomCount(&tempRot); i++)
-      {
-        Atom* pAtom = RotamerGetAtom(&tempRot, i);
+    Rotamers* pSet = DesignSiteGetRotamers(pSite);
+    Rotamer rot;
+    RotamerCreate(&rot);
+    RotamerSetType(&rot, ResidueGetName(pSite->pRes));
+    RotamerSetChainName(&rot, ResidueGetChainName(pSite->pRes));
+    RotamerSetPosInChain(&rot, ResidueGetPosInChain(pSite->pRes));
+    Rotamer* pRep = RotamersFindRep(pSet, RotamerGetType(&rot));
+    if (pRep != NULL) {
+      AtomArrayCopy(&rot.atoms, &pRep->atoms);
+      for (int i = 0; i < RotamerGetAtomNum(&rot); i++) {
+        Atom* pAtom = RotamerGetAtom(&rot, i);
         pAtom->xyz = ResidueGetAtomByName(pSite->pRes, AtomGetName(pAtom))->xyz;
       }
-      BondSetCopy(&tempRot.bonds, &pRepresentative->bonds);
-      XYZArrayResize(&tempRot.xyzs, RotamerGetAtomCount(pRepresentative));
-      for (int i = 0; i < XYZArrayGetLength(&tempRot.xyzs); i++)
-      {
-        XYZArraySet(&tempRot.xyzs, i, &AtomArrayGet(&tempRot.atoms, i)->xyz);
-      }
-      RotamerSetDunbrack(&tempRot, ResidueGetDunbrack(pResi));
-      DoubleArrayCopy(&tempRot.Xs, &pResi->Xs);
-      RotamerSetAdd(&pSite->rots, &tempRot);
+      BondsCopy(&rot.bonds, &pRep->bonds);
+      XYZArrayResize(&rot.xyzs, RotamerGetAtomNum(pRep));
+      for (int i = 0; i < XYZArrayGetNum(&rot.xyzs); i++) XYZArraySet(&rot.xyzs, i, &AtomArrayGet(&rot.atoms, i)->xyz);
+      RotamerSetDunbrack(&rot, ResidueGetDunbrack(pRes));
+      DoubleArrayCopy(&rot.Xs, &pRes->Xs);
+      RotamersAdd(&pSite->rots, &rot);
     }
     else
     { // cannot find a representative rotamer
-      if (ResidueGetDesignType(pResi) == Type_DesType_NatRot)
-      {
-        AtomArrayCopy(&tempRot.atoms, &pResi->atoms);
-        BondSetCopy(&tempRot.bonds, &pResi->bonds);
-        XYZArrayResize(&tempRot.xyzs, AtomArrayGetCount(&tempRot.atoms));
-        for (int i = 0; i < XYZArrayGetLength(&tempRot.xyzs); i++)
-        {
-          XYZArraySet(&tempRot.xyzs, i, &AtomArrayGet(&tempRot.atoms, i)->xyz);
-        }
-        RotamerSetDunbrack(&tempRot, ResidueGetDunbrack(pResi));
-        DoubleArrayCopy(&tempRot.Xs, &pResi->Xs);
-        RotamerSetAdd(&pSite->rots, &tempRot);
+      if (ResidueGetDesignType(pRes) == Type_DesType_NatRot) {
+        AtomArrayCopy(&rot.atoms, &pRes->atoms);
+        BondsCopy(&rot.bonds, &pRes->bonds);
+        XYZArrayResize(&rot.xyzs, AtomArrayGetNum(&rot.atoms));
+        for (int i = 0; i < XYZArrayGetNum(&rot.xyzs); i++) XYZArraySet(&rot.xyzs, i, &AtomArrayGet(&rot.atoms, i)->xyz);
+        RotamerSetDunbrack(&rot, ResidueGetDunbrack(pRes));
+        DoubleArrayCopy(&rot.Xs, &pRes->Xs);
+        RotamersAdd(&pSite->rots, &rot);
       }
     }
-    RotamerDestroy(&tempRot);
+    RotamerDestroy(&rot);
 
-    if (!strcmp(ResidueGetName(pSite->pRes), "HSD"))
-    {
-      if ((pRepresentative = RotamerSetGetRepresentative(pSetI, "HSE")))
-      {
-        Residue newResi;
-        ResidueCreate(&newResi);
-        ResidueSetName(&newResi, "HSE");
-        AtomArrayCopy(&newResi.atoms, &pRepresentative->atoms);
-        for (int i = 0; i < ResidueGetAtomCount(&newResi); i++)
-        {
-          Atom* pAtom = ResidueGetAtom(&newResi, i);
-          if (!pAtom->isBBAtom && AtomIsHydrogen(pAtom))
-          {
+    if (strcmp(ResidueGetName(pSite->pRes), "HSD") == 0) {
+      if ((pRep = RotamersFindRep(pSet, "HSE")) != NULL) {
+        Residue resi;
+        ResidueCreate(&resi);
+        ResidueSetName(&resi, "HSE");
+        AtomArrayCopy(&resi.atoms, &pRep->atoms);
+        for (int i = 0; i < ResidueGetAtomNum(&resi); i++) {
+          Atom* pAtom = ResidueGetAtom(&resi, i);
+          if (pAtom->isBBAtom == FALSE && AtomIsHydrogen(pAtom) == TRUE) {
             pAtom->isXyzValid = FALSE;
             continue;
           }
           pAtom->xyz = ResidueGetAtomByName(pSite->pRes, AtomGetName(pAtom))->xyz;
         }
-        ResidueCalcAllAtomXYZ(&newResi, pResiTopos, NULL, NULL);
+        ResidueCalcAllAtomXYZ(&resi, resiTopos, NULL, NULL);
 
-        RotamerCreate(&tempRot);
-        RotamerSetType(&tempRot, "HSE");
-        RotamerSetChainName(&tempRot, ResidueGetChainName(pSite->pRes));
-        RotamerSetPosInChain(&tempRot, ResidueGetPosInChain(pSite->pRes));
-        AtomArrayCopy(&tempRot.atoms, &pRepresentative->atoms);
-        for (int i = 0; i < RotamerGetAtomCount(&tempRot); i++)
-        {
-          Atom* pAtom = RotamerGetAtom(&tempRot, i);
-          pAtom->xyz = ResidueGetAtomByName(&newResi, AtomGetName(pAtom))->xyz;
+        RotamerCreate(&rot);
+        RotamerSetType(&rot, "HSE");
+        RotamerSetChainName(&rot, ResidueGetChainName(pSite->pRes));
+        RotamerSetPosInChain(&rot, ResidueGetPosInChain(pSite->pRes));
+        AtomArrayCopy(&rot.atoms, &pRep->atoms);
+        for (int i = 0; i < RotamerGetAtomNum(&rot); i++) {
+          Atom* pAtom = RotamerGetAtom(&rot, i);
+          pAtom->xyz = ResidueGetAtomByName(&resi, AtomGetName(pAtom))->xyz;
         }
-        BondSetCopy(&tempRot.bonds, &pRepresentative->bonds);
+        BondsCopy(&rot.bonds, &pRep->bonds);
 
-        XYZArrayResize(&tempRot.xyzs, RotamerGetAtomCount(pRepresentative));
-        for (int i = 0; i < XYZArrayGetLength(&tempRot.xyzs); i++)
-        {
-          XYZArraySet(&tempRot.xyzs, i, &AtomArrayGet(&tempRot.atoms, i)->xyz);
-        }
-        RotamerSetDunbrack(&tempRot, ResidueGetDunbrack(pResi));
-        DoubleArrayCopy(&tempRot.Xs, &pResi->Xs);
-        RotamerSetAdd(&pSite->rots, &tempRot);
+        XYZArrayResize(&rot.xyzs, RotamerGetAtomNum(pRep));
+        for (int i = 0; i < XYZArrayGetNum(&rot.xyzs); i++) XYZArraySet(&rot.xyzs, i, &AtomArrayGet(&rot.atoms, i)->xyz);
+        RotamerSetDunbrack(&rot, ResidueGetDunbrack(pRes));
+        DoubleArrayCopy(&rot.Xs, &pRes->Xs);
+        RotamersAdd(&pSite->rots, &rot);
 
-        RotamerDestroy(&tempRot);
-        ResidueDestroy(&newResi);
+        RotamerDestroy(&rot);
+        ResidueDestroy(&resi);
       }
     }
-    else if (!strcmp(ResidueGetName(pSite->pRes), "HSE"))
-    {
-      if ((pRepresentative = RotamerSetGetRepresentative(pSetI, "HSD")))
-      {
-        Residue newResi;
-        ResidueCreate(&newResi);
-        ResidueSetName(&newResi, "HSD");
-        AtomArrayCopy(&newResi.atoms, &pRepresentative->atoms);
-        for (int i = 0; i < ResidueGetAtomCount(&newResi); i++)
-        {
-          Atom* pAtom = ResidueGetAtom(&newResi, i);
-          if (!pAtom->isBBAtom && AtomIsHydrogen(pAtom))
-          {
+    else if (strcmp(ResidueGetName(pSite->pRes), "HSE") == 0) {
+      if ((pRep = RotamersFindRep(pSet, "HSD")) != NULL) {
+        Residue resi;
+        ResidueCreate(&resi);
+        ResidueSetName(&resi, "HSD");
+        AtomArrayCopy(&resi.atoms, &pRep->atoms);
+        for (int i = 0; i < ResidueGetAtomNum(&resi); i++) {
+          Atom* pAtom = ResidueGetAtom(&resi, i);
+          if (pAtom->isBBAtom == FALSE && AtomIsHydrogen(pAtom) == TRUE) {
             pAtom->isXyzValid = FALSE;
             continue;
           }
           pAtom->xyz = ResidueGetAtomByName(pSite->pRes, AtomGetName(pAtom))->xyz;
         }
-        ResidueCalcAllAtomXYZ(&newResi, pResiTopos, NULL, NULL);
+        ResidueCalcAllAtomXYZ(&resi, resiTopos, NULL, NULL);
 
-        RotamerCreate(&tempRot);
-        RotamerSetType(&tempRot, "HSD");
-        RotamerSetChainName(&tempRot, ResidueGetChainName(pSite->pRes));
-        RotamerSetPosInChain(&tempRot, ResidueGetPosInChain(pSite->pRes));
+        RotamerCreate(&rot);
+        RotamerSetType(&rot, "HSD");
+        RotamerSetChainName(&rot, ResidueGetChainName(pSite->pRes));
+        RotamerSetPosInChain(&rot, ResidueGetPosInChain(pSite->pRes));
 
-        AtomArrayCopy(&tempRot.atoms, &pRepresentative->atoms);
-        for (int i = 0; i < RotamerGetAtomCount(&tempRot); i++)
-        {
-          Atom* pAtom = RotamerGetAtom(&tempRot, i);
-          pAtom->xyz = ResidueGetAtomByName(&newResi, AtomGetName(pAtom))->xyz;
+        AtomArrayCopy(&rot.atoms, &pRep->atoms);
+        for (int i = 0; i < RotamerGetAtomNum(&rot); i++) {
+          Atom* pAtom = RotamerGetAtom(&rot, i);
+          pAtom->xyz = ResidueGetAtomByName(&resi, AtomGetName(pAtom))->xyz;
         }
-        BondSetCopy(&tempRot.bonds, &pRepresentative->bonds);
+        BondsCopy(&rot.bonds, &pRep->bonds);
 
-        XYZArrayResize(&tempRot.xyzs, RotamerGetAtomCount(pRepresentative));
-        for (int i = 0; i < XYZArrayGetLength(&tempRot.xyzs); i++)
-        {
-          XYZArraySet(&tempRot.xyzs, i, &AtomArrayGet(&tempRot.atoms, i)->xyz);
-        }
-        RotamerSetDunbrack(&tempRot, ResidueGetDunbrack(pResi));
-        DoubleArrayCopy(&tempRot.Xs, &pResi->Xs);
-        RotamerSetAdd(&pSite->rots, &tempRot);
-        RotamerDestroy(&tempRot);
-        ResidueDestroy(&newResi);
+        XYZArrayResize(&rot.xyzs, RotamerGetAtomNum(pRep));
+        for (int i = 0; i < XYZArrayGetNum(&rot.xyzs); i++) XYZArraySet(&rot.xyzs, i, &AtomArrayGet(&rot.atoms, i)->xyz);
+        RotamerSetDunbrack(&rot, ResidueGetDunbrack(pRes));
+        DoubleArrayCopy(&rot.Xs, &pRes->Xs);
+        RotamersAdd(&pSite->rots, &rot);
+        RotamerDestroy(&rot);
+        ResidueDestroy(&resi);
       }
     }
   }
@@ -2466,176 +1825,178 @@ int ProteinSiteBuildNativeRotamer(Structure* pThis, int chnNdx, int resNdx, Resi
 }
 
 
-int ProteinSiteBuildFlippedNativeRotamer(Structure* pStructure, int chainIndex, int resiIndex, ResiTopoSet* pResiTopos)
+int ProteinSiteBuildFlippedNativeRotamer(Structure* pStruct, int chnNdx, int resNdx, ResTopos* resiTopos)
 {
-  Chain* pChain = StructureGetChain(pStructure, chainIndex);
-  Residue* pResidue = ChainGetResidue(pChain, resiIndex);
-  if (pChain->type == Type_Chain_Protein)
+  Chain* pChn = StructureGetChain(pStruct, chnNdx);
+  Residue* pRes = ChainGetResidue(pChn, resNdx);
+  if (pChn->type == Type_Chain_Protein)
   {
-    if (strcmp(ResidueGetName(pResidue), "ASN") != 0 && strcmp(ResidueGetName(pResidue), "GLN") != 0 &&
-      strcmp(ResidueGetName(pResidue), "HSD") != 0 && strcmp(ResidueGetName(pResidue), "HSE") != 0)
+    if ( strcmp(ResidueGetName(pRes), "ASN") != 0 && 
+         strcmp(ResidueGetName(pRes), "GLN") != 0 && 
+         strcmp(ResidueGetName(pRes), "HSD") != 0 && 
+         strcmp(ResidueGetName(pRes), "HSE") != 0 )
     {
       return Success;
     }
 
-    DesignSite* pSite = StructureFindDesignSite(pStructure, chainIndex, resiIndex);
-    RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-    int rotCount = RotamerSetGetCount(pSet);
-    for (int i = 0; i < rotCount; i++)
+    DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
+    Rotamers* pSet = DesignSiteGetRotamers(pSite);
+    int rotNum = RotamersGetNum(pSet);
+    for (int i = 0; i < rotNum; i++)
     {
-      Rotamer* pRotamer = RotamerSetGet(pSet, i);
-      Rotamer* pRepresentative = RotamerSetGetRepresentative(pSet, RotamerGetType(pRotamer));
-      Rotamer tempRotamer;
-      RotamerCreate(&tempRotamer);
-      RotamerCopy(&tempRotamer, pRepresentative);
-      if (strcmp(RotamerGetType(pRotamer), "ASN") == 0)
+      Rotamer* pRot = RotamersGet(pSet, i);
+      Rotamer* pRepresentative = RotamersFindRep(pSet, RotamerGetType(pRot));
+      Rotamer rot;
+      RotamerCreate(&rot);
+      RotamerCopy(&rot, pRepresentative);
+      if (strcmp(RotamerGetType(pRot), "ASN") == 0)
       {
-        int index1, index2;
-        RotamerFindAtom(&tempRotamer, "ND2", &index1);
-        RotamerFindAtom(&tempRotamer, "OD1", &index2);
-        XYZ tempXYZ1 = RotamerGetAtom(&tempRotamer, index1)->xyz;
-        XYZ tempXYZ2 = RotamerGetAtom(&tempRotamer, index2)->xyz;
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ2;
-        RotamerGetAtom(&tempRotamer, index2)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ2);
-        XYZArraySet(&tempRotamer.xyzs, index2, &tempXYZ1);
-        ResidueTopology resiTopo;
+        int ndx1, ndx2;
+        RotamerFindAtom(&rot, "ND2", &ndx1);
+        RotamerFindAtom(&rot, "OD1", &ndx2);
+        XYZ xyz1 = RotamerGetAtom(&rot, ndx1)->xyz;
+        XYZ xyz2 = RotamerGetAtom(&rot, ndx2)->xyz;
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz2;
+        RotamerGetAtom(&rot, ndx2)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz2);
+        XYZArraySet(&rot.xyzs, ndx2, &xyz1);
+        ResTopology topo;
         CharmmIC ic;
-        ResidueTopologyCreate(&resiTopo);
+        ResTopologyCreate(&topo);
         CharmmICCreate(&ic);
-        ResiTopoSetGet(pResiTopos, "ASN", &resiTopo);
-        ResidueTopologyFindCharmmIC(&resiTopo, "HD21", &ic);
-        GetFourthAtom(&RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomA(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomB(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomC(&ic))->xyz,
+        ResToposGet(resiTopos, "ASN", &topo);
+        ResTopologyFindCharmmIC(&topo, "HD21", &ic);
+        GetFourthAtom(&RotamerGetAtomByName(&rot, CharmmICGetAtomA(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomB(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomC(&ic))->xyz,
           ic.icParam,
-          &tempXYZ1);
-        RotamerFindAtom(&tempRotamer, "HD21", &index1);
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ1);
-        ResidueTopologyFindCharmmIC(&resiTopo, "HD22", &ic);
-        GetFourthAtom(&RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomA(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomB(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomC(&ic))->xyz,
+          &xyz1);
+        RotamerFindAtom(&rot, "HD21", &ndx1);
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz1);
+        ResTopologyFindCharmmIC(&topo, "HD22", &ic);
+        GetFourthAtom(&RotamerGetAtomByName(&rot, CharmmICGetAtomA(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomB(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomC(&ic))->xyz,
           ic.icParam,
-          &tempXYZ1);
-        RotamerFindAtom(&tempRotamer, "HD22", &index1);
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ1);
-        ResidueTopologyDestroy(&resiTopo);
+          &xyz1);
+        RotamerFindAtom(&rot, "HD22", &ndx1);
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz1);
+        ResTopologyDestroy(&topo);
         CharmmICDestroy(&ic);
       }
-      else if (strcmp(RotamerGetType(pRotamer), "GLN") == 0)
+      else if (strcmp(RotamerGetType(pRot), "GLN") == 0)
       {
-        int index1, index2;
-        RotamerFindAtom(&tempRotamer, "NE2", &index1);
-        RotamerFindAtom(&tempRotamer, "OE1", &index2);
-        XYZ tempXYZ1 = RotamerGetAtom(&tempRotamer, index1)->xyz;
-        XYZ tempXYZ2 = RotamerGetAtom(&tempRotamer, index2)->xyz;
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ2;
-        RotamerGetAtom(&tempRotamer, index2)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ2);
-        XYZArraySet(&tempRotamer.xyzs, index2, &tempXYZ1);
-        ResidueTopology resiTopo;
+        int ndx1, ndx2;
+        RotamerFindAtom(&rot, "NE2", &ndx1);
+        RotamerFindAtom(&rot, "OE1", &ndx2);
+        XYZ xyz1 = RotamerGetAtom(&rot, ndx1)->xyz;
+        XYZ xyz2 = RotamerGetAtom(&rot, ndx2)->xyz;
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz2;
+        RotamerGetAtom(&rot, ndx2)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz2);
+        XYZArraySet(&rot.xyzs, ndx2, &xyz1);
+        ResTopology topo;
         CharmmIC ic;
-        ResidueTopologyCreate(&resiTopo);
+        ResTopologyCreate(&topo);
         CharmmICCreate(&ic);
-        ResiTopoSetGet(pResiTopos, "GLN", &resiTopo);
-        ResidueTopologyFindCharmmIC(&resiTopo, "HE21", &ic);
-        GetFourthAtom(&RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomA(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomB(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomC(&ic))->xyz,
+        ResToposGet(resiTopos, "GLN", &topo);
+        ResTopologyFindCharmmIC(&topo, "HE21", &ic);
+        GetFourthAtom(&RotamerGetAtomByName(&rot, CharmmICGetAtomA(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomB(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomC(&ic))->xyz,
           ic.icParam,
-          &tempXYZ1);
-        RotamerFindAtom(&tempRotamer, "HE21", &index1);
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ1);
-        ResidueTopologyFindCharmmIC(&resiTopo, "HE22", &ic);
-        GetFourthAtom(&RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomA(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomB(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomC(&ic))->xyz,
+          &xyz1);
+        RotamerFindAtom(&rot, "HE21", &ndx1);
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz1);
+        ResTopologyFindCharmmIC(&topo, "HE22", &ic);
+        GetFourthAtom(&RotamerGetAtomByName(&rot, CharmmICGetAtomA(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomB(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomC(&ic))->xyz,
           ic.icParam,
-          &tempXYZ1);
-        RotamerFindAtom(&tempRotamer, "HE22", &index1);
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ1);
-        ResidueTopologyDestroy(&resiTopo);
+          &xyz1);
+        RotamerFindAtom(&rot, "HE22", &ndx1);
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz1);
+        ResTopologyDestroy(&topo);
         CharmmICDestroy(&ic);
       }
-      else if (strcmp(RotamerGetType(pRotamer), "HSD") == 0)
+      else if (strcmp(RotamerGetType(pRot), "HSD") == 0)
       {
-        int index1, index2;
-        RotamerFindAtom(&tempRotamer, "CD2", &index1);
-        RotamerFindAtom(&tempRotamer, "ND1", &index2);
-        XYZ tempXYZ1 = RotamerGetAtom(&tempRotamer, index1)->xyz;
-        XYZ tempXYZ2 = RotamerGetAtom(&tempRotamer, index2)->xyz;
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ2;
-        RotamerGetAtom(&tempRotamer, index2)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ2);
-        XYZArraySet(&tempRotamer.xyzs, index2, &tempXYZ1);
-        RotamerFindAtom(&tempRotamer, "NE2", &index1);
-        RotamerFindAtom(&tempRotamer, "CE1", &index2);
-        tempXYZ1 = RotamerGetAtom(&tempRotamer, index1)->xyz;
-        tempXYZ2 = RotamerGetAtom(&tempRotamer, index2)->xyz;
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ2;
-        RotamerGetAtom(&tempRotamer, index2)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ2);
-        XYZArraySet(&tempRotamer.xyzs, index2, &tempXYZ1);
-        ResidueTopology resiTopo;
+        int ndx1, ndx2;
+        RotamerFindAtom(&rot, "CD2", &ndx1);
+        RotamerFindAtom(&rot, "ND1", &ndx2);
+        XYZ xyz1 = RotamerGetAtom(&rot, ndx1)->xyz;
+        XYZ xyz2 = RotamerGetAtom(&rot, ndx2)->xyz;
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz2;
+        RotamerGetAtom(&rot, ndx2)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz2);
+        XYZArraySet(&rot.xyzs, ndx2, &xyz1);
+        RotamerFindAtom(&rot, "NE2", &ndx1);
+        RotamerFindAtom(&rot, "CE1", &ndx2);
+        xyz1 = RotamerGetAtom(&rot, ndx1)->xyz;
+        xyz2 = RotamerGetAtom(&rot, ndx2)->xyz;
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz2;
+        RotamerGetAtom(&rot, ndx2)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz2);
+        XYZArraySet(&rot.xyzs, ndx2, &xyz1);
+        ResTopology topo;
         CharmmIC ic;
-        ResidueTopologyCreate(&resiTopo);
+        ResTopologyCreate(&topo);
         CharmmICCreate(&ic);
-        ResiTopoSetGet(pResiTopos, "HSD", &resiTopo);
-        ResidueTopologyFindCharmmIC(&resiTopo, "HD1", &ic);
-        GetFourthAtom(&RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomA(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomB(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomC(&ic))->xyz,
+        ResToposGet(resiTopos, "HSD", &topo);
+        ResTopologyFindCharmmIC(&topo, "HD1", &ic);
+        GetFourthAtom(&RotamerGetAtomByName(&rot, CharmmICGetAtomA(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomB(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomC(&ic))->xyz,
           ic.icParam,
-          &tempXYZ1);
-        RotamerFindAtom(&tempRotamer, "HD1", &index1);
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ1);
-        ResidueTopologyDestroy(&resiTopo);
+          &xyz1);
+        RotamerFindAtom(&rot, "HD1", &ndx1);
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz1);
+        ResTopologyDestroy(&topo);
         CharmmICDestroy(&ic);
       }
-      else if (strcmp(RotamerGetType(pRotamer), "HSE") == 0)
+      else if (strcmp(RotamerGetType(pRot), "HSE") == 0)
       {
-        int index1, index2;
-        RotamerFindAtom(&tempRotamer, "CD2", &index1);
-        RotamerFindAtom(&tempRotamer, "ND1", &index2);
-        XYZ tempXYZ1 = RotamerGetAtom(&tempRotamer, index1)->xyz;
-        XYZ tempXYZ2 = RotamerGetAtom(&tempRotamer, index2)->xyz;
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ2;
-        RotamerGetAtom(&tempRotamer, index2)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ2);
-        XYZArraySet(&tempRotamer.xyzs, index2, &tempXYZ1);
-        RotamerFindAtom(&tempRotamer, "NE2", &index1);
-        RotamerFindAtom(&tempRotamer, "CE1", &index2);
-        tempXYZ1 = RotamerGetAtom(&tempRotamer, index1)->xyz;
-        tempXYZ2 = RotamerGetAtom(&tempRotamer, index2)->xyz;
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ2;
-        RotamerGetAtom(&tempRotamer, index2)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ2);
-        XYZArraySet(&tempRotamer.xyzs, index2, &tempXYZ1);
-        ResidueTopology resiTopo;
+        int ndx1, ndx2;
+        RotamerFindAtom(&rot, "CD2", &ndx1);
+        RotamerFindAtom(&rot, "ND1", &ndx2);
+        XYZ xyz1 = RotamerGetAtom(&rot, ndx1)->xyz;
+        XYZ xyz2 = RotamerGetAtom(&rot, ndx2)->xyz;
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz2;
+        RotamerGetAtom(&rot, ndx2)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz2);
+        XYZArraySet(&rot.xyzs, ndx2, &xyz1);
+        RotamerFindAtom(&rot, "NE2", &ndx1);
+        RotamerFindAtom(&rot, "CE1", &ndx2);
+        xyz1 = RotamerGetAtom(&rot, ndx1)->xyz;
+        xyz2 = RotamerGetAtom(&rot, ndx2)->xyz;
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz2;
+        RotamerGetAtom(&rot, ndx2)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz2);
+        XYZArraySet(&rot.xyzs, ndx2, &xyz1);
+        ResTopology topo;
         CharmmIC ic;
-        ResidueTopologyCreate(&resiTopo);
+        ResTopologyCreate(&topo);
         CharmmICCreate(&ic);
-        ResiTopoSetGet(pResiTopos, "HSE", &resiTopo);
-        ResidueTopologyFindCharmmIC(&resiTopo, "HE2", &ic);
-        GetFourthAtom(&RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomA(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomB(&ic))->xyz,
-          &RotamerGetAtomByName(&tempRotamer, CharmmICGetAtomC(&ic))->xyz,
+        ResToposGet(resiTopos, "HSE", &topo);
+        ResTopologyFindCharmmIC(&topo, "HE2", &ic);
+        GetFourthAtom(&RotamerGetAtomByName(&rot, CharmmICGetAtomA(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomB(&ic))->xyz,
+          &RotamerGetAtomByName(&rot, CharmmICGetAtomC(&ic))->xyz,
           ic.icParam,
-          &tempXYZ1);
-        RotamerFindAtom(&tempRotamer, "HE2", &index1);
-        RotamerGetAtom(&tempRotamer, index1)->xyz = tempXYZ1;
-        XYZArraySet(&tempRotamer.xyzs, index1, &tempXYZ1);
-        ResidueTopologyDestroy(&resiTopo);
+          &xyz1);
+        RotamerFindAtom(&rot, "HE2", &ndx1);
+        RotamerGetAtom(&rot, ndx1)->xyz = xyz1;
+        XYZArraySet(&rot.xyzs, ndx1, &xyz1);
+        ResTopologyDestroy(&topo);
         CharmmICDestroy(&ic);
       }
-      RotamerSetAdd(pSet, &tempRotamer);
-      RotamerDestroy(&tempRotamer);
+      RotamersAdd(pSet, &rot);
+      RotamerDestroy(&rot);
     }
   }
 
@@ -2643,247 +2004,304 @@ int ProteinSiteBuildFlippedNativeRotamer(Structure* pStructure, int chainIndex, 
 }
 
 
-int ProteinSiteExpandHydroxylRotamers(Structure* pStructure, int chainIndex, int resiIndex, ResiTopoSet* pTopos)
+int ProteinSiteExpandHydroxylRotamers(Structure* pStruct, int chnNdx, int resNdx, ResTopos* resTopos)
 {
-  Chain* pChain = StructureGetChain(pStructure, chainIndex);
+  Chain* pChain = StructureGetChain(pStruct, chnNdx);
   if (pChain->type == Type_Chain_Protein)
   {
-    DesignSite* pSite = StructureFindDesignSite(pStructure, chainIndex, resiIndex);
-    RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-    int rotamerCount = RotamerSetGetCount(pSet); // the rotamer set will be expanded, we need to record the current count
-    ResidueTopology tops;
-    CharmmIC ics;
-    ResidueTopologyCreate(&tops);
-    CharmmICCreate(&ics);
-    if (RotamerSetGetRepresentative(pSet, "SER"))
+    DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
+    Rotamers* pSet = DesignSiteGetRotamers(pSite);
+    int rotNum = RotamersGetNum(pSet);
+    ResTopology topo;
+    CharmmIC ic;
+    ResTopologyCreate(&topo);
+    CharmmICCreate(&ic);
+    if ( RotamersFindRep(pSet, "SER") != NULL)
     {
-      ResiTopoSetGet(pTopos, "SER", &tops);
-      ResidueTopologyFindCharmmIC(&tops, "HG", &ics);
-      double icParaX = ics.icParam[2];
-      int addedCount = 0;
-      Rotamer tempRot;
-      RotamerCreate(&tempRot);
-      for (int j = 0; j < rotamerCount; j++)
+      ResToposGet(resTopos, "SER", &topo);
+      ResTopologyFindCharmmIC(&topo, "HG", &ic);
+      double icParaX = ic.icParam[2];
+      int addNum = 0;
+      Rotamer rot;
+      RotamerCreate(&rot);
+      for (int j = 0; j < rotNum; j++)
       {
-        Rotamer* pRotamer = RotamerSetGet(pSet, j);
-        if (strcmp(RotamerGetType(pRotamer), "SER") == 0)
+        Rotamer* pRot = RotamersGet(pSet, j);
+        if (strcmp(RotamerGetType(pRot), "SER") == 0)
         {
-          RotamerRestore(pRotamer, pSet);
-          int atomIndex;
-          RotamerFindAtom(pRotamer, "HG", &atomIndex);
-          RotamerCopy(&tempRot, pRotamer);
-          RotamerExtract(pRotamer);
-          RotamerSetAdd(pSet, &tempRot);
+          RotamerRestore(pRot, pSet);
+          int atNdx;
+          RotamerFindAtom(pRot, "HG", &atNdx);
+          RotamerCopy(&rot, pRot);
+          RotamerExtract(pRot);
+          RotamersAdd(pSet, &rot);
           for (int k = 0; k < EXPANDED_ROT_SER; k++)
           {
-            ics.icParam[2] = icParaX + 2.0 * PI * (k + 1) / (EXPANDED_ROT_SER + 1);
-            if (ics.icParam[2] > PI) ics.icParam[2] -= 2 * PI;
-            GetFourthAtom(&RotamerGetAtomByName(&tempRot, "CA")->xyz,
-              &RotamerGetAtomByName(&tempRot, "CB")->xyz,
-              &RotamerGetAtomByName(&tempRot, "OG")->xyz,
-              ics.icParam,
-              &RotamerGetAtomByName(&tempRot, "HG")->xyz);
-            XYZArraySet(&tempRot.xyzs, atomIndex, &RotamerGetAtomByName(&tempRot, "HG")->xyz);
+            ic.icParam[2] = icParaX + 2.0 * PI * (k + 1) / (EXPANDED_ROT_SER + 1);
+            if (ic.icParam[2] > PI) ic.icParam[2] -= 2 * PI;
+            GetFourthAtom(&RotamerGetAtomByName(&rot, "CA")->xyz,
+              &RotamerGetAtomByName(&rot, "CB")->xyz,
+              &RotamerGetAtomByName(&rot, "OG")->xyz,
+              ic.icParam,
+              &RotamerGetAtomByName(&rot, "HG")->xyz);
+            XYZArraySet(&rot.xyzs, atNdx, &RotamerGetAtomByName(&rot, "HG")->xyz);
             // check if the rotamer should be added
-            BOOL expandedRotAccepted = TRUE;
-            for (int kk = 0; kk < RotamerGetAtomCount(&tempRot); kk++)
+            BOOL isAccepted = TRUE;
+            for (int kk = 0; kk < RotamerGetAtomNum(&rot); kk++)
             {
-              Atom* pAtomK = RotamerGetAtom(&tempRot, kk);
-              if (strcmp(AtomGetName(pAtomK), "HG") != 0) continue;
-              for (int ss = 0; ss < RotamerGetAtomCount(&tempRot); ss++)
+              Atom* pAtomK = RotamerGetAtom(&rot, kk);
+              if (strcmp(AtomGetName(pAtomK), "HG") != 0)
               {
-                Atom* pAtomS = RotamerGetAtom(&tempRot, ss);
-                if (strcmp(AtomGetName(pAtomK), AtomGetName(pAtomS)) == 0) continue;
-                int bondType = ResidueIntraBondConnectionCheck(AtomGetName(pAtomK), AtomGetName(pAtomS), RotamerGetBonds(&tempRot));
+                continue;
+              }
+              for (int ss = 0; ss < RotamerGetAtomNum(&rot); ss++)
+              {
+                Atom* pAtomS = RotamerGetAtom(&rot, ss);
+                if (strcmp(AtomGetName(pAtomK), AtomGetName(pAtomS)) == 0)
+                {
+                  continue;
+                }
+                int bondType = ResidueIntraBondConnectionCheck(AtomGetName(pAtomK), AtomGetName(pAtomS), RotamerGetBonds(&rot));
                 if (bondType == 14 || bondType == 15)
                 {
-                  double distance = XYZDistance(&pAtomK->xyz, &pAtomS->xyz);
+                  double distance = XYZDist(&pAtomK->xyz, &pAtomS->xyz);
                   //if(distance < (pAtomK->vdw_radius+pAtomS->vdw_radius)*0.75){
                   if (distance < 2.25)
                   {
-                    expandedRotAccepted = FALSE;
+                    isAccepted = FALSE;
                     break;
                   }
                 }
               }
-              if (expandedRotAccepted == FALSE) break;
+              if (isAccepted == FALSE)
+              {
+                break;
+              }
             }
-            if (expandedRotAccepted == TRUE)
+            if (isAccepted == TRUE)
             {
-              RotamerSetAdd(pSet, &tempRot);
-              addedCount++;
+              RotamersAdd(pSet, &rot);
+              addNum++;
             }
           }
         }
       }
-      //printf("Design site (%2d, %4d): %d SER rots expanded\n", chnNdx, ResidueGetPosInChain(pDesignSite->pRes), addedCount);
-      RotamerDestroy(&tempRot);
+      RotamerDestroy(&rot);
     }
-    // for thr rots
-    if (RotamerSetGetRepresentative(pSet, "THR") != NULL)
+
+    if (RotamersFindRep(pSet, "THR") != NULL)
     {
-      ResiTopoSetGet(pTopos, "THR", &tops);
-      ResidueTopologyFindCharmmIC(&tops, "HG1", &ics);
-      double icParaX = ics.icParam[2];
-      int addedCount = 0;
-      Rotamer tempRot;
-      RotamerCreate(&tempRot);
-      for (int j = 0; j < rotamerCount; j++)
+      ResToposGet(resTopos, "THR", &topo);
+      ResTopologyFindCharmmIC(&topo, "HG1", &ic);
+      double icParaX = ic.icParam[2];
+      int addNum = 0;
+      Rotamer rot;
+      RotamerCreate(&rot);
+      for (int j = 0; j < rotNum; j++)
       {
-        Rotamer* pRotamer = RotamerSetGet(pSet, j);
-        if (strcmp(RotamerGetType(pRotamer), "THR") == 0)
+        Rotamer* pRot = RotamersGet(pSet, j);
+        if (strcmp(RotamerGetType(pRot), "THR") == 0)
         {
-          RotamerRestore(pRotamer, pSet);
-          int atomIndex;
-          RotamerFindAtom(pRotamer, "HG1", &atomIndex);
-          RotamerCopy(&tempRot, pRotamer);
-          RotamerExtract(pRotamer);
+          RotamerRestore(pRot, pSet);
+          int atNdx;
+          RotamerFindAtom(pRot, "HG1", &atNdx);
+          RotamerCopy(&rot, pRot);
+          RotamerExtract(pRot);
           for (int k = 0; k < EXPANDED_ROT_THR; k++)
           {
-            BOOL expandedRotAccepted = TRUE;
-            ics.icParam[2] = icParaX + 2.0 * PI * (k + 1) / (EXPANDED_ROT_THR + 1);
-            if (ics.icParam[2] > PI) ics.icParam[2] -= 2 * PI;
-            GetFourthAtom(&RotamerGetAtomByName(&tempRot, "CA")->xyz,
-              &RotamerGetAtomByName(&tempRot, "CB")->xyz,
-              &RotamerGetAtomByName(&tempRot, "OG1")->xyz,
-              ics.icParam,
-              &RotamerGetAtomByName(&tempRot, "HG1")->xyz);
-            XYZArraySet(&tempRot.xyzs, atomIndex, &RotamerGetAtomByName(&tempRot, "HG1")->xyz);
-            //RotamerSetAdd(&tempSet, &tempRot);
-            for (int kk = 0; kk < RotamerGetAtomCount(&tempRot); kk++)
+            BOOL isAccepted = TRUE;
+            ic.icParam[2] = icParaX + 2.0 * PI * (k + 1) / (EXPANDED_ROT_THR + 1);
+            if (ic.icParam[2] > PI) ic.icParam[2] -= 2 * PI;
+            GetFourthAtom(&RotamerGetAtomByName(&rot, "CA")->xyz,
+              &RotamerGetAtomByName(&rot, "CB")->xyz,
+              &RotamerGetAtomByName(&rot, "OG1")->xyz,
+              ic.icParam,
+              &RotamerGetAtomByName(&rot, "HG1")->xyz);
+            XYZArraySet(&rot.xyzs, atNdx, &RotamerGetAtomByName(&rot, "HG1")->xyz);
+            for (int kk = 0; kk < RotamerGetAtomNum(&rot); kk++)
             {
-              Atom* pAtomK = RotamerGetAtom(&tempRot, kk);
-              if (strcmp(AtomGetName(pAtomK), "HG1") != 0) continue;
-              for (int ss = 0; ss < RotamerGetAtomCount(&tempRot); ss++)
+              Atom* pAtomK = RotamerGetAtom(&rot, kk);
+              if (strcmp(AtomGetName(pAtomK), "HG1") != 0)
               {
-                Atom* pAtomS = RotamerGetAtom(&tempRot, ss);
-                if (strcmp(AtomGetName(pAtomK), AtomGetName(pAtomS)) == 0) continue;
-                int bondType = ResidueIntraBondConnectionCheck(AtomGetName(pAtomK), AtomGetName(pAtomS), RotamerGetBonds(&tempRot));
+                continue;
+              }
+              for (int ss = 0; ss < RotamerGetAtomNum(&rot); ss++)
+              {
+                Atom* pAtomS = RotamerGetAtom(&rot, ss);
+                if (strcmp(AtomGetName(pAtomK), AtomGetName(pAtomS)) == 0)
+                {
+                  continue;
+                }
+                int bondType = ResidueIntraBondConnectionCheck(AtomGetName(pAtomK), AtomGetName(pAtomS), RotamerGetBonds(&rot));
                 if (bondType == 14 || bondType == 15)
                 {
-                  double distance = XYZDistance(&pAtomK->xyz, &pAtomS->xyz);
+                  double distance = XYZDist(&pAtomK->xyz, &pAtomS->xyz);
                   //if(distance < (pAtomK->vdw_radius+pAtomS->vdw_radius)*0.75){
                   if (distance < 2.25)
                   {
-                    expandedRotAccepted = FALSE;
+                    isAccepted = FALSE;
                     break;
                   }
                 }
               }
-              if (expandedRotAccepted == FALSE) break;
+              if (isAccepted == FALSE)
+              {
+                break;
+              }
             }
-            if (expandedRotAccepted == TRUE)
+            if (isAccepted == TRUE)
             {
-              RotamerSetAdd(pSet, &tempRot);
-              addedCount++;
+              RotamersAdd(pSet, &rot);
+              addNum++;
             }
           }
 
         }
       }
-      //printf("Design site (%2d, %4d): %d THR rots expanded\n", chnNdx, ResidueGetPosInChain(pDesignSite->pRes), addedCount);
-      RotamerDestroy(&tempRot);
+      RotamerDestroy(&rot);
     }
-    // for tyr rots
-    if (RotamerSetGetRepresentative(pSet, "TYR") != NULL)
+
+    if (RotamersFindRep(pSet, "TYR") != NULL)
     {
-      ResiTopoSetGet(pTopos, "TYR", &tops);
-      ResidueTopologyFindCharmmIC(&tops, "HH", &ics);
-      double icPara_Tyr = ics.icParam[2];
-      int addedCount = 0;
-      Rotamer tempRot;
-      RotamerCreate(&tempRot);
-      for (int j = 0; j < rotamerCount; j++)
+      ResToposGet(resTopos, "TYR", &topo);
+      ResTopologyFindCharmmIC(&topo, "HH", &ic);
+      double icParaX = ic.icParam[2];
+      int addNum = 0;
+      Rotamer rot;
+      RotamerCreate(&rot);
+      for (int j = 0; j < rotNum; j++)
       {
-        Rotamer* pRotamer = RotamerSetGet(pSet, j);
-        if (strcmp(RotamerGetType(pRotamer), "TYR") == 0)
+        Rotamer* pRot = RotamersGet(pSet, j);
+        if (strcmp(RotamerGetType(pRot), "TYR") == 0)
         {
-          RotamerRestore(pRotamer, pSet);
-          int atomIndex = -1;
-          RotamerFindAtom(pRotamer, "HH", &atomIndex);
-          RotamerCopy(&tempRot, pRotamer);
-          RotamerExtract(pRotamer);
+          RotamerRestore(pRot, pSet);
+          int atNdx = -1;
+          RotamerFindAtom(pRot, "HH", &atNdx);
+          RotamerCopy(&rot, pRot);
+          RotamerExtract(pRot);
           for (int k = 0; k < EXPANDED_ROT_TYR; k++)
           {
-            ics.icParam[2] = icPara_Tyr + 2.0 * PI * (k + 1) / (EXPANDED_ROT_TYR + 1);
-            if (ics.icParam[2] > PI) ics.icParam[2] -= 2 * PI;
-            GetFourthAtom(&RotamerGetAtomByName(&tempRot, "CE1")->xyz,
-              &RotamerGetAtomByName(&tempRot, "CZ")->xyz,
-              &RotamerGetAtomByName(&tempRot, "OH")->xyz,
-              ics.icParam,
-              &RotamerGetAtomByName(&tempRot, "HH")->xyz);
-            XYZArraySet(&tempRot.xyzs, atomIndex, &RotamerGetAtomByName(&tempRot, "HH")->xyz);
-            RotamerSetAdd(pSet, &tempRot);
-            addedCount++;
+            ic.icParam[2] = icParaX + 2.0 * PI * (k + 1) / (EXPANDED_ROT_TYR + 1);
+            if (ic.icParam[2] > PI) ic.icParam[2] -= 2 * PI;
+            GetFourthAtom(&RotamerGetAtomByName(&rot, "CE1")->xyz,
+              &RotamerGetAtomByName(&rot, "CZ")->xyz,
+              &RotamerGetAtomByName(&rot, "OH")->xyz,
+              ic.icParam,
+              &RotamerGetAtomByName(&rot, "HH")->xyz);
+            XYZArraySet(&rot.xyzs, atNdx, &RotamerGetAtomByName(&rot, "HH")->xyz);
+            RotamersAdd(pSet, &rot);
+            addNum++;
           }
         }
 
       }
-      //printf("Design site (%2d, %4d): %d TYR rots expanded\n", chnNdx, ResidueGetPosInChain(pDesignSite->pRes), addedCount);
-      RotamerDestroy(&tempRot);
+      RotamerDestroy(&rot);
     }
-    ResidueTopologyDestroy(&tops);
-    CharmmICDestroy(&ics);
+    ResTopologyDestroy(&topo);
+    CharmmICDestroy(&ic);
   }
   return Success;
 }
 
-#define NOT_FOR_DESIGN
-
-int StructureGenerateWildtypeRotamers(Structure* pStructure, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
+int StructureGenerateWildtypeRotamersByBBdepRotLib(Structure* pStruct, BBdepRotLib* rotlib, AtomParams* atomParams, ResTopos* resiTopos)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+    Chain* pChn = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChn) != Type_Chain_Protein)
     {
-      Residue* pResidue = ChainGetResidue(pChainI, j);
-      if (pResidue->desType != Type_DesType_Fixed) continue;
-      ResidueSetDesignType(pResidue, Type_DesType_Repackable);
-      ProteinSiteBuildSpecifiedRotamers(pStructure, i, j, rotlib, atomParams, resiTopos, pResidue->desType);
-      if (FLAG_USE_INPUT_SC && pResidue->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-      if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+      continue;
+    }
+    if (strstr(DES_CHAINS, ChainGetName(pChn)) == NULL)
+    {
+      continue;
+    }
+    for (int j = 0; j < ChainGetResidueNum(pChn); j++)
+    {
+      Residue* pRes = ChainGetResidue(pChn, j);
+      if (pRes->desType != Type_DesType_Fixed)
+      {
+        continue;
+      }
+      ResidueSetDesignType(pRes, Type_DesType_Repackable);
+      ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resiTopos);
+      if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE)
+      {
+        ProteinSiteBuildNativeRotamer(pStruct, i, j, resiTopos);
+      }
+      if (FLAG_ROTATE_HYDROXYL == TRUE)
+      {
+        ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resiTopos);
+      }
     }
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+    Chain* pChn = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChn) != Type_Chain_Protein)
     {
-      Residue* pResidue = ChainGetResidue(pChainI, j);
-      if (pResidue->desType != Type_DesType_Fixed) continue;
-      Atom* pAtomCA1 = ResidueGetAtomByName(pResidue, "CA");
-      BOOL interResi = FALSE;
-      for (int k = 0; k < StructureGetChainCount(pStructure); k++)
+      continue;
+    }
+    if (strstr(DES_CHAINS, ChainGetName(pChn)) != NULL)
+    {
+      continue;
+    }
+    for (int j = 0; j < ChainGetResidueNum(pChn); j++)
+    {
+      Residue* pRes = ChainGetResidue(pChn, j);
+      if (pRes->desType != Type_DesType_Fixed)
       {
-        if (k == i)continue;
-        Chain* pChainK = StructureGetChain(pStructure, k);
-        if (ChainGetType(pChainK) != Type_Chain_Protein)continue;
-        if (strstr(DES_CHAINS, ChainGetName(pChainK)) == NULL)continue;
-        for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+        continue;
+      }
+      Atom* pAtomCA1 = ResidueGetAtomByName(pRes, "CA");
+      BOOL interResi = FALSE;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++)
+      {
+        if (k == i)
         {
-          Residue* pResidueKS = ChainGetResidue(pChainK, s);
-          Atom* pAtomCA2 = ResidueGetAtomByName(pResidueKS, "CA");
-          if (XYZDistance(&pAtomCA2->xyz, &pAtomCA1->xyz) > 15.0) continue;
-          if (AtomArrayCalcMinDistance(&pResidue->atoms, &pResidueKS->atoms) < CUT_PPI_DIST_SHELL1)
+          continue;
+        }
+        Chain* pChnK = StructureGetChain(pStruct, k);
+        if (ChainGetType(pChnK) != Type_Chain_Protein)
+        {
+          continue;
+        }
+        if (strstr(DES_CHAINS, ChainGetName(pChnK)) == NULL)
+        {
+          continue;
+        }
+        for (int s = 0;s < ChainGetResidueNum(pChnK);s++)
+        {
+          Residue* pResKS = ChainGetResidue(pChnK, s);
+          Atom* pAtomCA2 = ResidueGetAtomByName(pResKS, "CA");
+          if (XYZDist(&pAtomCA2->xyz, &pAtomCA1->xyz) > 15.0)
+          {
+            continue;
+          }
+          if (AtomArrayCalcMinDistance(&pRes->atoms, &pResKS->atoms) < CUT_PPI_DIST_SHELL1)
           {
             interResi = TRUE;
             break;
           }
         }
-        if (interResi) break;
+        if (interResi == TRUE)
+        {
+          break;
+        }
       }
-      if (interResi)
+      if (interResi == TRUE)
       {
-        ResidueSetDesignType(pResidue, Type_DesType_Repackable);
-        ProteinSiteBuildSpecifiedRotamers(pStructure, i, j, rotlib, atomParams, resiTopos, pResidue->desType);
-        if (FLAG_USE_INPUT_SC && pResidue->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+        ResidueSetDesignType(pRes, Type_DesType_Repackable);
+        ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStruct, i, j, rotlib, atomParams, resiTopos);
+        if (FLAG_USE_INPUT_SC == TRUE && pRes->isSCIntact == TRUE)
+        {
+          ProteinSiteBuildNativeRotamer(pStruct, i, j, resiTopos);
+        }
+        if (FLAG_ROTATE_HYDROXYL == TRUE)
+        {
+          ProteinSiteExpandHydroxylRotamers(pStruct, i, j, resiTopos);
+        }
       }
     }
   }
@@ -2892,63 +2310,735 @@ int StructureGenerateWildtypeRotamers(Structure* pStructure, BBindRotamerLib* ro
 }
 
 
-int StructureGenerateWildtypeRotamersByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos)
+int SelfEnergyGenerate(Structure* pStruct, char* file)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  int result = Success;
+  char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
+  FILE* pOut = fopen(file, "w");
+  if (pOut == NULL)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) == NULL) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
-    {
-      Residue* pResidue = ChainGetResidue(pChainI, j);
-      if (pResidue->desType != Type_DesType_Fixed) continue;
-      ResidueSetDesignType(pResidue, Type_DesType_Repackable);
-      ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-      if (FLAG_USE_INPUT_SC && pResidue->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-      if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-    }
+    sprintf(errMsg, "in file %s line %d, cannot create file %s to write", __FILE__, __LINE__, file);
+    result = IOError;
+    TraceError(errMsg, result);
+    return result;
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetDesignSiteNum(pStruct); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    if (strstr(DES_CHAINS, ChainGetName(pChainI)) != NULL) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+    DesignSite* pSite = StructureGetDesignSite(pStruct, i);
+    Rotamers* pSet = DesignSiteGetRotamers(pSite);
+    Chain* pChn = StructureGetChain(pStruct, pSite->chnNdx);
+    for (int j = 0; j < RotamersGetNum(pSet); j++)
     {
-      Residue* pResidue = ChainGetResidue(pChainI, j);
-      if (pResidue->desType != Type_DesType_Fixed) continue;
-      Atom* pAtomCA1 = ResidueGetAtomByName(pResidue, "CA");
-      BOOL interResi = FALSE;
-      for (int k = 0; k < StructureGetChainCount(pStructure); k++)
+      Rotamer* pRot = RotamersGet(pSet, j);
+      RotamerRestore(pRot, pSet);
+      double energyTerms[MAX_ENERGY_TERM] = { 0 };
+      if (ChainGetType(pChn) == Type_Chain_Protein)
       {
-        if (k == i)continue;
-        Chain* pChainK = StructureGetChain(pStructure, k);
-        if (ChainGetType(pChainK) != Type_Chain_Protein)continue;
-        if (strstr(DES_CHAINS, ChainGetName(pChainK)) == NULL)continue;
-        for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+        for (int a = 0; a < StructureGetChainNum(pStruct); a++)
         {
-          Residue* pResidueKS = ChainGetResidue(pChainK, s);
-          Atom* pAtomCA2 = ResidueGetAtomByName(pResidueKS, "CA");
-          if (XYZDistance(&pAtomCA2->xyz, &pAtomCA1->xyz) > 15.0) continue;
-          if (AtomArrayCalcMinDistance(&pResidue->atoms, &pResidueKS->atoms) < CUT_PPI_DIST_SHELL1)
+          Chain* pChnA = StructureGetChain(pStruct, a);
+          if (a == pSite->chnNdx)
+          { // the same chain
+            for (int b = 0; b < ChainGetResidueNum(pChnA); b++)
+            {
+              Residue* pResAB = ChainGetResidue(pChnA, b);
+              if (b == pSite->resNdx)
+              { // the same residue
+                AminoAcidReferenceEnergy(RotamerGetType(pRot), energyTerms);
+                EnergyIntraRotamer(pRot, energyTerms);
+              }
+              else
+              { // different residues
+                if (ChainGetType(pChnA) != Type_Chain_SmallMol)
+                {
+                  if (pResAB->desType == Type_DesType_Fixed)
+                  {
+                    EnergyRotamerAndFixedResidueSameChain(pRot, pResAB, energyTerms);
+                  }
+                  else if ( pResAB->desType == Type_DesType_Repackable ||
+                            pResAB->desType == Type_DesType_Mutable ||
+                            pResAB->desType == Type_DesType_Catalytic )
+                  {
+                    EnergyRotamerAndDesignResidueSameChain(pRot, pResAB, energyTerms);
+                  }
+                }
+              }
+            }
+          }
+          else
+          { // different chains
+            if (ChainGetType(pChnA) != Type_Chain_SmallMol)
+            {
+              for (int b = 0; b < ChainGetResidueNum(pChnA); b++)
+              {
+                Residue* pResAB = ChainGetResidue(pChnA, b);
+                if (pResAB->desType == Type_DesType_Fixed)
+                {
+                  EnergyRotamerAndFixedResidueDiffChain(pRot, pResAB, energyTerms);
+                }
+                else if ( pResAB->desType == Type_DesType_Repackable ||
+                          pResAB->desType == Type_DesType_Mutable ||
+                          pResAB->desType == Type_DesType_Catalytic )
+                {
+                  EnergyRotamerAndDesignResidueDiffChain(pRot, pResAB, energyTerms);
+                }
+              }
+            }
+            else
+            { // fixed small molecule
+              for (int b = 0; b < ChainGetResidueNum(pChnA); b++)
+              {
+                Residue* pResAB = ChainGetResidue(pChnA, b);
+                if (pResAB->desType == Type_DesType_Fixed)
+                {
+                  EnergyRotamerAndFixedLigResidue(pRot, pResAB, energyTerms);
+                }
+                else if ( pResAB->desType == Type_DesType_Repackable ||
+                          pResAB->desType == Type_DesType_Mutable ||
+                          pResAB->desType == Type_DesType_Catalytic )
+                {
+                  EnergyRotamerAndDesignResidueDiffChain(pRot, pResAB, energyTerms);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      else if (ChainGetType(pChn) == Type_Chain_SmallMol)
+      {
+        for (int a = 0; a < StructureGetChainNum(pStruct); a++)
+        {
+          Chain* pChnA = StructureGetChain(pStruct, a);
+          if (a == pSite->chnNdx)
+          { // the same chain
+            pRot->selfEnergy += pRot->vdwInternal;
+          }
+          else
+          { // different chains
+            for (int b = 0; b < ChainGetResidueNum(pChnA); b++)
+            {
+              Residue* pResAB = ChainGetResidue(pChnA, b);
+              if (pResAB->desType == Type_DesType_Fixed)
+              {
+                EnergyLigRotamerAndFixedResidue(pRot, pResAB, energyTerms);
+              }
+              else if ( pResAB->desType == Type_DesType_Repackable ||
+                        pResAB->desType == Type_DesType_Mutable ||
+                        pResAB->desType == Type_DesType_Catalytic )
+              {
+                EnergyLigRotamerAndDesignResidue(pRot, pResAB, energyTerms);
+              }
+            }
+          }
+        }
+      }
+      EnergyTermWeighting(energyTerms);
+      pRot->selfEnergy += energyTerms[0];
+      fprintf(pOut, "%d %d %f\n", i, j, pRot->selfEnergy);
+      RotamerExtract(pRot);
+    }
+  }
+  fclose(pOut);
+
+  return result;
+}
+
+
+int SelfEnergyGenerate2(Structure* pStruct, AAppTable* pAAppTable, RamaTable* pRamaTable, char* file)
+{
+  FILE* pOut = fopen(file, "w");
+  if (pOut == NULL)
+  {
+    char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
+    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, file);
+    TraceError(errMsg, IOError);
+    return IOError;
+  }
+
+  for (int i = 0; i < StructureGetDesignSiteNum(pStruct); i++)
+  {
+    DesignSite* pSite = StructureGetDesignSite(pStruct, i);
+    Rotamers* pSet = DesignSiteGetRotamers(pSite);
+    Chain* pChn = StructureGetChain(pStruct, pSite->chnNdx);
+    for (int j = 0; j < RotamersGetNum(pSet); j++)
+    {
+      Rotamer* pRot = RotamersGet(pSet, j);
+      RotamerRestore(pRot, pSet);
+      double energyTerms[MAX_ENERGY_TERM] = { 0 };
+      double energyTermsBind[MAX_ENERGY_TERM] = { 0 };
+      if (ChainGetType(pChn) == Type_Chain_Protein)
+      {
+        for (int a = 0; a < StructureGetChainNum(pStruct); a++)
+        {
+          Chain* pChnA = StructureGetChain(pStruct, a);
+          if (a == pSite->chnNdx)
+          { // the same chain
+            for (int b = 0; b < ChainGetResidueNum(pChnA); b++)
+            {
+              Residue* pResAB = ChainGetResidue(pChnA, b);
+              if (b == pSite->resNdx)
+              { // the same residue
+                AminoAcidReferenceEnergy(RotamerGetType(pRot), energyTerms);
+                EnergyIntraRotamer(pRot, energyTerms);
+                RotamerPropensityAndRamachandranEnergy(pRot, pResAB, pAAppTable, pRamaTable, energyTerms);
+                RotamerDunbrackEnergy(pRot, energyTerms);
+              }
+              else
+              {
+                if ( ChainGetType(pChnA) == Type_Chain_Protein ||
+                     ChainGetType(pChnA) == Type_Chain_DNA ||
+                     ChainGetType(pChnA) == Type_Chain_RNA ||
+                     ChainGetType(pChnA) == Type_Chain_Water )
+                {
+                  if (pResAB->desType == Type_DesType_Fixed)
+                  {
+                    EnergyRotamerAndFixedResidueSameChain(pRot, pResAB, energyTerms);
+                  }
+                  else if ( pResAB->desType == Type_DesType_Repackable ||
+                            pResAB->desType == Type_DesType_Mutable ||
+                            pResAB->desType == Type_DesType_Catalytic ||
+                            pResAB->desType == Type_DesType_NatRot )
+                  {
+                    EnergyRotamerAndDesignResidueSameChain(pRot, pResAB, energyTerms);
+                  }
+                }
+              }
+            }
+          }
+          else
+          { // different chains
+            if ( ChainGetType(pChnA) == Type_Chain_Protein ||
+                 ChainGetType(pChnA) == Type_Chain_DNA ||
+                 ChainGetType(pChnA) == Type_Chain_RNA ||
+                 ChainGetType(pChnA) == Type_Chain_Water )
+            {
+              for (int b = 0; b < ChainGetResidueNum(pChnA); b++)
+              {
+                Residue* pResAB = ChainGetResidue(pChnA, b);
+                if (pResAB->desType == Type_DesType_Fixed)
+                {
+                  EnergyRotamerAndFixedResidueDiffChain(pRot, pResAB, energyTerms);
+                  if ( (strstr(DES_CHAINS, ChainGetName(pChnA)) == NULL && strstr(DES_CHAINS, ChainGetName(pChn)) != NULL) ||
+                       (strstr(DES_CHAINS, ChainGetName(pChnA)) != NULL && strstr(DES_CHAINS, ChainGetName(pChn)) == NULL))
+                  {
+                    if (FLAG_DESIGN_PPI == TRUE)
+                    {
+                      EnergyRotamerAndFixedResidueDiffChain(pRot, pResAB, energyTermsBind);
+                    }
+                  }
+                }
+                else if ( pResAB->desType == Type_DesType_Repackable ||
+                          pResAB->desType == Type_DesType_Mutable ||
+                          pResAB->desType == Type_DesType_Catalytic ||
+                          pResAB->desType == Type_DesType_NatRot)
+                {
+                  EnergyRotamerAndDesignResidueDiffChain(pRot, pResAB, energyTerms);
+                  if ( (strstr(DES_CHAINS, ChainGetName(pChnA)) == NULL && strstr(DES_CHAINS, ChainGetName(pChn)) != NULL) ||
+                       (strstr(DES_CHAINS, ChainGetName(pChnA)) != NULL && strstr(DES_CHAINS, ChainGetName(pChn)) == NULL))
+                  {
+                    if (FLAG_DESIGN_PPI == TRUE)
+                    {
+                      EnergyRotamerAndDesignResidueDiffChain(pRot, pResAB, energyTermsBind);
+                    }
+                  }
+                }
+              }
+            }
+            else if (ChainGetType(pChnA) == Type_Chain_SmallMol)
+            { // chainA is small molecule
+              for (int b = 0; b < ChainGetResidueNum(pChnA); b++)
+              {
+                Residue* pResAB = ChainGetResidue(pChnA, b);
+                if (pResAB->desType == Type_DesType_Fixed)
+                {
+                  EnergyRotamerAndFixedLigResidue(pRot, pResAB, energyTerms);
+                  if (FLAG_DESIGN_PLI == TRUE || FLAG_DESIGN_ENZ == TRUE)
+                  {
+                    EnergyRotamerAndFixedLigResidue(pRot, pResAB, energyTermsBind);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      else if (ChainGetType(pChn) == Type_Chain_SmallMol)
+      {
+        for (int a = 0; a < StructureGetChainNum(pStruct); a++)
+        {
+          Chain* pChnA = StructureGetChain(pStruct, a);
+          if (a == pSite->chnNdx)
+          { // the same chain
+            pRot->selfEnergy += pRot->vdwInternal;
+            // do not add vdwBackbone because it will be re-calculated
+          }
+          else
+          { // different chains
+            for (int b = 0; b < ChainGetResidueNum(pChnA); b++)
+            {
+              Residue* pResAB = ChainGetResidue(pChnA, b);
+              if (pResAB->desType == Type_DesType_Fixed)
+              {
+                EnergyLigRotamerAndFixedResidue(pRot, pResAB, energyTerms);
+                EnergyLigRotamerAndFixedResidue(pRot, pResAB, energyTermsBind);
+              }
+              else if ( pResAB->desType == Type_DesType_Repackable ||
+                        pResAB->desType == Type_DesType_Mutable ||
+                        pResAB->desType == Type_DesType_Catalytic ||
+                        pResAB->desType == Type_DesType_NatRot )
+              {
+                EnergyLigRotamerAndDesignResidue(pRot, pResAB, energyTerms);
+                EnergyLigRotamerAndDesignResidue(pRot, pResAB, energyTermsBind);
+              }
+            }
+          }
+        }
+      }
+      EnergyTermWeighting(energyTerms);
+      pRot->selfEnergy += energyTerms[0];
+      EnergyTermWeighting(energyTermsBind);
+      pRot->selfEnergyBin += energyTermsBind[0];
+      fprintf(pOut, "%d %d %f %f\n", i, j, pRot->selfEnergy, pRot->selfEnergyBin);
+      RotamerExtract(pRot);
+    }
+  }
+  fclose(pOut);
+
+  return Success;
+}
+
+
+int SelfEnergyReadAndCheck(Structure* pStruct, RotamerList* pList, char* file)
+{
+  FILE* pIn = fopen(file, "r");
+  if (pIn == NULL)
+  {
+    char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
+    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, file);
+    TraceError(errMsg, IOError);
+    return IOError;
+  }
+
+  char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
+  while (fgets(buffer, MAX_LEN_ONE_LINE_CONTENT, pIn))
+  {
+    int siteNdx = -1;
+    int rotNdx = -1;
+    double selfTot = 1000.0;
+    double selfBin = 1000.0;
+    sscanf(buffer, "%d %d %lf %lf\n", &siteNdx, &rotNdx, &selfTot, &selfBin);
+    DesignSite* pSite = StructureGetDesignSite(pStruct, siteNdx);
+    Rotamers* pSet = DesignSiteGetRotamers(pSite);
+    Rotamer* pRot = RotamersGet(pSet, rotNdx);
+    pRot->selfEnergy = selfTot;
+    pRot->selfEnergyBin = selfBin;
+  }
+
+  for (int i = 0; i < StructureGetDesignSiteNum(pStruct); i++)
+  {
+    DesignSite* pSite = StructureGetDesignSite(pStruct, i);
+    Rotamers* pSet = DesignSiteGetRotamers(pSite);
+    for (int j = 0; j < RotamersGetNum(pSet); j++)
+    {
+      Rotamer* pRot = RotamersGet(pSet, j);
+      if (pList->remainFlag[i][j] == FALSE)
+      {
+        continue;
+      }
+      for (int k = 0; k < RotamersGetNum(pSet); k++)
+      {
+        Rotamer* pRotK = RotamersGet(pSet, k);
+        if (pList->remainFlag[i][k] == FALSE)
+        {
+          continue;
+        }
+        if (ResidueGetDesignType(pSite->pRes) == Type_DesType_SmallMol)
+        {
+          if (pRot->selfEnergy - pRotK->selfEnergy > SELF_ENERGY_THRESHOLD_SMALLMOL)
           {
-            interResi = TRUE;
+            pList->remainFlag[i][j] = FALSE;
             break;
           }
         }
-        if (interResi) break;
-      }
-      if (interResi)
-      {
-        ResidueSetDesignType(pResidue, Type_DesType_Repackable);
-        ProteinSiteBuildSpecifiedRotamersByBBdepRotLib(pStructure, i, j, rotlib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResidue->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
+        else
+        {
+          if ( (pRot->selfEnergy - pRotK->selfEnergy > SELF_ENERGY_THRESHOLD_DIFF_AA_RES_TYPE && RotamerAndRotamerInSameType(pRot, pRotK) == FALSE) ||
+               (pRot->selfEnergy - pRotK->selfEnergy > SELF_ENERGY_THRESHOLD_SAME_AA_RES_TYPE && RotamerAndRotamerInSameType(pRot, pRotK) == TRUE) )
+          {
+            pList->remainFlag[i][j] = FALSE;
+            break;
+          }
+        }
       }
     }
   }
+  fclose(pIn);
+
+  return Success;
+}
+
+
+int RotamerListCreateFromStructure(RotamerList* pThis, Structure* pStruct)
+{
+  pThis->desSiteNum = StructureGetDesignSiteNum(pStruct);
+  pThis->rotNum = (int*)malloc(sizeof(int) * pThis->desSiteNum);
+  pThis->remainFlag = (BOOL**)malloc(sizeof(BOOL*) * pThis->desSiteNum);
+  for (int i = 0; i < pThis->desSiteNum; i++)
+  {
+    pThis->rotNum[i] = RotamersGetNum(DesignSiteGetRotamers(StructureGetDesignSite(pStruct, i)));
+    pThis->remainFlag[i] = (BOOL*)malloc(sizeof(BOOL) * pThis->rotNum[i]);
+    for (int j = 0; j < pThis->rotNum[i]; j++)
+    {
+      pThis->remainFlag[i][j] = TRUE;
+    }
+  }
+  pThis->remainRotNum = (int*)malloc(sizeof(int) * pThis->desSiteNum);
+  for (int i = 0; i < pThis->desSiteNum; i++)
+  {
+    pThis->remainRotNum[i] = 0;
+    for (int j = 0; j < pThis->rotNum[i]; j++)
+    {
+      if (pThis->remainFlag[i][j])
+      {
+        pThis->remainRotNum[i]++;
+      }
+    }
+  }
+  return Success;
+}
+
+
+void RotamerListDestroy(RotamerList* pList)
+{
+  for (int i = 0; i < pList->desSiteNum; i++) free(pList->remainFlag[i]);
+  free(pList->remainFlag);
+  free(pList->rotNum);
+  free(pList->remainRotNum);
+}
+
+
+int RotamerListCopy(RotamerList* pThis, RotamerList* pOther)
+{
+  RotamerListDestroy(pThis);
+  pThis->desSiteNum = pOther->desSiteNum;
+  pThis->rotNum = (int*)malloc(pThis->desSiteNum * sizeof(int));
+  memcpy(pThis->rotNum, pOther->rotNum, sizeof(int) * pThis->desSiteNum);
+  pThis->remainFlag = (BOOL**)malloc(pThis->desSiteNum * sizeof(BOOL*));
+  for (int i = 0; i < pThis->desSiteNum; i++)
+  {
+    pThis->remainFlag[i] = (BOOL*)malloc(pThis->rotNum[i] * sizeof(BOOL));
+    memcpy(pThis->remainFlag[i], pOther->remainFlag[i], sizeof(BOOL) * pThis->rotNum[i]);
+  }
+  pThis->remainRotNum = (int*)malloc(pThis->desSiteNum * sizeof(int));
+  memcpy(pThis->remainRotNum, pOther->remainRotNum, sizeof(int) * pThis->desSiteNum);
+  return Success;
+}
+
+
+int RotamerListRead(RotamerList* pList, char* file)
+{
+  int result = Success;
+  char errMsg[MAX_LEN_ERR_MSG+1];
+  FILE* pIn = fopen(file, "r");
+  if (pIn == NULL)
+  {
+    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, file);
+    result = IOError;
+    TraceError(errMsg, result);
+    return result;
+  }
+
+  char line[MAX_LEN_ONE_LINE_CONTENT+1];
+  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
+  {
+    int i, j;
+    char flag[MAX_LEN_ONE_LINE_CONTENT+1];
+    sscanf(line, "%d %d %s", &i, &j, flag);
+    if (i >= pList->desSiteNum)
+    {
+      sprintf(errMsg, "in file %s line %d, structure does not have site #%d at this line:\n%s", __FILE__, __LINE__, i, line);
+      result = ValueError;
+      TraceError(errMsg, result);
+      return result;
+    }
+    if (j >= pList->rotNum[i])
+    {
+      sprintf(errMsg, "in file %s line %d, structure does not have rotamer #%d on site #%d at this line:\n%s", __FILE__, __LINE__, j, i, line);
+      result = ValueError;
+      TraceError(errMsg, result);
+      return result;
+    }
+    if (strcmp(flag, "TRUE") == 0)
+    {
+      pList->remainFlag[i][j] = TRUE;
+    }
+    else if (strcmp(flag, "FALSE") == 0)
+    {
+      pList->remainFlag[i][j] = FALSE;
+    }
+    else
+    {
+      sprintf(errMsg, "in file %s line %d, incorrect file format at this line:\n%s", __FILE__, __LINE__, line);
+      result = FormatError;
+      TraceError(errMsg, result);
+      return result;
+    }
+  }
+
+  for (int i = 0; i < pList->desSiteNum; i++)
+  {
+    pList->remainRotNum[i] = 0;
+    for (int j = 0; j < pList->rotNum[i]; j++)
+    {
+      if (pList->remainFlag[i][j])
+      {
+        pList->remainRotNum[i]++;
+      }
+    }
+  }
+
+  return Success;
+}
+
+
+int RotamerListWrite(RotamerList* pList, char* file)
+{
+  int result;
+  char errMsg[MAX_LEN_ERR_MSG+1];
+  FILE* pOut = fopen(file, "w");
+  if (pOut == NULL)
+  {
+    result = IOError;
+    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, file);
+    TraceError(errMsg, result);
+    return result;
+  }
+  for (int i = 0; i < pList->desSiteNum; i++)
+  {
+    for (int j = 0; j < pList->rotNum[i]; j++)
+    {
+      fprintf(pOut, "%d\t%d\t%s\n", i, j,
+        pList->remainFlag[i][j] ? "TRUE" : "FALSE");
+    }
+  }
+  fclose(pOut);
+  return Success;
+}
+
+
+
+int RotamerListShow(RotamerList* pList)
+{
+  int totRotNum = 0;
+  for (int i = 0; i < pList->desSiteNum; i++)
+  {
+    int remainRotNum = 0;
+    printf("site %d, %d rotamers:\n", i, pList->rotNum[i]);
+    for (int j = 0; j < pList->rotNum[i]; j++)
+    {
+      if (pList->remainFlag[i][j])
+      {
+        printf("rotamer %d\n", j);
+        remainRotNum++;
+      }
+    }
+    totRotNum += remainRotNum;
+    printf("%d rotamers left\n", remainRotNum);
+  }
+  printf("number of total rotamers:\t%d\n", totRotNum);
+  return Success;
+}
+
+
+int StructureShowDesignSites2(Structure* pStruct, RotamerList* pList)
+{
+  int result = Success;
+  char errMsg[MAX_LEN_ERR_MSG+1];
+  double space = 0.0;
+  int totRotNum = 0;
+  if (StructureGetDesignSiteNum(pStruct) != pList->desSiteNum) {
+    sprintf(errMsg, "in file %s line %d, number of design site in structure (%d) is not equal to that in rotamer list (%d)",
+      __FILE__, __LINE__, StructureGetDesignSiteNum(pStruct), pList->desSiteNum);
+    result = ValueError;
+    TraceError(errMsg, result);
+    return result;
+  }
+  for (int i = 0; i < StructureGetDesignSiteNum(pStruct); i++) {
+    DesignSite* pSite = StructureGetDesignSite(pStruct, i);
+    Rotamers* pSet = DesignSiteGetRotamers(pSite);
+    int remainRotNum = 0;
+    if (RotamersGetNum(pSet) != pList->rotNum[i]) {
+      sprintf(errMsg, "in file %s line %d, number of rotamers (%d) in site %d of structure is not equal to that in rotamer list (%d)",
+        __FILE__, __LINE__, RotamersGetNum(pSet), i, pList->rotNum[i]);
+      result = ValueError;
+      TraceError(errMsg, result);
+      return result;
+    }
+    for (int j = 0; j < RotamersGetNum(pSet); j++) {
+      Rotamer* pRot = RotamersGet(pSet, j);
+      if (pList->remainFlag[i][j] == TRUE) remainRotNum++;
+    }
+    printf("site %3d: %s %4d %3s, %6d rotamers, ",
+      i, ResidueGetChainName(pSite->pRes), ResidueGetPosInChain(pSite->pRes), ResidueGetName(pSite->pRes), remainRotNum);
+    totRotNum += remainRotNum;
+    if (remainRotNum > 0) space += log((double)remainRotNum) / log(10.0);
+    switch (pSite->pRes->desType) {
+      case Type_DesType_Catalytic:
+        printf("Catalytic\n"); break;
+      case Type_DesType_Fixed:
+        printf("Fixed\n"); break;
+      case Type_DesType_Mutable:
+        printf("Mutable\n"); break;
+      case Type_DesType_SmallMol:
+        printf("Smallmol\n"); break;
+      case Type_DesType_Repackable:
+        printf("Repackable\n"); break;
+      case Type_DesType_NatRot:
+        printf("Fixed_Natrot\n"); break;
+      default:
+        break;
+    }
+  }
+  fprintf(stdout, "number of total rotamers: %d, conformation space: 1e^%.1f\n", totRotNum, space);
+
+  return Success;
+}
+
+int RotamerOriginalIndexGet(RotamerList* pList, int siteNdx, int rotNdx, int* trueRotNdx)
+{
+  int j, flag = 0;
+  for (j = 0; j < pList->rotNum[siteNdx]; j++)
+  {
+    if (pList->remainFlag[siteNdx][j] == FALSE)
+    {
+      continue;
+    }
+    if (flag == rotNdx)
+    {
+      break;
+    }
+    flag++;
+  }
+  if (j == pList->rotNum[siteNdx])
+  {
+    return DataNotExistError;
+  }
+  else
+  {
+    *trueRotNdx = j;
+  }
+
+  return Success;
+}
+
+
+int RotamerReducedIndexGet(RotamerList* pList, int siteNdx, int trueRotNdx, int* reducedRotNdx)
+{
+  int j, flag = 0;
+  for (j = 0; j < pList->rotNum[siteNdx]; j++)
+  {
+    if (pList->remainFlag[siteNdx][j] == FALSE)
+    {
+      continue;
+    }
+    if (j == trueRotNdx)
+    {
+      break;
+    }
+    flag++;
+  }
+  if (j == pList->rotNum[siteNdx])
+  {
+    return DataNotExistError;
+  }
+  else
+  {
+    *reducedRotNdx = flag;
+  }
+
+  return Success;
+}
+
+
+int RotamerListCreateFromFile(RotamerList* pList, char* file)
+{
+  int result;
+  char errMsg[MAX_LEN_ERR_MSG+1];
+  FILE* pIn = fopen(file, "r");
+  if (pIn == NULL)
+  {
+    sprintf(errMsg, "in file %s line %d, cannot open file %s", __FILE__, __LINE__, file);
+    result = IOError;
+    TraceError(errMsg, result);
+    return result;
+  }
+
+  int desSiteNum = 0;
+  char line[MAX_LEN_ONE_LINE_CONTENT+1];
+  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
+  {
+    int i, j;
+    char flag[MAX_LEN_ONE_LINE_CONTENT+1];
+    if (sscanf(line, "%d %d %s", &i, &j, flag) != 3)
+    {
+      sprintf(errMsg, "in file %s line %d, wrong format in file %s line\n%s", __FILE__, __LINE__, file, line);
+      result = IOError;
+      TraceError(errMsg, result);
+      return result;
+    }
+    if (i >= desSiteNum) desSiteNum++;
+  }
+
+  IntArray remainRotNumArray;
+  IntArrayCreate(&remainRotNumArray, desSiteNum);
+  for (int i = 0; i < IntArrayGetLength(&remainRotNumArray); i++)
+  {
+    IntArraySet(&remainRotNumArray, i, 0);
+  }
+
+  fseek(pIn, 0, SEEK_SET);
+  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
+  {
+    int i, j;
+    char flag[MAX_LEN_ONE_LINE_CONTENT+1];
+    sscanf(line, "%d %d %s", &i, &j, flag);
+    if (j >= IntArrayGet(&remainRotNumArray, i))
+    {
+      IntArraySet(&remainRotNumArray, i, j + 1);
+    }
+  }
+  fseek(pIn, 0, SEEK_SET);
+
+  pList->desSiteNum = desSiteNum;
+  pList->rotNum = (int*)malloc(sizeof(int) * pList->desSiteNum);
+  pList->remainFlag = (BOOL**)malloc(sizeof(BOOL*) * pList->desSiteNum);
+  for (int i = 0; i < pList->desSiteNum; i++)
+  {
+    pList->rotNum[i] = IntArrayGet(&remainRotNumArray, i);
+    pList->remainFlag[i] = (BOOL*)malloc(sizeof(BOOL) * pList->rotNum[i]);
+    for (int j = 0; j < pList->rotNum[i]; j++)
+    {
+      pList->remainFlag[i][j] = TRUE;
+    }
+  }
+  while (fgets(line, MAX_LEN_ONE_LINE_CONTENT, pIn))
+  {
+    int i, j;
+    char flag[MAX_LEN_ONE_LINE_CONTENT+1];
+    sscanf(line, "%d %d %s", &i, &j, flag);
+    if (strcmp(flag, "TRUE") == 0)
+    {
+      pList->remainFlag[i][j] = TRUE;
+    }
+    else if (strcmp(flag, "FALSE") == 0)
+    {
+      pList->remainFlag[i][j] = FALSE;
+    }
+  }
+  fclose(pIn);
+  IntArrayDestroy(&remainRotNumArray);
 
   return Success;
 }

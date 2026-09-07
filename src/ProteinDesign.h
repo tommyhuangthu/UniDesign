@@ -14,42 +14,38 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRA
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
 
-#ifndef ENERGY_OPTIMIZATION_H
-#define ENERGY_OPTIMIZATION_H
+#ifndef PROTEIN_DESIGN_H
+#define PROTEIN_DESIGN_H
 
-#include "ProteinDesign.h"
-#include "EnergyMatrix.h"
+#include "RotamerBuilder.h"
 #include "SmallMol.h"
 #include "Sequence.h"
 
-// simulated annealing
-#define SA_CYCLE         3
-#define	SA_TMAX          50
-#define	SA_TMIN	         0.001
-#define	SA_DECREASE_FAC  0.8
-#define METROPOLIS_STEP  20000
+int SitePairConsDeploy(CataConsSitePairArray* pConsArray, Structure* pStruct);
+int DesignSiteShowRotamerTypeAndNum(RotamerList* pList, Structure* pStruct, StringArray** ppRotTypes, IntArray** ppRotNums);
 
-int SitePairConsDeploy(CataConsSitePairArray* pSitePairArray, Structure* pStructure);
-int EnergyMatrixUpdateForCataCons(EnergyMatrix* pMatrix, RotamerList* pList, CataConsSitePair* pSitePair, Structure* pStructure);
-int EnergyMatrixUpdateForCataConsArray(EnergyMatrix* pMatrix, RotamerList* pList, CataConsSitePairArray* pSitePairArray, Structure* pStructure);
-int DesignSiteShowRotamerTypeAndCount(RotamerList* pList, Structure* pStructure, StringArray** ppRotamerType, IntArray** ppRotamerCount);
+int SequenceRandomSiteIndex(int* mutSiteNdx, int desSiteNum);
+int SequenceRandRotamerIndex(Structure* pStruct, RotamerList* pList, StringArray** ppRotTypes, IntArray** ppRotNums, int siteNdx, int* rotNdx);
+int SequenceUpdateSingleSite(Sequence* pSeq, int mutSiteNdx, int mutRotNdx);
 
-int SequenceRandomSiteIndex(int* mutSiteIndex, int designSiteCount);
-int SequenceRandRotamerIndex(Structure* pStructure, RotamerList* pList, StringArray** ppRotamerType, IntArray** ppRotamerCount, int siteIndex, int* rotIndex);
-int SequenceUpdateSingleSite(Sequence* pThis, int mutationSiteIndex, int mutationRotamerIndex);
+int SequenceGenRandomSeed(Sequence* pSeq, RotamerList* pList);
+int SequenceGenInitialSeqSeed(Sequence* pSeq, Structure* pStruct, RotamerList* pList);
+int SequenceGenNativeSeqSeed(Sequence* pSeq, Structure* pStruct, RotamerList* pList);
 
-int SequenceGenRandomSeed(Sequence* pThis, RotamerList* pList);
-int SequenceGenInitialSeqSeed(Structure* pStructure, RotamerList* pList, Sequence* pThis);
-int SequenceGenNativeSeqSeed(Structure* pStructure, RotamerList* pList, Sequence* pSequence);
+int SequenceCalcTemplateEnergy(Sequence* pSeq, Structure* pStruct, double *energyTerms, double* energyTermsBind);
+int SequenceCalcEnergy(Sequence* pSeq, Structure* pStruct, Sequence** ppSavedSeqs, int numSavedSeqs);
+int SequenceCalcEnergyWithCataCons(Sequence* pSeq, Structure* pStruct, CataConsSitePairArray* pConsArray, Sequence** ppSavedSeqs, int numSavedSeqs);
+int SequenceCalcEnergyChangeUponSingleMutation(Sequence* pSeq, Structure* pStruct, int mutSiteNdx, int mutRotNdx, double* dtot, double* dphy, double* dbin, double* devo, int* nmutsAfter, Sequence** ppSavedSeqs, int numSavedSeqs, BOOL* isSeqSameAsSaved);
+int SequenceCalcEnergyChangeUponSingleMutationWithCataCons(Sequence* pSeq, Structure* pStruct, CataConsSitePairArray* pConsArray, int mutSiteNdx, int mutRotNdx, double* dtot, double* dphy, double* dbin, double* devo, int* dcons, int* nmutsAfter, Sequence** ppSavedSeqs, int numSavedSeqs, BOOL* isSeqSameAsSaved);
 
-int SequenceTemplateEnergy(Structure* pStructure, Sequence* pSequence, double energyTerms[MAX_ENERGY_TERM], double energyTermsBind[MAX_ENERGY_TERM]);
-int SequenceEnergy(Structure* pStructure, Sequence* pSequence);
-int EnergyDifferenceUponSingleMutation(Structure* pStructure, Sequence* pSequence, int mutSiteIndex, int mutRotIndex, double* dtot, double* dphy, double* dbin, double* devo);
-int Metropolis(Sequence* pOld, Sequence* pBest, Structure* pStructure, RotamerList* pList, StringArray** ppRotamerType, IntArray** ppRotamerCount, int* seqIndex, double temp, int stepCount, FILE* fp, FILE* fp2);
-int SequenceEnergyWithCataCons(Structure* pStructure, Sequence* pSequence, CataConsSitePairArray* pConsArray);
-int EnergyChangeUponSingleMutationWithCataCons(Structure* pStruct, Sequence* pSeq, int mutSiteIndex, int mutRotIndex, double* dtot, double* dphy, double* dbin, double* devo, int* dcons, CataConsSitePairArray* pConsArray);
-int MetropolisWithCataCons(Sequence* pOld, Sequence* pBest, Structure* pStructure, RotamerList* pList, StringArray** ppRotamerType, IntArray** ppRotamerCount, int* seqIndex, double temp, int stepCount, FILE* pFileRot, FILE* pFileSeq, CataConsSitePairArray* pConsArray);
+int SequenceCalcNumOfMutations(Sequence* pSeq, Structure* pStruct);
+int SequenceCalcNumOfMutationsUponSingleMutation(Sequence* pSeq, Structure* pStruct, int mutSiteNdx, int mutRotNdx);
+double EnergyPenaltyForOutOfRangeMutations(int count);
+BOOL SequenceIsSameAsSavedSequences(Sequence* pSeq, Structure* pStruct, Sequence** ppSavedSeqs, int numSavedSeqs);
+BOOL SequenceIsSameAsSavedSequencesUponSingleMutation(Sequence* pSeq, Structure* pStruct, int mutSiteNdx, int mutRotNdx, Sequence** ppSavedSeqs, int numSavedSeqs);
 
-int SimulatedAnnealing(Structure* pStructure, RotamerList* pList);
+int Metropolis(Sequence* pSeq, Sequence* pBest, Structure* pStruct, RotamerList* pList, StringArray** ppRotTypes, IntArray** ppRotNums, double T, int stepNum, Sequence** ppSavedSeqs, int numSavedSeqs);
+int MetropolisWithCataCons(Sequence* pSeq, Sequence* pBest, Structure* pStruct, CataConsSitePairArray* pConsArray, RotamerList* pList, StringArray** ppRotTypes, IntArray** ppRotNums, double T, int stepNum, Sequence** ppSavedSeqs, int numSavedSeqs);
+int SimulatedAnnealing(Structure* pStruct, RotamerList* pList);
 
 #endif

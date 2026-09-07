@@ -20,7 +20,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Structure.h"
 #include "EnergyFunction.h"
 
-#define  MAX_SEQ_LEN  2000
+#define  MAX_LEN_SEQ  3000
 
 typedef struct _Sequence
 {
@@ -29,23 +29,25 @@ typedef struct _Sequence
   double        ebin;
   double        eevo;
   double        ebpf;
-  int           desSiteCount;
+  int           desSiteNum;
   IntArray      rotNdxs;
-  int           numOfUnsatisfiedCons;
-  char          fileToSaveThisSeq[MAX_LEN_FILE_NAME + 1];
+  int           unmetConsNum;
+  int           mutNum;
+  BOOL          seqExist;
+  char          pdbToSaveSeq[MAX_LEN_FILE_NAME+1];
 } Sequence;
 
 int SequenceCreate(Sequence* pThis);
 int SequenceDestroy(Sequence* pThis);
 int SequenceCopy(Sequence* pThis, Sequence* pOther);
-int SequenceWriteDesignRotamer(Sequence* pThis, Structure* pStructure, int index, FILE* pFile);
-int SequenceWriteDesignFasta(Sequence* pThis, Structure* pStructure, int index, FILE* pFile);
-
-int DesignShowMinEnergyDesignStructure(Structure* pStructure, Sequence* pSeq, char* pdbfile);
-int DesignShowMinEnergyDesignSites(Structure* pStructure, Sequence* pSeq, char* pdbfile);
-int DesignShowMinEnergyDesignMutableSites(Structure* pStructure, Sequence* sequence, char* pdbfile);
-int DesignShowMinEnergyDesignLigand(Structure* pStructure, Sequence* sequence, char* mol2file);
-int StructureGetWholeSequence(Structure* pStructure, Sequence* sequence, char* seq);
-int StructureWriteFirstLigandRotamerIntoMol2(Structure* pStructure, char* mol2file);
+int SequenceWriteRotamerIndex(Sequence* pThis, Structure* pStruct, int index, FILE* pFile);
+int SequenceWriteDesignSummaryToFile(Sequence* pThis, Structure* pStruct, int ndx, FILE* pFile);
+int SequenceWriteDesignSequenceToFile(Sequence* pSeq, Structure* pStruct, int ndx, FILE* pFile);
+int SequenceWriteStructureInPDB(Sequence* pSeq, Structure* pStruct, char* file);
+int SequenceWriteAllSitesInPDB(Sequence* pSeq, Structure* pStruct, char* file);
+int SequenceWriteMutableSitesInPDB(Sequence* pSeq, Structure* pStruct, char* file);
+int StructureWriteFirstLigandRotamerIntoMol2(Structure* pStruct, char* file);
+int SequenceWriteLigandInMol2(Sequence* pSeq, Structure* pStruct, char* file);
+int StructureGetWholeSequence(Sequence* pSeq, Structure* pStruct, char* seqstr);
 
 #endif // SEQUENCE_H

@@ -24,8 +24,8 @@ typedef enum _Type_AtomPolarity
 {
   Type_AtomPolarity_P,
   Type_AtomPolarity_C,
-  Type_AtomPolarity_NPAliphatic,
-  Type_AtomPolarity_NPAromatic
+  Type_AtomPolarity_NPAL, // Aliphatic
+  Type_AtomPolarity_NPAR  // Aromatic
 } Type_AtomPolarity;
 
 typedef enum _Type_AtomHydrogen
@@ -49,20 +49,20 @@ typedef enum _Type_AtomHybridType
 typedef struct _Atom
 {
   XYZ xyz;
-  double vdw_epsilon;
-  double vdw_radius;
+  double vdw_eps;
+  double vdw_rad;
   double charge;
   int    EEF1_atType;
   double EEF1_volume;
-  double EEF1_lamda_;
+  double EEF1_lamda;
   double EEF1_freeDG;
 
-  char name[MAX_LEN_ATOM_NAME + 1];
-  char type[MAX_LEN_ATOM_TYPE + 1];
-  char hbHorA[MAX_LEN_ATOM_DONOR + 1];
-  char hbDorB[MAX_LEN_ATOM_ACCEPTOR + 1];
-  char hbB2[MAX_LEN_ATOM_ACCEPTOR + 1];
-  char chainName[MAX_LEN_CHAIN_NAME + 1];
+  char name[MAX_LEN_ATOM_NAME+1];
+  char type[MAX_LEN_ATOM_TYPE+1];
+  char hbHorA[MAX_LEN_ATOM_DONOR+1];
+  char hbDorB[MAX_LEN_ATOM_ACCEPTOR+1];
+  char hbB2[MAX_LEN_ATOM_ACCEPTOR+1];
+  char chnName[MAX_LEN_CHAIN_NAME+1];
   int  posInChain;
   Type_AtomPolarity polarity;
   Type_AtomHybridType hybridType;
@@ -105,10 +105,10 @@ typedef struct _AtomArray
 int AtomArrayCreate(AtomArray* pThis);
 int AtomArrayDestroy(AtomArray* pThis);
 int AtomArrayCopy(AtomArray* pThis, AtomArray* pOther);
-int AtomArrayGetCount(AtomArray* pThis);
+int AtomArrayGetNum(AtomArray* pThis);
 Atom* AtomArrayGet(AtomArray* pThis, int index);
 Atom* AtomArrayGetByName(AtomArray* pThis, char* atomName);
-int AtomArrayFind(AtomArray* pThis, char* atomName, int* pIndex);
+int AtomArrayFind(AtomArray* pThis, char* atomName, int* pNdx);
 int AtomArrayInsert(AtomArray* pThis, int index, Atom* pNewAtom);
 int AtomArrayRemove(AtomArray* pThis, int index);
 int AtomArrayRemoveByName(AtomArray* pThis, char* atomName);
@@ -116,6 +116,6 @@ int AtomArrayAppend(AtomArray* pThis, Atom* pNewAtom);
 double AtomArrayCalcTotalCharge(AtomArray* pThis);
 double AtomArrayCalcMinDistance(AtomArray* pThis, AtomArray* pOther);
 BOOL AtomArrayAllAtomXYZAreValid(AtomArray* pThis);
-int AtomArrayShowInPDBFormat(AtomArray* pThis, char* header, char* resiName, char* chainName, int atomIndex, int resiIndex, FILE* pFile);
+int AtomArrayShowInPDBFormat(AtomArray* pThis, char* header, char* resName, char* chnName, int atomNdx, int resNdx, FILE* pOut);
 int AtomCopyParameter(Atom* pThis, Atom* pOther);
 #endif // ATOM_H

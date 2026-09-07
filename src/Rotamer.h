@@ -20,28 +20,13 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Atom.h"
 #include "Residue.h"
 
-typedef struct _BBindRotamerLib
-{
-  StringArray resTypeNames;
-  IntArray    rotCounts;
-  DoubleArray** torsions;
-} BBindRotamerLib;
-
-int BBindRotamerLibCreate(BBindRotamerLib* pThis, char* rotlibFile);
-int BBindRotamerLibDestroy(BBindRotamerLib* pThis);
-int BBindRotamerLibGetCount(BBindRotamerLib* pThis, char* typeName);
-int BBindRotamerLibGet(BBindRotamerLib* pThis, char* typeName, int index, DoubleArray* pDestTorsion);
-int BBindRotamerLibShow(BBindRotamerLib* pThis);
-int BBindRotamerLibTester(char* rotlibFile);
-
-
 typedef struct _Rotamer
 {
   AtomArray atoms;
-  BondSet bonds;
+  Bonds bonds;
   XYZArray xyzs;
-  char type[MAX_LEN_RES_NAME + 1];
-  char chainName[MAX_LEN_CHAIN_NAME + 1];
+  char type[MAX_LEN_RES_NAME+1];
+  char chainName[MAX_LEN_CHAIN_NAME+1];
   int  posInChain;
   double vdwBackbone;
   double vdwInternal;
@@ -69,12 +54,12 @@ BOOL RotamerAndRotamerInSameType(Rotamer* pThis, Rotamer* pOther);
 BOOL RotamerAndResidueInSameType(Rotamer* pThis, Residue* pOther);
 
 // These functions below are valid only when Rotamer is restored
-int RotamerGetAtomCount(Rotamer* pThis);
+int RotamerGetAtomNum(Rotamer* pThis);
 Atom* RotamerGetAtom(Rotamer* pThis, int index);
 Atom* RotamerGetAtomByName(Rotamer* pThis, char* atomName);
 int RotamerFindAtom(Rotamer* pThis, char* atomName, int* index);
 int RotamerAddAtoms(Rotamer* pThis, AtomArray* pNewAtoms);
-BondSet* RotamerGetBonds(Rotamer* pThis);
+Bonds* RotamerGetBonds(Rotamer* pThis);
 
 typedef enum _Type_ProteinAtomOrder
 {
@@ -91,11 +76,11 @@ int Type_ProteinAtomOrder_ToInt(Type_ProteinAtomOrder order);
 Type_ProteinAtomOrder Type_ProteinAtomOrder_FromInt(int order);
 Type_ProteinAtomOrder Type_ProteinAtomOrder_JudgedByAtomName(char* atomName);
 
-int RotamerOfProteinInitAtomsAndBonds_Charmm19(Rotamer* pThis, Residue* pResi, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int RotamerOfProteinInitAtomsAndBonds_Charmm22(Rotamer* pThis, Residue* pResi, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int RotamerOfProteinPatch(Rotamer* pThis, char* patchType, AtomParamsSet* atomParams, ResiTopoSet* resiTopo);
-int RotamerOfProteinCalcXYZ(Rotamer* pThis, Residue* pResi, char* patchName, DoubleArray* torsions, ResiTopoSet* resiTopos);
-int RotamerOfProteinGenerate(Rotamer* pThis, Residue* pResi, char* rotamerType, char* patchType, DoubleArray* torsions, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
+int RotamerOfProteinInitAtomsAndBonds_Charmm19(Rotamer* pThis, Residue* pResi, AtomParams* atomParams, ResTopos* resiTopos);
+int RotamerOfProteinInitAtomsAndBonds_Charmm22(Rotamer* pThis, Residue* pResi, AtomParams* atomParams, ResTopos* resiTopos);
+int RotamerOfProteinPatch(Rotamer* pThis, char* patchType, AtomParams* atomParams, ResTopos* resiTopo);
+int RotamerOfProteinCalcXYZ(Rotamer* pThis, Residue* pResi, char* patchName, DoubleArray* torsions, ResTopos* resiTopos);
+int RotamerOfProteinGenerate(Rotamer* pThis, Residue* pResi, char* rotamerType, char* patchType, DoubleArray* torsions, AtomParams* atomParams, ResTopos* resiTopos);
 int RotamerShowInPDBFormat(Rotamer* pThis, char* header, char* chainName, int atomIndex, int resiIndex, FILE* pFile);
 int RotamerShowAtomParameter(Rotamer* pThis);
 
@@ -105,67 +90,66 @@ double RotamerAndResidueSidechainRMSD(Rotamer* pThis, Residue* pOther);
 
 
 
-typedef struct _RotamerSet
+typedef struct _Rotamers
 {
-  Rotamer* rotamers;
-  Rotamer* representatives;
-  int count;
+  Rotamer* rots;
+  Rotamer* reps; // representative rotamers
+  int num;
   int capacity;
-  int representativeCount;
-} RotamerSet;
+  int repNum;
+} Rotamers;
 
-int RotamerSetCreate(RotamerSet* pThis);
-int RotamerSetDestroy(RotamerSet* pThis);
-int RotamerSetCopy(RotamerSet* pThis, RotamerSet* pOther);
-int RotamerSetGetCount(RotamerSet* pThis);
-Rotamer* RotamerSetGet(RotamerSet* pThis, int index);
-Rotamer* RotamerSetGetRepresentative(RotamerSet* pThis, char* type);
-int RotamerSetAdd(RotamerSet* pThis, Rotamer* pNewRotamer);
-int RotamerSetOfProteinGenerate(RotamerSet* pThis, Residue* pResi, StringArray* designTypes, StringArray* patchTypes, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopo);
-int RotamerSetShow(RotamerSet* pThis, FILE* pFile);
+int RotamersCreate(Rotamers* pThis);
+int RotamersDestroy(Rotamers* pThis);
+int RotamersCopy(Rotamers* pThis, Rotamers* pOther);
+int RotamersGetNum(Rotamers* pThis);
+Rotamer* RotamersGet(Rotamers* pThis, int index);
+Rotamer* RotamersGetRepByIndex(Rotamers* pThis, int index);
+Rotamer* RotamersFindRep(Rotamers* pThis, char* type);
+int RotamersAdd(Rotamers* pThis, Rotamer* pNewRotamer);
+int RotamersShow(Rotamers* pThis, FILE* pFile);
 
 int RotamerExtract(Rotamer* pThis);
-int RotamerRestore(Rotamer* pThis, RotamerSet* pRotamerSet);
-int RotamerSetGetRepresentativeCount(RotamerSet* pThis);
-Rotamer* RotamerSetGetRepresentativeByIndex(RotamerSet* pThis, int index);
+int RotamerRestore(Rotamer* pThis, Rotamers* pRots);
+int RotamersGetRepNum(Rotamers* pThis);
 int RotamerShowBondInformation(Rotamer* pThis);
 
 
 typedef struct _RotLibPhiPsi
 {
   StringArray rotTypes;
-  IntArray    rotamerCounts;
-  DoubleArray** torsions;
-  DoubleArray** deviations;
-  DoubleArray* probability;
+  IntArray    rotNums;
+  DoubleArray** tors;
+  DoubleArray** devs;
+  DoubleArray* prob;
   double phi;
   double psi;
 }RotLibPhiPsi;
 
 int RotLibPhiPsiCreate(RotLibPhiPsi* pThis);
 int RotLibPhiPsiDestroy(RotLibPhiPsi* pThis);
-int RotLibPhiPsiGetCount(RotLibPhiPsi* pThis, char* typeName);
+int RotLibPhiPsiGetNum(RotLibPhiPsi* pThis, char* typeName);
 int RotLibPhiPsiGet(RotLibPhiPsi* pThis, char* typeName, int index, DoubleArray* pDestTorsion, double* probability);
 
 
-typedef struct _BBdepRotamerLib
+typedef struct _BBdepRotLib
 {
-  int phipsicount;
-  RotLibPhiPsi* rotlibphipsis;
-}BBdepRotamerLib;
+  int num; // number of Phi-
+  RotLibPhiPsi* pps; // Phi-Psi's
+}BBdepRotLib;
 
 
-int BBdepRotamerLibCreate(BBdepRotamerLib* pRotLib, char* rotlibfile);
-int BBdepRotamerLibCreate2(BBdepRotamerLib* pRotLib, char* binlibfile);
-int BBdepRotamerLibDestroy(BBdepRotamerLib* pThis);
-int RotamerOfProteinGenerateByBBdepRot(Rotamer* pThis, Residue* pResi, char* rotamerType, char* patchType, DoubleArray* torsions, AtomParamsSet* atomParams, ResiTopoSet* resiTopos);
-int RotamerSetOfProteinGenerateByBBdepRotLib(RotamerSet* pThis, Residue* pResi, StringArray* designTypes, StringArray* patchTypes, BBdepRotamerLib* bbrotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopo);
+int BBdepRotamerLibCreate(BBdepRotLib* pRotLib, char* rotlibfile);
+int BBdepRotamerLibCreate2(BBdepRotLib* pRotLib, char* binlibfile);
+int BBdepRotamerLibDestroy(BBdepRotLib* pThis);
+int RotamerOfProteinGenerateByBBdepRot(Rotamer* pThis, Residue* pResi, char* rotamerType, char* patchType, DoubleArray* torsions, AtomParams* atomParams, ResTopos* resiTopos);
+int RotamerSetOfProteinGenerateByBBdepRotLib(Rotamers* pThis, Residue* pResi, StringArray* designTypes, StringArray* patchTypes, BBdepRotLib* bbrotlib, AtomParams* atomParams, ResTopos* resiTopo);
 int RotamerCalcDunbrackEnergy(Rotamer* pThis, double probability);
 
 
 BOOL RotamerAndResidueWithSimilarTorsions(Rotamer* pThis, Residue* pOther, double cutoff);
-int ResidueCalcSidechainTorsion(Residue* pThis, ResiTopoSet* pTopos);
-Rotamer* RotamerSetFindFirstGivenTypeRotamer(RotamerSet* pThis, char* type);
+int ResidueCalcSidechainTorsion(Residue* pThis, ResTopos* pTopos);
+Rotamer* RotamerSetFindFirstGivenTypeRotamer(Rotamers* pThis, char* type);
 
 BOOL RotamerIsSymmetricalCheck(Rotamer* pRotamer);
 int SymmetricalRotamerGenerate(Rotamer* pSymmetrical, Rotamer* pRotamer);

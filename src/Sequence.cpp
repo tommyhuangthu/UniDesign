@@ -21,222 +21,316 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 #include <ctype.h>
 
-extern double CUT_TORSION_DEVIATION;
-extern char MOL2[MAX_LEN_FILE_NAME + 1];
-extern char DES_CHAINS[MAX_LEN_ONE_LINE_CONTENT + 1];
+extern double TORSION_DEVIATION_THRESHOLD;
+extern char MOL2[MAX_LEN_FILE_NAME+1];
+extern char DES_CHAINS[MAX_LEN_ONE_LINE_CONTENT+1];
+
+extern BOOL FLAG_DESIGN_MON;
+extern BOOL FLAG_DESIGN_PPI;
+extern BOOL FLAG_DESIGN_PLI;
+extern BOOL FLAG_DESIGN_ENZ;
+extern BOOL FLAG_WRITE_MUTATIONS;
 
 int SequenceCreate(Sequence* pThis)
 {
-  pThis->desSiteCount = 0;
+  pThis->desSiteNum = 0;
   pThis->etot = 0;
   pThis->eevo = 0;
   pThis->ephy = 0;
   pThis->ebin = 0;
   pThis->ebpf = 0;
+  pThis->mutNum = -1;
+  pThis->seqExist = FALSE;
+  pThis->unmetConsNum = 0;
   IntArrayCreate(&pThis->rotNdxs, 0);
-  pThis->numOfUnsatisfiedCons = 0;
-  strcpy(pThis->fileToSaveThisSeq, "None");
+  strcpy(pThis->pdbToSaveSeq, "None");
   return Success;
 }
 
 
 int SequenceDestroy(Sequence* pThis)
 {
-  pThis->desSiteCount = 0;
+  pThis->desSiteNum = 0;
   pThis->etot = 0;
   pThis->eevo = 0;
   pThis->ephy = 0;
   pThis->ebin = 0;
   pThis->ebpf = 0;
+  pThis->mutNum = -1;
+  pThis->seqExist = FALSE;
+  pThis->unmetConsNum = 0;
   IntArrayDestroy(&pThis->rotNdxs);
-  pThis->numOfUnsatisfiedCons = 0;
   return Success;
 }
 
 
 int SequenceCopy(Sequence* pThis, Sequence* pOther)
 {
-  pThis->desSiteCount = pOther->desSiteCount;
+  pThis->desSiteNum = pOther->desSiteNum;
   pThis->etot = pOther->etot;
   pThis->ephy = pOther->ephy;
   pThis->ebin = pOther->ebin;
   pThis->eevo = pOther->eevo;
   pThis->ebpf = pOther->ebpf;
+  pThis->mutNum = pOther->mutNum;
+  pThis->seqExist = pOther->seqExist;
+  pThis->unmetConsNum = pOther->unmetConsNum;
   IntArrayCopy(&pThis->rotNdxs, &pOther->rotNdxs);
-  pThis->numOfUnsatisfiedCons = pOther->numOfUnsatisfiedCons;
-  strcpy(pThis->fileToSaveThisSeq, pOther->fileToSaveThisSeq);
+  strcpy(pThis->pdbToSaveSeq, pOther->pdbToSaveSeq);
   return Success;
 }
 
 
-int SequenceWriteDesignRotamer(Sequence* pThis, Structure* pStructure, int seqIdx, FILE* pFile)
+int SequenceWriteRotamerIndex(Sequence* pSeq, Structure* pStruct, int ndx, FILE* pFile)
 {
   BOOL firstchain = TRUE;
-  int flagIndex = -1;
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  int iniChainNdx = -1;
+  for (int i = 0;i < StructureGetChainNum(pStruct);i++) 
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain* pChain = StructureGetChain(pStruct, i);
+    for (int j = 0;j < ChainGetResidueNum(pChain);j++) 
     {
-      int siteIdx = StructureGetDesignSiteIndex(pStructure, i, j);
-      if (siteIdx == -1) continue;
-      DesignSite* pSite = StructureGetDesignSite(pStructure, siteIdx);
-      RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-      int rotIdx = IntArrayGet(&pThis->rotNdxs, siteIdx);
-      if (i != flagIndex)
+      int siteNdx = StructureGetDesignSiteIndex(pStruct, i, j);
+      if (siteNdx == -1)
       {
-        if (firstchain)
+        continue;
+      }
+      DesignSite* pSite = StructureGetDesignSite(pStruct, siteNdx);
+      Rotamers* pSet = DesignSiteGetRotamers(pSite);
+      int rotNdx = IntArrayGet(&pSeq->rotNdxs, siteNdx);
+      if (i != iniChainNdx) 
+      {
+        if (firstchain) 
         {
-          fprintf(pFile, "%d", rotIdx);
+          fprintf(pFile, "%d", rotNdx);
           firstchain = FALSE;
         }
-        else fprintf(pFile, ";%d", rotIdx);
-        flagIndex = i;
+        else
+        {
+          fprintf(pFile, ";%d", rotNdx);
+        }
+        iniChainNdx = i;
       }
-      else fprintf(pFile, ",%d", rotIdx);
+      else
+      {
+        fprintf(pFile, ",%d", rotNdx);
+      }
     }
   }
-  fprintf(pFile, " %d\n", seqIdx);
+  fprintf(pFile, " %d\n", ndx);
   return Success;
 }
 
 
-int SequenceWriteDesignFasta(Sequence* pThis, Structure* pStructure, int seqIdx, FILE* pFile)
+int SequenceWriteDesignSummaryToFile(Sequence* pSeq, Structure* pStruct, int ndx, FILE* pFile)
 {
   BOOL firstchain = TRUE;
-  int chainFlag = -1;
-  int totResCount = 0;
-  int samResCount = 0;
-  for (int i = 0; i < StructureGetChainCount(pStructure);i++)
+  int iniChainNdx = -1;
+  int mutResNum = 0;
+  int sameResNum = 0;
+  char mutStr[2*MAX_LEN_FILE_NAME+1] = "";
+  BOOL firstMut = TRUE;
+  for (int i = 0; i < StructureGetChainNum(pStruct);i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    if (!strstr(DES_CHAINS, ChainGetName(pChain))) continue;
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain* pChain = StructureGetChain(pStruct, i);
+    if (!strstr(DES_CHAINS, ChainGetName(pChain)))
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      char res = AA3ToAA1(ResidueGetName(pResi));
-      int siteIdx = StructureGetDesignSiteIndex(pStructure, i, j);
-      if (siteIdx == -1)
+      continue;
+    }
+    for (int j = 0;j < ChainGetResidueNum(pChain);j++)
+    {
+      Residue* pRes = ChainGetResidue(pChain, j);
+      char res = AA3ToAA1(ResidueGetName(pRes));
+      int siteNdx = StructureGetDesignSiteIndex(pStruct, i, j);
+      if (siteNdx == -1) 
+      { // current site is fixed (not a design site)
+        continue;
+      }
+      DesignSite* pSite = StructureGetDesignSite(pStruct, siteNdx);
+      Rotamers* pSet = DesignSiteGetRotamers(pSite);
+      int rotIdx = IntArrayGet(&pSeq->rotNdxs, siteNdx);
+      Rotamer* pRot = RotamersGet(pSet, rotIdx);
+      char rot = AA3ToAA1(RotamerGetType(pRot));
+      if (ChainGetType(pChain) == Type_Chain_Protein && ResidueGetDesignType(pRes) == Type_DesType_Mutable) 
       {
-        if (i != chainFlag)
+        if (rot == res)
         {
-          if (firstchain)
+          sameResNum++;
+        }
+        else 
+        {
+          if (FLAG_DESIGN_PLI || FLAG_DESIGN_ENZ || FLAG_WRITE_MUTATIONS) 
           {
-            if (ChainGetType(pChain) == Type_Chain_Protein)
+            if (firstMut == TRUE) 
             {
-              fprintf(pFile, "%c", res);
+              sprintf(mutStr, "%s%c%c%d%c", mutStr, res, ResidueGetChainName(pRes)[0], ResidueGetPosInChain(pRes), rot);
+              firstMut = FALSE;
             }
+            else 
+            {
+              sprintf(mutStr, "%s,%c%c%d%c", mutStr, res, ResidueGetChainName(pRes)[0], ResidueGetPosInChain(pRes), rot);
+            }
+          }
+        }
+        mutResNum++;
+      }
+    }
+  }
+
+  if(strcmp(mutStr, "") == 0)
+  {
+    strcpy(mutStr, "Wildtype");
+  }
+
+  double seq_identity = (mutResNum > 0 ? (double)sameResNum / mutResNum : 1.0);
+  if (FLAG_DESIGN_PLI || FLAG_DESIGN_ENZ || FLAG_WRITE_MUTATIONS) 
+  {
+    fprintf(pFile, "%s\t%f\t%f\t%f\t%f\t%f\t%d\t%d\t%d\t%s\n",
+      pSeq->pdbToSaveSeq, seq_identity, pSeq->etot, pSeq->eevo, pSeq->ephy, pSeq->ebin, pSeq->unmetConsNum, pSeq->mutNum, pSeq->seqExist, mutStr);
+  }
+  else 
+  {
+    fprintf(pFile, "%s\t%f\t%f\t%f\t%f\t%f\t%d\t%d\t%d\t%s\n",
+      pSeq->pdbToSaveSeq, seq_identity, pSeq->etot, pSeq->eevo, pSeq->ephy, pSeq->ebin, pSeq->unmetConsNum, pSeq->mutNum, pSeq->seqExist, "mutations_not_shown");
+  }
+
+  return Success;
+}
+
+
+int SequenceWriteDesignSequenceToFile(Sequence* pSeq, Structure* pStruct, int ndx, FILE* pFile)
+{
+  BOOL firstchain = TRUE;
+  int iniChainNdx = -1;
+  char fullSeq[MAX_LEN_ONE_LINE_CONTENT+1] = "";
+  char mutSeq[MAX_LEN_ONE_LINE_CONTENT+1] = "";
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++) 
+  {
+    Chain* pChain = StructureGetChain(pStruct, i);
+    if (!strstr(DES_CHAINS, ChainGetName(pChain)))
+    {
+      continue;
+    }
+    if (ChainGetType(pChain) != Type_Chain_Protein)
+    {
+      continue;
+    }
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++) 
+    {
+      Residue* pRes = ChainGetResidue(pChain, j);
+      char res = AA3ToAA1(ResidueGetName(pRes));
+      int siteNdx = StructureGetDesignSiteIndex(pStruct, i, j);
+      if (siteNdx == -1) 
+      { // current site is fixed (not design site)
+        if (i != iniChainNdx) 
+        {
+          if (firstchain) 
+          {
+            sprintf(fullSeq, "%s%c", fullSeq, res);
             firstchain = FALSE;
           }
           else
           {
-            if (ChainGetType(pChain) == Type_Chain_Protein)
-            {
-              fprintf(pFile, ";%c", res);
-            }
+            sprintf(fullSeq, "%s;%c", fullSeq, res);
           }
-          chainFlag = i;
+          iniChainNdx = i;
         }
-        else
+        else 
         {
-          if (ChainGetType(pChain) == Type_Chain_Protein)
-          {
-            fprintf(pFile, "%c", res);
-          }
+          sprintf(fullSeq, "%s%c", fullSeq, res);
         }
         continue;
       }
-
-      DesignSite* pSite = StructureGetDesignSite(pStructure, siteIdx);
-      RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-      int rotIdx = IntArrayGet(&pThis->rotNdxs, siteIdx);
-      Rotamer* pRot = RotamerSetGet(pSet, rotIdx);
+      DesignSite* pSite = StructureGetDesignSite(pStruct, siteNdx);
+      Rotamers* pSet = DesignSiteGetRotamers(pSite);
+      int rotIdx = IntArrayGet(&pSeq->rotNdxs, siteNdx);
+      Rotamer* pRot = RotamersGet(pSet, rotIdx);
       char rot = AA3ToAA1(RotamerGetType(pRot));
-
-      if (i != chainFlag)
+      if (i != iniChainNdx) 
       {
-        if (firstchain)
+        if (firstchain) 
         {
-          if (ChainGetType(pChain) == Type_Chain_Protein)
-          {
-            fprintf(pFile, "%c", rot);
+          sprintf(fullSeq, "%s%c", fullSeq, rot);
+          if (ResidueGetDesignType(pRes) == Type_DesType_Mutable)
+          { 
+            sprintf(mutSeq, "%s%c", mutSeq, rot);
           }
           firstchain = FALSE;
         }
-        else
+        else 
         {
-          if (ChainGetType(pChain) == Type_Chain_Protein)
+          sprintf(fullSeq, "%s;%c", fullSeq, rot);
+          if (ResidueGetDesignType(pRes) == Type_DesType_Mutable)
           {
-            fprintf(pFile, ";%c", rot);
+            sprintf(mutSeq, "%s;%c", mutSeq, rot);
           }
         }
-        chainFlag = i;
+        iniChainNdx = i;
       }
-      else
-      {
-        if (ChainGetType(pChain) == Type_Chain_Protein)
+      else {
+        sprintf(fullSeq, "%s%c", fullSeq, rot);
+        if (ResidueGetDesignType(pRes) == Type_DesType_Mutable) 
         {
-          fprintf(pFile, "%c", rot);
+          sprintf(mutSeq, "%s%c", mutSeq, rot);
         }
-      }
-
-      if (ChainGetType(pChain) == Type_Chain_Protein && ResidueGetDesignType(pResi) == Type_DesType_Mutable)
-      {
-        if (rot == res) samResCount++;
-        totResCount++;
       }
     }
   }
-  double seqid = (totResCount > 0 ? (double)samResCount / totResCount : 1.0);
-  fprintf(pFile, " %50s %13.6f %13.6f %13.6f %13.6f %13.6f %13d\n",
-    pThis->fileToSaveThisSeq, seqid, pThis->etot, pThis->eevo, pThis->ephy, pThis->ebin, pThis->numOfUnsatisfiedCons);
+  if (FLAG_DESIGN_PLI || FLAG_DESIGN_ENZ || FLAG_WRITE_MUTATIONS)
+  {
+    fprintf(pFile, "%s\t%s\t%s\n", pSeq->pdbToSaveSeq, fullSeq, mutSeq);
+  }
+  else
+  {
+    fprintf(pFile, "%s\t%s\t%s\n", pSeq->pdbToSaveSeq, fullSeq, "N.A.");
+  }
 
   return Success;
 }
 
 
-int DesignShowMinEnergyDesignStructure(Structure* pStructure, Sequence* pSeq, char* pdbfile)
+int SequenceWriteStructureInPDB(Sequence* pSeq, Structure* pStruct, char* file)
 {
   int result = Success;
-  char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
-  FILE* pFile = fopen(pdbfile, "w");
-  if (pFile == NULL)
+  char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
+  FILE* pFile = fopen(file, "w");
+  if (pFile == NULL) 
   {
     result = IOError;
-    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, pdbfile);
+    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, file);
     TraceError(errMsg, result);
     return result;
   }
-  for (int i = 0; i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct);i++) 
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain* pChain = StructureGetChain(pStruct, i);
+    for (int j = 0;j < ChainGetResidueNum(pChain);j++) 
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      if (pResi->desType == Type_DesType_Fixed)
+      Residue* pRes = ChainGetResidue(pChain, j);
+      if (pRes->desType == Type_DesType_Fixed) 
       {
-        if (ChainGetType(pChain) == Type_Chain_Protein || ChainGetType(pChain) == Type_Chain_DNA || ChainGetType(pChain) == Type_Chain_RNA)
+        if (ChainGetType(pChain) == Type_Chain_Protein || ChainGetType(pChain) == Type_Chain_DNA || ChainGetType(pChain) == Type_Chain_RNA) 
         {
-          ResidueShowInPDBFormat(pResi, "ATOM", ResidueGetChainName(pResi), 1, ResidueGetPosInChain(pResi), pFile);
+          ResidueShowInPDBFormat(pRes, "ATOM", ResidueGetChainName(pRes), 1, ResidueGetPosInChain(pRes), pFile);
         }
-        else if (ChainGetType(pChain) != Type_Chain_SmallMol)
+        else if (ChainGetType(pChain) != Type_Chain_SmallMol) 
         {
-          ResidueShowInPDBFormat(pResi, "HETATM", ResidueGetChainName(pResi), 1, ResidueGetPosInChain(pResi), pFile);
+          ResidueShowInPDBFormat(pRes, "HETATM", ResidueGetChainName(pRes), 1, ResidueGetPosInChain(pRes), pFile);
         }
       }
-      else
+      else 
       {
-        int siteIdx = StructureGetDesignSiteIndex(pStructure, i, j);
-        DesignSite* pSite = StructureGetDesignSite(pStructure, siteIdx);
-        RotamerSet* pSet = DesignSiteGetRotamers(pSite);
+        int siteIdx = StructureGetDesignSiteIndex(pStruct, i, j);
+        DesignSite* pSite = StructureGetDesignSite(pStruct, siteIdx);
+        Rotamers* pSet = DesignSiteGetRotamers(pSite);
         int rotIdx = IntArrayGet(&pSeq->rotNdxs, siteIdx);
-        Rotamer* pRot = RotamerSetGet(pSet, rotIdx);
+        Rotamer* pRot = RotamersGet(pSet, rotIdx);
         RotamerRestore(pRot, pSet);
-        if (ChainGetType(pChain) == Type_Chain_Protein || ChainGetType(pChain) == Type_Chain_DNA || ChainGetType(pChain) == Type_Chain_RNA)
+        if (ChainGetType(pChain) == Type_Chain_Protein || ChainGetType(pChain) == Type_Chain_DNA || ChainGetType(pChain) == Type_Chain_RNA) 
         {
           RotamerShowInPDBFormat(pRot, "ATOM", RotamerGetChainName(pRot), 1, RotamerGetPosInChain(pRot), pFile);
         }
-        else if (ChainGetType(pChain) != Type_Chain_SmallMol)
+        else if (ChainGetType(pChain) != Type_Chain_SmallMol) 
         {
           RotamerShowInPDBFormat(pRot, "HETATM", RotamerGetChainName(pRot), 1, RotamerGetPosInChain(pRot), pFile);
         }
@@ -249,24 +343,24 @@ int DesignShowMinEnergyDesignStructure(Structure* pStructure, Sequence* pSeq, ch
   return result;
 }
 
-int DesignShowMinEnergyDesignSites(Structure* pStructure, Sequence* sequence, char* pdbfile)
+int SequenceWriteAllSitesInPDB(Sequence* pSeq, Structure* pStruct, char* file)
 {
   int result = Success;
-  char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
-  FILE* pFile = fopen(pdbfile, "w");
-  if (pFile == NULL)
+  char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
+  FILE* pFile = fopen(file, "w");
+  if (pFile == NULL) 
   {
     result = IOError;
-    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, pdbfile);
+    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, file);
     TraceError(errMsg, result);
     return result;
   }
-  for (int i = 0;i < StructureGetDesignSiteCount(pStructure);i++)
+  for (int i = 0;i < StructureGetDesignSiteNum(pStruct);i++) 
   {
-    DesignSite* pSite = StructureGetDesignSite(pStructure, i);
-    RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-    int rotIdx = IntArrayGet(&sequence->rotNdxs, i);
-    Rotamer* pRotamer = RotamerSetGet(pSet, rotIdx);
+    DesignSite* pSite = StructureGetDesignSite(pStruct, i);
+    Rotamers* pSet = DesignSiteGetRotamers(pSite);
+    int rotIdx = IntArrayGet(&pSeq->rotNdxs, i);
+    Rotamer* pRotamer = RotamersGet(pSet, rotIdx);
     RotamerRestore(pRotamer, pSet);
     RotamerShowInPDBFormat(pRotamer, "ATOM", RotamerGetChainName(pRotamer), 1, RotamerGetPosInChain(pRotamer), pFile);
     RotamerExtract(pRotamer);
@@ -276,26 +370,26 @@ int DesignShowMinEnergyDesignSites(Structure* pStructure, Sequence* sequence, ch
 }
 
 
-int DesignShowMinEnergyDesignMutableSites(Structure* pStructure, Sequence* sequence, char* pdbfile)
+int SequenceWriteMutableSitesInPDB(Sequence* pSeq, Structure* pStruct, char* file)
 {
   int result = Success;
-  char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
-  FILE* pFile = fopen(pdbfile, "w");
-  if (pFile == NULL)
+  char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
+  FILE* pFile = fopen(file, "w");
+  if (pFile == NULL) 
   {
     result = IOError;
-    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, pdbfile);
+    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, file);
     TraceError(errMsg, result);
     return result;
   }
-  for (int i = 0;i < StructureGetDesignSiteCount(pStructure);i++)
+  for (int i = 0;i < StructureGetDesignSiteNum(pStruct);i++) 
   {
-    DesignSite* pSite = StructureGetDesignSite(pStructure, i);
-    if (pSite->pRes->desType == Type_DesType_Mutable || pSite->pRes->desType == Type_DesType_SmallMol)
+    DesignSite* pSite = StructureGetDesignSite(pStruct, i);
+    if (ResidueGetDesignType(pSite->pRes) == Type_DesType_Mutable || ResidueGetDesignType(pSite->pRes) == Type_DesType_SmallMol) 
     {
-      RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-      int rotIdx = IntArrayGet(&sequence->rotNdxs, i);
-      Rotamer* pRotamer = RotamerSetGet(pSet, rotIdx);
+      Rotamers* pSet = DesignSiteGetRotamers(pSite);
+      int rotIdx = IntArrayGet(&pSeq->rotNdxs, i);
+      Rotamer* pRotamer = RotamersGet(pSet, rotIdx);
       RotamerRestore(pRotamer, pSet);
       RotamerShowInPDBFormat(pRotamer, "ATOM", RotamerGetChainName(pRotamer), 1, RotamerGetPosInChain(pRotamer), pFile);
       RotamerExtract(pRotamer);
@@ -307,65 +401,65 @@ int DesignShowMinEnergyDesignMutableSites(Structure* pStructure, Sequence* seque
 
 
 
-int DesignShowMinEnergyDesignLigand(Structure* pStructure, Sequence* sequence, char* mol2file)
+int SequenceWriteLigandInMol2(Sequence* pSeq, Structure* pStruct, char* file)
 {
   int result = Success;
-  char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
 
   StringArray lines;
   StringArrayCreate(&lines);
   FILE* pfile = fopen(MOL2, "r");
-  char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
   int start = -1, end = -1;
-  int counter = 0;
-  while (fgets(buffer, MAX_LEN_ONE_LINE_CONTENT, pfile))
+  int num = 0;
+  while (fgets(buffer, MAX_LEN_ONE_LINE_CONTENT, pfile)) 
   {
     StringArrayAppend(&lines, buffer);
-    if (strstr(buffer, "@<TRIPOS>ATOM") != NULL)
+    if (strstr(buffer, "@<TRIPOS>ATOM") != NULL) 
     {
-      start = counter + 1;
+      start = num + 1;
     }
-    else if (strstr(buffer, "@<TRIPOS>BOND") != NULL)
+    else if (strstr(buffer, "@<TRIPOS>BOND") != NULL) 
     {
-      end = counter - 1;
+      end = num - 1;
     }
-    counter++;
+    num++;
   }
   fclose(pfile);
 
-  FILE* pMol2 = fopen(mol2file, "w");
-  if (pMol2 == NULL)
+  FILE* pMol2 = fopen(file, "w");
+  if (pMol2 == NULL) 
   {
     result = IOError;
-    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, mol2file);
+    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, file);
     TraceError(errMsg, result);
     return result;
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct);i++) 
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain* pChain = StructureGetChain(pStruct, i);
+    for (int j = 0;j < ChainGetResidueNum(pChain);j++) 
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      if (pResi->desType == Type_DesType_Fixed)
+      Residue* pRes = ChainGetResidue(pChain, j);
+      if (ResidueGetDesignType(pRes) == Type_DesType_Fixed) 
       {
-        if (pChain->type == Type_Chain_SmallMol)
+        if (ChainGetType(pChain) == Type_Chain_SmallMol) 
         {
-          for (int l = 0;l < StringArrayGetCount(&lines);l++)
+          for (int l = 0;l < StringArrayGetNum(&lines);l++) 
           {
-            if (l<start || l>end)
+            if (l<start || l>end) 
             {
               fprintf(pMol2, "%s", StringArrayGet(&lines, l));
             }
-            else
+            else 
             {
-              char line[MAX_LEN_ONE_LINE_CONTENT + 1];
+              char line[MAX_LEN_ONE_LINE_CONTENT+1];
               strcpy(line, StringArrayGet(&lines, l));
               StringArray words;
               StringArrayCreate(&words);
               StringArraySplitString(&words, line, ' ');
-              XYZ xyz = ResidueGetAtom(pResi, l - start)->xyz;
+              XYZ xyz = ResidueGetAtom(pRes, l - start)->xyz;
               fprintf(pMol2, "%7s %-10s %10.3f %10.3f %10.3f %-10s %s %s %10s\n",
                 StringArrayGet(&words, 0),
                 StringArrayGet(&words, 1),
@@ -381,33 +475,33 @@ int DesignShowMinEnergyDesignLigand(Structure* pStructure, Sequence* sequence, c
           }
         }
       }
-      else
+      else 
       {
-        for (int k = 0;k < sequence->desSiteCount;k++)
+        for (int k = 0;k < pSeq->desSiteNum;k++) 
         {
-          DesignSite* pDesignSite = StructureGetDesignSite(pStructure, k);
-          RotamerSet* pRotamerSet = DesignSiteGetRotamers(pDesignSite);
-          int rotamerIndex = IntArrayGet(&sequence->rotNdxs, k);
-          Rotamer* pOptRotamer = RotamerSetGet(pRotamerSet, rotamerIndex);
-          if (pDesignSite->chnNdx == i && pDesignSite->resNdx == j)
+          DesignSite* pSite = StructureGetDesignSite(pStruct, k);
+          Rotamers* pSet = DesignSiteGetRotamers(pSite);
+          int rotNdx = IntArrayGet(&pSeq->rotNdxs, k);
+          Rotamer* pOptRot = RotamersGet(pSet, rotNdx);
+          if (pSite->chnNdx == i && pSite->resNdx == j) 
           {
-            RotamerRestore(pOptRotamer, pRotamerSet);
-            if (pChain->type == Type_Chain_SmallMol)
+            RotamerRestore(pOptRot, pSet);
+            if (ChainGetType(pChain) == Type_Chain_SmallMol) 
             {
-              for (int l = 0;l < StringArrayGetCount(&lines);l++)
+              for (int l = 0;l < StringArrayGetNum(&lines);l++) 
               {
-                if (l<start || l>end)
+                if (l<start || l>end) 
                 {
                   fprintf(pMol2, "%s", StringArrayGet(&lines, l));
                 }
-                else
+                else 
                 {
-                  char line[MAX_LEN_ONE_LINE_CONTENT + 1];
+                  char line[MAX_LEN_ONE_LINE_CONTENT+1];
                   strcpy(line, StringArrayGet(&lines, l));
                   StringArray words;
                   StringArrayCreate(&words);
                   StringArraySplitString(&words, line, ' ');
-                  XYZ xyz = RotamerGetAtom(pOptRotamer, l - start)->xyz;
+                  XYZ xyz = RotamerGetAtom(pOptRot, l - start)->xyz;
                   fprintf(pMol2, "%7s %-10s %10.3f %10.3f %10.3f %-10s %s %s %10s\n",
                     StringArrayGet(&words, 0),
                     StringArrayGet(&words, 1),
@@ -422,7 +516,7 @@ int DesignShowMinEnergyDesignLigand(Structure* pStructure, Sequence* sequence, c
                 }
               }
             }
-            RotamerExtract(pOptRotamer);
+            RotamerExtract(pOptRot);
             break;
           }
         }
@@ -436,97 +530,99 @@ int DesignShowMinEnergyDesignLigand(Structure* pStructure, Sequence* sequence, c
 }
 
 
-int StructureGetWholeSequence(Structure* pStructure, Sequence* sequence, char* seq)
+int StructureGetWholeSequence(Sequence* pSeq, Structure* pStruct, char* seqstr)
 {
   int index = 0;
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0;i < StructureGetChainNum(pStruct);i++) 
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    if (strcmp(DES_CHAINS, ChainGetName(pChain)))continue;
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain* pChain = StructureGetChain(pStruct, i);
+    if (strcmp(DES_CHAINS, ChainGetName(pChain))) 
+    {
+      continue;
+    }
+    for (int j = 0;j < ChainGetResidueNum(pChain);j++) 
     {
       Residue* pResi = ChainGetResidue(pChain, j);
-      if (ResidueGetDesignType(pResi) == Type_DesType_Fixed)
+      if (ResidueGetDesignType(pResi) == Type_DesType_Fixed) 
       {
-        seq[index++] = AA3ToAA1(ResidueGetName(pResi));
+        seqstr[index++] = AA3ToAA1(ResidueGetName(pResi));
       }
-      else
+      else 
       {
-        int siteIdx = StructureGetDesignSiteIndex(pStructure, i, j);
-        DesignSite* pSite = StructureGetDesignSite(pStructure, siteIdx);
-        RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-        int rotIdx = IntArrayGet(&sequence->rotNdxs, siteIdx);
-        Rotamer* pRot = RotamerSetGet(pSet, rotIdx);
-        seq[index++] = AA3ToAA1(RotamerGetType(pRot));
+        int siteIdx = StructureGetDesignSiteIndex(pStruct, i, j);
+        DesignSite* pSite = StructureGetDesignSite(pStruct, siteIdx);
+        Rotamers* pSet = DesignSiteGetRotamers(pSite);
+        int rotIdx = IntArrayGet(&pSeq->rotNdxs, siteIdx);
+        Rotamer* pRot = RotamersGet(pSet, rotIdx);
+        seqstr[index++] = AA3ToAA1(RotamerGetType(pRot));
       }
     }
   }
-  seq[index] = '\0';
+  seqstr[index] = '\0';
   return Success;
 }
 
 
-int StructureWriteFirstLigandRotamerIntoMol2(Structure* pStructure, char* mol2file)
+int StructureWriteFirstLigandRotamerIntoMol2(Structure* pStruct, char* file)
 {
   int result = Success;
-  char errMsg[MAX_LEN_ONE_LINE_CONTENT + 1];
-
+  char errMsg[MAX_LEN_ONE_LINE_CONTENT+1];
   StringArray lines;
   StringArrayCreate(&lines);
   FILE* pfile = fopen(MOL2, "r");
-  char buffer[MAX_LEN_ONE_LINE_CONTENT + 1];
+  char buffer[MAX_LEN_ONE_LINE_CONTENT+1];
   int start = 100000, end = -1;
-  int counter = 0;
+  int num = 0;
   int atomend = 0;
-  while (fgets(buffer, MAX_LEN_ONE_LINE_CONTENT, pfile))
+  while (fgets(buffer, MAX_LEN_ONE_LINE_CONTENT, pfile)) 
   {
     StringArrayAppend(&lines, buffer);
-    if (strstr(buffer, "@<TRIPOS>ATOM") != NULL)
+    if (strstr(buffer, "@<TRIPOS>ATOM") != NULL) 
     {
-      start = counter + 1;
+      start = num + 1;
     }
-    else if (strstr(buffer, "@<TRIPOS>") != NULL && counter > start && atomend == 0)
+    else if (strstr(buffer, "@<TRIPOS>") != NULL && num > start && atomend == 0) 
     {
-      end = counter - 1;
+      end = num - 1;
       atomend = 1;
     }
-    counter++;
+    num++;
   }
   fclose(pfile);
 
-  FILE* pMol2 = fopen(mol2file, "w");
-  if (pMol2 == NULL)
+  FILE* pMol2 = fopen(file, "w");
+  if (pMol2 == NULL) 
   {
     result = IOError;
-    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, mol2file);
+    sprintf(errMsg, "in file %s line %d, cannot write to file %s", __FILE__, __LINE__, file);
     TraceError(errMsg, result);
     return result;
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct);i++) 
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain* pChain = StructureGetChain(pStruct, i);
+    for (int j = 0;j < ChainGetResidueNum(pChain);j++) 
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      if (pResi->desType == Type_DesType_Fixed)
+      Residue* pRes = ChainGetResidue(pChain, j);
+      if (pRes->desType == Type_DesType_Fixed) 
       {
-        if (pChain->type == Type_Chain_SmallMol)
+        if (pChain->type == Type_Chain_SmallMol) 
         {
-          for (int l = 0;l < StringArrayGetCount(&lines);l++)
+          for (int l = 0;l < StringArrayGetNum(&lines);l++) 
           {
-            if (l<start || l>end)
+            if (l<start || l>end) 
             {
               fprintf(pMol2, "%s", StringArrayGet(&lines, l));
             }
-            else
+            else 
             {
-              char line[MAX_LEN_ONE_LINE_CONTENT + 1];
+              char line[MAX_LEN_ONE_LINE_CONTENT+1];
               strcpy(line, StringArrayGet(&lines, l));
               StringArray words;
               StringArrayCreate(&words);
               StringArraySplitString(&words, line, ' ');
-              XYZ xyz = ResidueGetAtom(pResi, l - start)->xyz;
+              XYZ xyz = ResidueGetAtom(pRes, l - start)->xyz;
               fprintf(pMol2, "%7s %-10s %10.3f %10.3f %10.3f %-10s %s %s %10s\n",
                 StringArrayGet(&words, 0),
                 StringArrayGet(&words, 1),
@@ -542,32 +638,32 @@ int StructureWriteFirstLigandRotamerIntoMol2(Structure* pStructure, char* mol2fi
           }
         }
       }
-      else
+      else 
       {
-        for (int k = 0;k < pStructure->desSiteCount;k++)
+        for (int k = 0;k < pStruct->desSiteNum;k++) 
         {
-          DesignSite* pDesignSite = StructureGetDesignSite(pStructure, k);
-          RotamerSet* pRotamerSet = DesignSiteGetRotamers(pDesignSite);
-          Rotamer* pOptRotamer = RotamerSetGet(pRotamerSet, 0);
-          if (pDesignSite->chnNdx == i && pDesignSite->resNdx == j)
+          DesignSite* pSite = StructureGetDesignSite(pStruct, k);
+          Rotamers* pSet = DesignSiteGetRotamers(pSite);
+          Rotamer* pOptRot = RotamersGet(pSet, 0);
+          if (pSite->chnNdx == i && pSite->resNdx == j) 
           {
-            RotamerRestore(pOptRotamer, pRotamerSet);
-            if (pChain->type == Type_Chain_SmallMol)
+            RotamerRestore(pOptRot, pSet);
+            if (ChainGetType(pChain) == Type_Chain_SmallMol) 
             {
-              for (int l = 0;l < StringArrayGetCount(&lines);l++)
+              for (int l = 0;l < StringArrayGetNum(&lines);l++) 
               {
-                if (l<start || l>end)
+                if (l<start || l>end) 
                 {
                   fprintf(pMol2, "%s", StringArrayGet(&lines, l));
                 }
-                else
+                else 
                 {
-                  char line[MAX_LEN_ONE_LINE_CONTENT + 1];
+                  char line[MAX_LEN_ONE_LINE_CONTENT+1];
                   strcpy(line, StringArrayGet(&lines, l));
                   StringArray words;
                   StringArrayCreate(&words);
                   StringArraySplitString(&words, line, ' ');
-                  XYZ xyz = RotamerGetAtom(pOptRotamer, l - start)->xyz;
+                  XYZ xyz = RotamerGetAtom(pOptRot, l - start)->xyz;
                   fprintf(pMol2, "%7s %-10s %10.3f %10.3f %10.3f %-10s %s %s %10s\n",
                     StringArrayGet(&words, 0),
                     StringArrayGet(&words, 1),
@@ -582,7 +678,7 @@ int StructureWriteFirstLigandRotamerIntoMol2(Structure* pStructure, char* mol2fi
                 }
               }
             }
-            RotamerExtract(pOptRotamer);
+            RotamerExtract(pOptRot);
             break;
           }
         }

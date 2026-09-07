@@ -15,81 +15,82 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
 
 #include "RotamerOptimizer.h"
-#include "EnergyFunction.h"
 #include <string.h>
 
-int ProteinSiteOptimizeRotamer(Structure* pStructure, int chainIndex, int resiIndex)
+int ProteinSiteOptimizeRotamer(Structure* pStruct, int chnNdx, int resNdx)
 {
-  DesignSite* pDesignSite = StructureFindDesignSite(pStructure, chainIndex, resiIndex);
-  if (pDesignSite == NULL) return Success;
-  RotamerSet* pRotSet = DesignSiteGetRotamers(pDesignSite);
-  Residue* pDesign = pDesignSite->pRes;
-
-  //step 1: find out residues within 5 angstroms to the design site of interest;
-  int surroundingResiNum = 0;
-  Residue** ppSurroundingResidues = NULL;
-  for (int i = 0; i < pStructure->chainNum; i++)
+  DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
+  if (pSite == NULL)
   {
-    Chain* pChainI = pStructure->chains + i;
-    for (int j = 0; j < pChainI->residueNum; j++)
+    return Success;
+  }
+  Rotamers* pSet = DesignSiteGetRotamers(pSite);
+  Residue* pRes = pSite->pRes;
+
+  int numCloseRes = 0;
+  Residue** ppCloseRes = NULL;
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
+  {
+    Chain* pChn = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChn); j++)
     {
-      Residue* pResi2 = pChainI->residues + j;
-      if (strcmp(pDesign->name, pResi2->name) == 0 && pDesign->posInChain == pResi2->posInChain)
+      Residue* pRes2 = ChainGetResidue(pChn, j);
+      if ( strcmp(ResidueGetName(pRes), ResidueGetName(pRes2)) == 0 && 
+           ResidueGetPosInChain(pRes) == ResidueGetPosInChain(pRes2) )
       {
         continue;
       }
-      else if (AtomArrayCalcMinDistance(&pDesign->atoms, &pResi2->atoms) < ENERGY_DISTANCE_CUTOFF)
+      else if (AtomArrayCalcMinDistance(&pRes->atoms, &pRes2->atoms) < ENERGY_DISTANCE_CUTOFF)
       {
-        surroundingResiNum++;
-        ppSurroundingResidues = (Residue**)realloc(ppSurroundingResidues, sizeof(Residue*) * surroundingResiNum);
-        ppSurroundingResidues[surroundingResiNum - 1] = pResi2;
+        numCloseRes++;
+        ppCloseRes = (Residue**)realloc(ppCloseRes, sizeof(Residue*) * numCloseRes);
+        ppCloseRes[numCloseRes - 1] = pRes2;
       }
     }
   }
 
-  //step 2: calculate the energy between the rots of the design site
   double minEnergy = 1000.0;
-  for (int ir = 0; ir < RotamerSetGetCount(pRotSet); ir++)
+  for (int ir = 0; ir < RotamersGetNum(pSet); ir++)
   {
     double energyTerms[MAX_ENERGY_TERM] = { 0 };
-    Rotamer* pRotIR = RotamerSetGet(pRotSet, ir);
-    RotamerRestore(pRotIR, pRotSet);
+    Rotamer* pRotIR = RotamersGet(pSet, ir);
+    RotamerRestore(pRotIR, pSet);
 
-    Residue tempResidue;
-    ResidueCreate(&tempResidue);
-    ResidueCopy(&tempResidue, pDesign);
-    ResidueSetName(&tempResidue, pRotIR->type);
-    AtomArrayCopy(&tempResidue.atoms, &pRotIR->atoms);
-    BondSetCopy(&tempResidue.bonds, &pRotIR->bonds);
-    AminoAcidReferenceEnergy(tempResidue.name, energyTerms);
-    EnergyIntraResidue(&tempResidue, energyTerms);
-    for (int is = 0; is < surroundingResiNum; is++)
+    Residue res;
+    ResidueCreate(&res);
+    ResidueCopy(&res, pRes);
+    ResidueSetName(&res, RotamerGetType(pRotIR));
+    AtomArrayCopy(ResidueGetAllAtoms(&res), &pRotIR->atoms);
+    BondsCopy(ResidueGetBonds(&res), RotamerGetBonds(pRotIR));
+    AminoAcidReferenceEnergy(ResidueGetName(&res), energyTerms);
+    EnergyIntraResidue(&res, energyTerms);
+    for (int is = 0; is < numCloseRes; is++)
     {
-      Residue* pResIS = ppSurroundingResidues[is];
-      if (strcmp(ResidueGetChainName(&tempResidue), ResidueGetChainName(pResIS)) == 0)
+      Residue* pResIS = ppCloseRes[is];
+      if (strcmp(ResidueGetChainName(&res), ResidueGetChainName(pResIS)) == 0)
       {
-        if (tempResidue.posInChain == pResIS->posInChain - 1)
+        if (ResidueGetPosInChain(&res) == ResidueGetPosInChain(pResIS) - 1)
         {
-          EnergyResidueAndNextResidue(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndNextResidue(&res, pResIS, energyTerms);
         }
-        else if (tempResidue.posInChain == pResIS->posInChain + 1)
+        else if (ResidueGetPosInChain(&res) == ResidueGetPosInChain(pResIS) + 1)
         {
-          EnergyResidueAndNextResidue(pResIS, &tempResidue, energyTerms);
+          EnergyResidueAndNextResidue(pResIS, &res, energyTerms);
         }
         else
         {
-          EnergyResidueAndOtherResidueSameChain(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndOtherResidueSameChain(&res, pResIS, energyTerms);
         }
       }
       else
       {
-        if (ChainGetType(StructureFindChainByName(pStructure, ResidueGetChainName(pResIS))) == Type_Chain_SmallMol)
+        if (ChainGetType(StructureFindChainByName(pStruct, ResidueGetChainName(pResIS))) == Type_Chain_SmallMol)
         {
-          EnergyResidueAndLigandResidue(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndLigandResidue(&res, pResIS, energyTerms);
         }
         else
         {
-          EnergyResidueAndOtherResidueDiffChain(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndOtherResidueDiffChain(&res, pResIS, energyTerms);
         }
       }
     }
@@ -98,372 +99,382 @@ int ProteinSiteOptimizeRotamer(Structure* pStructure, int chainIndex, int resiIn
     if (energyTerms[0] < minEnergy)
     {
       minEnergy = energyTerms[0];
-      ResidueCopy(pDesign, &tempResidue);
+      ResidueCopy(pRes, &res);
     }
     RotamerExtract(pRotIR);
-    ResidueDestroy(&tempResidue);
+    ResidueDestroy(&res);
   }
 
-  if (ppSurroundingResidues != NULL)
+  if (ppCloseRes != NULL)
   {
-    free(ppSurroundingResidues);
-    ppSurroundingResidues = NULL;
+    free(ppCloseRes);
+    ppCloseRes = NULL;
   }
   return Success;
 }
 
 
-int ProteinSiteOptimizeRotamerHBondEnergy(Structure* pStructure, int chainIndex, int resiIndex)
+int ProteinSiteOptimizeRotamerHBondEnergy(Structure* pStruct, int chnNdx, int resNdx)
 {
-  DesignSite* pDesignSite = StructureFindDesignSite(pStructure, chainIndex, resiIndex);
-  if (pDesignSite == NULL) return Success;
-  RotamerSet* pRotSet = DesignSiteGetRotamers(pDesignSite);
-  Residue* pDesign = pDesignSite->pRes;
-
-  //step 1: find out residues within 5 angstroms to the design site of interest;
-  int surroundingResiNum = 0;
-  Residue** ppSurroundingResidues = NULL;
-  for (int i = 0; i < pStructure->chainNum; i++)
+  DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
+  if (pSite == NULL)
   {
-    Chain* pChainI = pStructure->chains + i;
-    for (int j = 0; j < pChainI->residueNum; j++)
+    return Success;
+  }
+  Rotamers* pSet = DesignSiteGetRotamers(pSite);
+  Residue* pRes = pSite->pRes;
+
+  int numCloseRes = 0;
+  Residue** ppCloseRes = NULL;
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
+  {
+    Chain* pChn = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChn); j++)
     {
-      Residue* pResi2 = pChainI->residues + j;
-      if (strcmp(pDesign->name, pResi2->name) == 0 && pDesign->posInChain == pResi2->posInChain)
+      Residue* pRes2 = ChainGetResidue(pChn, j);
+      if (strcmp(ResidueGetName(pRes), ResidueGetName(pRes2)) == 0 &&
+        ResidueGetPosInChain(pRes) == ResidueGetPosInChain(pRes2))
       {
         continue;
       }
-      else if (AtomArrayCalcMinDistance(&pDesign->atoms, &pResi2->atoms) < ENERGY_DISTANCE_CUTOFF)
+      else if (AtomArrayCalcMinDistance(&pRes->atoms, &pRes2->atoms) < ENERGY_DISTANCE_CUTOFF)
       {
-        surroundingResiNum++;
-        ppSurroundingResidues = (Residue**)realloc(ppSurroundingResidues, sizeof(Residue*) * surroundingResiNum);
-        ppSurroundingResidues[surroundingResiNum - 1] = pResi2;
+        numCloseRes++;
+        ppCloseRes = (Residue**)realloc(ppCloseRes, sizeof(Residue*) * numCloseRes);
+        ppCloseRes[numCloseRes - 1] = pRes2;
       }
     }
   }
 
-  //step 2: calculate the energy between the rots of the design site
   double minEnergy = 1000.0;
-  for (int ir = 0; ir < RotamerSetGetCount(pRotSet); ir++)
+  for (int ir = 0; ir < RotamersGetNum(pSet); ir++)
   {
     double energyTerms[MAX_ENERGY_TERM] = { 0 };
-    Rotamer* pRotIR = RotamerSetGet(pRotSet, ir);
-    RotamerRestore(pRotIR, pRotSet);
+    Rotamer* pRotIR = RotamersGet(pSet, ir);
+    RotamerRestore(pRotIR, pSet);
 
-    Residue tempResidue;
-    ResidueCreate(&tempResidue);
-    ResidueCopy(&tempResidue, pDesign);
-    ResidueSetName(&tempResidue, pRotIR->type);
-    AtomArrayCopy(&tempResidue.atoms, &pRotIR->atoms);
-    BondSetCopy(&tempResidue.bonds, &pRotIR->bonds);
-    AminoAcidReferenceEnergy(tempResidue.name, energyTerms);
-    EnergyIntraResidue(&tempResidue, energyTerms);
-    for (int is = 0; is < surroundingResiNum; is++)
+    Residue res;
+    ResidueCreate(&res);
+    ResidueCopy(&res, pRes);
+    ResidueSetName(&res, RotamerGetType(pRotIR));
+    AtomArrayCopy(ResidueGetAllAtoms(&res), &pRotIR->atoms);
+    BondsCopy(ResidueGetBonds(&res), RotamerGetBonds(pRotIR));
+    AminoAcidReferenceEnergy(ResidueGetName(&res), energyTerms);
+    EnergyIntraResidue(&res, energyTerms);
+    for (int is = 0; is < numCloseRes; is++)
     {
-      Residue* pResIS = ppSurroundingResidues[is];
-      if (strcmp(ResidueGetChainName(&tempResidue), ResidueGetChainName(pResIS)) == 0)
+      Residue* pResIS = ppCloseRes[is];
+      if (strcmp(ResidueGetChainName(&res), ResidueGetChainName(pResIS)) == 0)
       {
-        if (tempResidue.posInChain == pResIS->posInChain - 1)
+        if (ResidueGetPosInChain(&res) == ResidueGetPosInChain(pResIS) - 1)
         {
-          EnergyResidueAndNextResidue(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndNextResidue(&res, pResIS, energyTerms);
         }
-        else if (tempResidue.posInChain == pResIS->posInChain + 1)
+        else if (ResidueGetPosInChain(&res) == ResidueGetPosInChain(pResIS) + 1)
         {
-          EnergyResidueAndNextResidue(pResIS, &tempResidue, energyTerms);
+          EnergyResidueAndNextResidue(pResIS, &res, energyTerms);
         }
         else
         {
-          EnergyResidueAndOtherResidueSameChain(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndOtherResidueSameChain(&res, pResIS, energyTerms);
         }
       }
       else
       {
-        if (ChainGetType(StructureFindChainByName(pStructure, ResidueGetChainName(pResIS))) == Type_Chain_SmallMol)
+        if (ChainGetType(StructureFindChainByName(pStruct, ResidueGetChainName(pResIS))) == Type_Chain_SmallMol)
         {
-          EnergyResidueAndLigandResidue(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndLigandResidue(&res, pResIS, energyTerms);
         }
         else
         {
-          EnergyResidueAndOtherResidueDiffChain(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndOtherResidueDiffChain(&res, pResIS, energyTerms);
         }
       }
     }
 
     EnergyTermWeighting(energyTerms);
-    //only consider the non-intra residue hbond energy
+
+    // only consider the non-intra residue hbond energy
     double hbenergy;
-    for (int i = 41;i <= 49;i++) hbenergy += energyTerms[i];
-    for (int i = 61;i <= 69;i++) hbenergy += energyTerms[i];
-    for (int i = 81;i <= 89;i++) hbenergy += energyTerms[i];
+    for (int i = 41; i <= 49; i++) hbenergy += energyTerms[i];
+    for (int i = 61; i <= 69; i++) hbenergy += energyTerms[i];
+    for (int i = 81; i <= 89; i++) hbenergy += energyTerms[i];
 
     if (hbenergy < minEnergy)
     {
       minEnergy = hbenergy;
-      ResidueCopy(pDesign, &tempResidue);
+      ResidueCopy(pRes, &res);
     }
     RotamerExtract(pRotIR);
-    ResidueDestroy(&tempResidue);
+    ResidueDestroy(&res);
   }
 
-  if (ppSurroundingResidues != NULL)
+  if (ppCloseRes != NULL)
   {
-    free(ppSurroundingResidues);
-    ppSurroundingResidues = NULL;
+    free(ppCloseRes);
+    ppCloseRes = NULL;
   }
 
   return Success;
 }
 
-int ProteinSiteCalcRotamersEnergy(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, int chainIndex, int resiIndex, FILE* fp)
+int ProteinSiteCalcRotamersEnergy(Structure* pStruct, AAppTable* pAAppTable, RamaTable* pRama, int chnNdx, int resNdx, FILE* pOut)
 {
-  DesignSite* pDesignSite = StructureFindDesignSite(pStructure, chainIndex, resiIndex);
-  if (pDesignSite == NULL) return Success;
-  RotamerSet* pRotSet = DesignSiteGetRotamers(pDesignSite);
-  Residue* pResidue = pDesignSite->pRes;
-
-  //step 1: find out residues within 5 angstroms to the design site of interest;
-  int surroundingResiNum = 0;
-  Residue** ppSurroundingResidues = NULL;
-  for (int i = 0; i < pStructure->chainNum; i++)
+  DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
+  if (pSite == NULL)
   {
-    Chain* pChainI = pStructure->chains + i;
-    for (int j = 0; j < pChainI->residueNum; j++)
+    return Success;
+  }
+  Rotamers* pSet = DesignSiteGetRotamers(pSite);
+  Residue* pRes = pSite->pRes;
+
+  int numCloseRes = 0;
+  Residue** ppCloseRes = NULL;
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
+  {
+    Chain* pChn = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChn); j++)
     {
-      Residue* pResi2 = pChainI->residues + j;
-      if (strcmp(pResidue->name, pResi2->name) == 0 && pResidue->posInChain == pResi2->posInChain)
+      Residue* pRes2 = ChainGetResidue(pChn, j);
+      if (strcmp(ResidueGetName(pRes), ResidueGetName(pRes2)) == 0 &&
+        ResidueGetPosInChain(pRes) == ResidueGetPosInChain(pRes2))
       {
         continue;
       }
-      else if (AtomArrayCalcMinDistance(&pResidue->atoms, &pResi2->atoms) < ENERGY_DISTANCE_CUTOFF)
+      else if (AtomArrayCalcMinDistance(&pRes->atoms, &pRes2->atoms) < ENERGY_DISTANCE_CUTOFF)
       {
-        surroundingResiNum++;
-        ppSurroundingResidues = (Residue**)realloc(ppSurroundingResidues, sizeof(Residue*) * surroundingResiNum);
-        ppSurroundingResidues[surroundingResiNum - 1] = pResi2;
+        numCloseRes++;
+        ppCloseRes = (Residue**)realloc(ppCloseRes, sizeof(Residue*) * numCloseRes);
+        ppCloseRes[numCloseRes - 1] = pRes2;
       }
     }
   }
 
-  // step 2: calculate the energy between the rots of the design site
-  for (int ir = 0; ir < RotamerSetGetCount(pRotSet); ir++)
+  for (int ir = 0; ir < RotamersGetNum(pSet); ir++)
   {
     double energyTerms[MAX_ENERGY_TERM] = { 0 };
-    Rotamer* pRotIR = RotamerSetGet(pRotSet, ir);
-    RotamerRestore(pRotIR, pRotSet);
+    Rotamer* pRotIR = RotamersGet(pSet, ir);
+    RotamerRestore(pRotIR, pSet);
 
-    Residue tempResidue;
-    ResidueCreate(&tempResidue);
-    ResidueCopy(&tempResidue, pResidue);
-    ResidueSetName(&tempResidue, pRotIR->type);
-    AtomArrayCopy(&tempResidue.atoms, &pRotIR->atoms);
-    BondSetCopy(&tempResidue.bonds, &pRotIR->bonds);
-
-    //intra energy, add the statistical energy
-    AminoAcidReferenceEnergy(tempResidue.name, energyTerms);
-    EnergyIntraResidue(&tempResidue, energyTerms);
-    RotamerPropensityAndRamachandranEnergy(pRotIR, pResidue, pAAppTable, pRama, energyTerms);
+    Residue res;
+    ResidueCreate(&res);
+    ResidueCopy(&res, pRes);
+    ResidueSetName(&res, RotamerGetType(pRotIR));
+    AtomArrayCopy(ResidueGetAllAtoms(&res), &pRotIR->atoms);
+    BondsCopy(ResidueGetBonds(&res), RotamerGetBonds(pRotIR));
+    AminoAcidReferenceEnergy(ResidueGetName(&res), energyTerms);
+    EnergyIntraResidue(&res, energyTerms);
+    RotamerPropensityAndRamachandranEnergy(pRotIR, pRes, pAAppTable, pRama, energyTerms);
     RotamerDunbrackEnergy(pRotIR, energyTerms);
-    for (int is = 0; is < surroundingResiNum; is++)
+    for (int is = 0; is < numCloseRes; is++)
     {
-      Residue* pResIS = ppSurroundingResidues[is];
-      if (strcmp(ResidueGetChainName(&tempResidue), ResidueGetChainName(pResIS)) == 0)
+      Residue* pResIS = ppCloseRes[is];
+      if (strcmp(ResidueGetChainName(&res), ResidueGetChainName(pResIS)) == 0)
       {
-        if (tempResidue.posInChain == pResIS->posInChain - 1)
+        if (ResidueGetPosInChain(&res) == ResidueGetPosInChain(pResIS) - 1)
         {
-          EnergyResidueAndNextResidue(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndNextResidue(&res, pResIS, energyTerms);
         }
-        else if (tempResidue.posInChain == pResIS->posInChain + 1)
+        else if (ResidueGetPosInChain(&res) == ResidueGetPosInChain(pResIS) + 1)
         {
-          EnergyResidueAndNextResidue(pResIS, &tempResidue, energyTerms);
+          EnergyResidueAndNextResidue(pResIS, &res, energyTerms);
         }
         else
         {
-          EnergyResidueAndOtherResidueSameChain(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndOtherResidueSameChain(&res, pResIS, energyTerms);
         }
       }
       else
       {
-        if (ChainGetType(StructureFindChainByName(pStructure, ResidueGetName(pResIS))) == Type_Chain_SmallMol)
+        if (ChainGetType(StructureFindChainByName(pStruct, ResidueGetName(pResIS))) == Type_Chain_SmallMol)
         {
-          EnergyResidueAndLigandResidue(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndLigandResidue(&res, pResIS, energyTerms);
         }
         else
         {
-          EnergyResidueAndOtherResidueDiffChain(&tempResidue, pResIS, energyTerms);
+          EnergyResidueAndOtherResidueDiffChain(&res, pResIS, energyTerms);
         }
       }
     }
 
-    //disable the weighting
     EnergyTermWeighting(energyTerms);
-    if (RotamerAndResidueInSameType(pRotIR, pResidue))
+    if (RotamerAndResidueInSameType(pRotIR, pRes))
     {
-      double rmsd = RotamerAndResidueSidechainRMSD(pRotIR, pResidue);
+      double rmsd = RotamerAndResidueSidechainRMSD(pRotIR, pRes);
       if (rmsd < 0.005)
-      {//this should be a crystal rotamer
-        fprintf(fp, "POS %3d XAL", RotamerGetPosInChain(pRotIR));
-        //if the energy for monomer & PPI is too large, skip the crystal rotamer
-        BOOL energyTooBig = FALSE;
-        for (int index = 1;index <= 70;index++)
+      { // must be the crystal rotamer
+        fprintf(pOut, "POS %3d XAL", RotamerGetPosInChain(pRotIR));
+        // if the energy for monomer & PPI is too large, skip the crystal rotamer
+        BOOL energyTooHigh = FALSE;
+        for (int index = 1; index <= 70; index++)
         {
           if (energyTerms[index] > 30.0 || energyTerms[index] < -30.0)
           {
-            energyTooBig = TRUE;
+            energyTooHigh = TRUE;
             break;
           }
         }
-        if (energyTooBig)
+        if (energyTooHigh == TRUE)
         {
-          char errMsg[MAX_LEN_ERR_MSG + 1];
-          sprintf(errMsg, "in file %s line %d, the energy value of native rotamer on residue %s%d%s is too high", __FILE__, __LINE__, ResidueGetChainName(&tempResidue), ResidueGetPosInChain(&tempResidue), ResidueGetName(&tempResidue));
+          char errMsg[MAX_LEN_ERR_MSG+1];
+          sprintf(errMsg, "in file %s line %d, the energy value of native rotamer on residue %s%d%s is too high", 
+            __FILE__, __LINE__, ResidueGetChainName(&res), ResidueGetPosInChain(&res), ResidueGetName(&res));
           TraceError(errMsg, Warning);
         }
 
       }
       else
       {
-        fprintf(fp, "POS %3d NAT", RotamerGetPosInChain(pRotIR));
+        fprintf(pOut, "POS %3d NAT", RotamerGetPosInChain(pRotIR));
       }
     }
     else
     {
-      fprintf(fp, "POS %3d %s", RotamerGetPosInChain(pRotIR), RotamerGetType(pRotIR));
+      fprintf(pOut, "POS %3d %s", RotamerGetPosInChain(pRotIR), RotamerGetType(pRotIR));
     }
     //20 reference energy
     for (int index = 1; index <= 20; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
     //intraR vdw->desol
     for (int index = 21; index <= 25; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
     //intraR hbonds
     for (int index = 26; index <= 28; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
     //intraR aa propensity, rama and dunbrack
     for (int index = 91; index <= 93; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
     //interS vdw->desol
     for (int index = 31; index <= 36; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
     //interS hbonds
     for (int index = 41; index <= 49; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
     //interD vdw->desol
     for (int index = 51; index <= 56; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
     //interD hbonds
     for (int index = 61; index <= 69; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
     //prot-lig vdw->desol
     for (int index = 71; index <= 75; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
     //prot-lig hbonds
     for (int index = 81; index <= 86; index++)
     {
-      fprintf(fp, " %8.2f", energyTerms[index]);
+      fprintf(pOut, " %8.2f", energyTerms[index]);
     }
-    fprintf(fp, "\n");
+    fprintf(pOut, "\n");
 
     RotamerExtract(pRotIR);
-    ResidueDestroy(&tempResidue);
+    ResidueDestroy(&res);
   }
 
-  if (ppSurroundingResidues != NULL)
+  if (ppCloseRes != NULL)
   {
-    free(ppSurroundingResidues);
-    ppSurroundingResidues = NULL;
+    free(ppCloseRes);
+    ppCloseRes = NULL;
   }
 
   return Success;
 }
 
 
-int ProteinSiteOptimizeRotamerWithBBdepRotLib(Structure* pStructure, int chainIndex, int resiIndex, BBdepRotamerLib* pBBdepRotLib)
+int ProteinSiteOptimizeRotamer(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib)
 {
-  DesignSite* pSite = StructureFindDesignSite(pStructure, chainIndex, resiIndex);
-  if (pSite == NULL) return Success;
-  RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-  Residue* pResi = pSite->pRes;
-
-  int surroundingResiNum = 0;
-  Residue** ppSurroundingResidues = NULL;
-  for (int i = 0; i < pStructure->chainNum; i++)
+  DesignSite* pSite = StructureFindDesignSite(pStruct, chnNdx, resNdx);
+  if (pSite == NULL)
   {
-    Chain* pChainI = pStructure->chains + i;
-    for (int j = 0; j < pChainI->residueNum; j++)
+    return Success;
+  }
+  Rotamers* pSet = DesignSiteGetRotamers(pSite);
+  Residue* pRes = pSite->pRes;
+
+  int numCloseRes = 0;
+  Residue** ppCloseRes = NULL;
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
+  {
+    Chain* pChn = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChn); j++)
     {
-      Residue* pResi2 = pChainI->residues + j;
-      if (strcmp(pResi->name, pResi2->name) == 0 && pResi->posInChain == pResi2->posInChain) continue;
-      else if (AtomArrayCalcMinDistance(&pResi->atoms, &pResi2->atoms) < ENERGY_DISTANCE_CUTOFF)
+      Residue* pRes2 = ChainGetResidue(pChn, j);
+      if (strcmp(ResidueGetName(pRes), ResidueGetName(pRes2)) == 0 &&
+        ResidueGetPosInChain(pRes) == ResidueGetPosInChain(pRes2))
       {
-        surroundingResiNum++;
-        ppSurroundingResidues = (Residue**)realloc(ppSurroundingResidues, sizeof(Residue*) * surroundingResiNum);
-        ppSurroundingResidues[surroundingResiNum - 1] = pResi2;
+        continue;
+      }
+      else if (AtomArrayCalcMinDistance(&pRes->atoms, &pRes2->atoms) < ENERGY_DISTANCE_CUTOFF)
+      {
+        numCloseRes++;
+        ppCloseRes = (Residue**)realloc(ppCloseRes, sizeof(Residue*) * numCloseRes);
+        ppCloseRes[numCloseRes - 1] = pRes2;
       }
     }
   }
 
   double minEnergy = 1000.0;
-  for (int ir = 0; ir < RotamerSetGetCount(pSet); ir++)
+  for (int ir = 0; ir < RotamersGetNum(pSet); ir++)
   {
     double energyTerms[MAX_ENERGY_TERM] = { 0 };
-    Rotamer* pRotIR = RotamerSetGet(pSet, ir);
+    Rotamer* pRotIR = RotamersGet(pSet, ir);
     RotamerRestore(pRotIR, pSet);
 
-    Residue tempResi;
-    ResidueCreate(&tempResi);
-    ResidueCopy(&tempResi, pResi);
-    ResidueSetName(&tempResi, RotamerGetType(pRotIR));
-    AtomArrayCopy(ResidueGetAllAtoms(&tempResi), &pRotIR->atoms);
-    BondSetCopy(ResidueGetBonds(&tempResi), RotamerGetBonds(pRotIR));
-    AminoAcidReferenceEnergy(ResidueGetName(&tempResi), energyTerms);
-    EnergyIntraResidue(&tempResi, energyTerms);
+    Residue res;
+    ResidueCreate(&res);
+    ResidueCopy(&res, pRes);
+    ResidueSetName(&res, RotamerGetType(pRotIR));
+    AtomArrayCopy(ResidueGetAllAtoms(&res), &pRotIR->atoms);
+    BondsCopy(ResidueGetBonds(&res), RotamerGetBonds(pRotIR));
+    AminoAcidReferenceEnergy(ResidueGetName(&res), energyTerms);
+    EnergyIntraResidue(&res, energyTerms);
     RotamerDunbrackEnergy(pRotIR, energyTerms);
-    ResidueSetDunbrack(&tempResi, RotamerGetDunbrack(pRotIR));
-    DoubleArrayCopy(&tempResi.Xs, &pRotIR->Xs);
-    for (int is = 0; is < surroundingResiNum; is++)
+    ResidueSetDunbrack(&res, RotamerGetDunbrack(pRotIR));
+    DoubleArrayCopy(&res.Xs, &pRotIR->Xs);
+    for (int is = 0; is < numCloseRes; is++)
     {
-      Residue* pResIS = ppSurroundingResidues[is];
-      if (!strcmp(ResidueGetChainName(&tempResi), ResidueGetChainName(pResIS)))
+      Residue* pResIS = ppCloseRes[is];
+      if (!strcmp(ResidueGetChainName(&res), ResidueGetChainName(pResIS)))
       {
-        if (tempResi.posInChain == pResIS->posInChain - 1)
+        if (ResidueGetPosInChain(&res) == ResidueGetPosInChain(pResIS) - 1)
         {
-          EnergyResidueAndNextResidue(&tempResi, pResIS, energyTerms);
+          EnergyResidueAndNextResidue(&res, pResIS, energyTerms);
         }
-        else if (tempResi.posInChain == pResIS->posInChain + 1)
+        else if (ResidueGetPosInChain(&res) == ResidueGetPosInChain(pResIS) + 1)
         {
-          EnergyResidueAndNextResidue(pResIS, &tempResi, energyTerms);
+          EnergyResidueAndNextResidue(pResIS, &res, energyTerms);
         }
         else
         {
-          EnergyResidueAndOtherResidueSameChain(&tempResi, pResIS, energyTerms);
+          EnergyResidueAndOtherResidueSameChain(&res, pResIS, energyTerms);
         }
       }
       else
       {
-        if (ChainGetType(StructureFindChainByName(pStructure, ResidueGetChainName(pResIS))) == Type_Chain_SmallMol)
+        if (ChainGetType(StructureFindChainByName(pStruct, ResidueGetChainName(pResIS))) == Type_Chain_SmallMol)
         {
-          EnergyResidueAndLigandResidue(&tempResi, pResIS, energyTerms);
+          EnergyResidueAndLigandResidue(&res, pResIS, energyTerms);
         }
         else
         {
-          EnergyResidueAndOtherResidueDiffChain(&tempResi, pResIS, energyTerms);
+          EnergyResidueAndOtherResidueDiffChain(&res, pResIS, energyTerms);
         }
       }
     }
@@ -472,14 +483,18 @@ int ProteinSiteOptimizeRotamerWithBBdepRotLib(Structure* pStructure, int chainIn
     if (energyTerms[0] < minEnergy)
     {
       minEnergy = energyTerms[0];
-      ResidueCopy(pResi, &tempResi);
+      ResidueCopy(pRes, &res);
     }
-
     RotamerExtract(pRotIR);
-    ResidueDestroy(&tempResi);
+    ResidueDestroy(&res);
   }
-  free(ppSurroundingResidues);
-  ppSurroundingResidues = NULL;
+
+  if (ppCloseRes != NULL)
+  {
+    free(ppCloseRes);
+    ppCloseRes = NULL;
+  }
 
   return Success;
 }
+

@@ -176,8 +176,6 @@ void CharSeq::SeqAlign::readMkPrf(char* prffile)
 {
   FILE* fp = NULL;
   fp = fopen(prffile, "r");
-  // count the number of residues
-
 //	len = Text::nnewline(fp) - 2;
 //	fseek(fp, 0, SEEK_SET);
 

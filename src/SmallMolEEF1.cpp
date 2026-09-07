@@ -22,10 +22,10 @@ int AtomAssignParameter(Atom* pAtom, char* atomType, double dgfree, double lambd
 {
   strcpy(pAtom->type, atomType);
   pAtom->EEF1_freeDG = dgfree;
-  pAtom->EEF1_lamda_ = lambda;
+  pAtom->EEF1_lamda = lambda;
   pAtom->EEF1_volume = volume;
-  pAtom->vdw_epsilon = epsilon;
-  pAtom->vdw_radius = radius;
+  pAtom->vdw_eps = epsilon;
+  pAtom->vdw_rad = radius;
   return Success;
 }
 

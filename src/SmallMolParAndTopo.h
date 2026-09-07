@@ -28,7 +28,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 int FindAtomC(Atom* pAtomD, AtomArray* pAtomArray, IntArray* icFlags, IntArray* bondsFromToAndType, AtomArray* pAtomCArray);
 int FindAtomB(Atom* pAtomC, Atom* pAtomD, AtomArray* pAtoms, IntArray* icFlags, IntArray* bondsFromToAndType, AtomArray* pAtomBArray);
-int GetAttachedAtomTypeNum(AtomArray* pAtoms, int bonds[][2], int bondNum, int atomIndex, int attachAtomTypeNum[10], int* attachCount, int attachIndex[10]);
+int GetAttachedAtomTypeNum(AtomArray* pAtoms, int bonds[][2], int bondNum, int atomIndex, int attachAtomTypeNum[10], int* attachNum, int attachIndex[10]);
 int GenerateSmallMolParameterAndTopologyFromMol2(char* mol2file, char* parfile, char* topfile, char* iniAtom1, char* iniAtom2, char* iniAtom3);
 
 #endif // SMALLMOL_PAR_AND_TOPO_H

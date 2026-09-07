@@ -30,8 +30,8 @@ typedef enum _Type_Bond
 
 typedef struct _Bond
 {
-  char atomFromName[MAX_LEN_ATOM_NAME + 1];
-  char atomToName[MAX_LEN_ATOM_NAME + 1];
+  char atomFromName[MAX_LEN_ATOM_NAME+1];
+  char atomToName[MAX_LEN_ATOM_NAME+1];
   Type_Bond type;
 } Bond;
 
@@ -46,27 +46,27 @@ Type_Bond BondGetType(Bond* pThis);
 int BondSetType(Bond* pThis, Type_Bond newType);
 int BondShow(Bond* pThis);
 
-typedef struct _BondSet
+typedef struct _Bonds
 {
-  int count;
+  int num;
   Bond* bonds;
-} BondSet;
+} Bonds;
 
-int BondSetCreate(BondSet* pThis);
-int BondSetDestroy(BondSet* pThis);
-int BondSetCopy(BondSet* pThis, BondSet* pOther);
-int BondSetGetCount(BondSet* pThis);
-int BondSetAdd(BondSet* pThis, char* atom1, char* atom2, Type_Bond bondType);
-int BondSetRemove(BondSet* pThis, char* atom1, char* atom2);
-Type_Bond BondSetFind(BondSet* pThis, char* atom1, char* atom2);
-Bond* BondSetGet(BondSet* pThis, int index);
-int BondSetShow(BondSet* pThis);
+int BondsCreate(Bonds* pThis);
+int BondsDestroy(Bonds* pThis);
+int BondsCopy(Bonds* pThis, Bonds* pOther);
+int BondsGetNum(Bonds* pThis);
+int BondsAdd(Bonds* pThis, char* atom1, char* atom2, Type_Bond bondType);
+int BondsRemove(Bonds* pThis, char* atom1, char* atom2);
+Type_Bond BondsFind(Bonds* pThis, char* atom1, char* atom2);
+Bond* BondsGet(Bonds* pThis, int index);
+int BondsShow(Bonds* pThis);
 
 typedef struct _CharmmIC
 {
   double icParam[5];
-  char atomNames[4][MAX_LEN_ATOM_NAME + 1];
-  BOOL torsionProperFlag;                    // 1 byte
+  char atomNames[4][MAX_LEN_ATOM_NAME+1];
+  BOOL torFlag;
   // Proper dihedral angle (A, B, C, D): five parameters are R(AB), Theta(ABC), Phi(ABCD), Theta(BCD), R(CD)
   // Improper dihedral angle (A, B, *C, D); five parameters are R(AC), Theta(ACB), Phi(ABCD), Theta(BCD), R(CD)
 }CharmmIC;
@@ -85,50 +85,50 @@ BOOL CharmmICGetTorsionProperFlag(CharmmIC* pThis);
 int CharmmICCalcXYZ(CharmmIC* pThis, AtomArray* atomArray, XYZ* pDestXYZ);
 int CharmmICShow(CharmmIC* pThis);
 
-typedef struct _ResidueTopology
+typedef struct _ResTopology
 {
   StringArray atoms;
-  StringArray deletes;
-  BondSet bonds;
+  StringArray dels;
+  Bonds bonds;
   CharmmIC* ics;
-  char residueName[MAX_LEN_RES_NAME + 1];
-  int icCount;
-} ResidueTopology;
+  char resName[MAX_LEN_RES_NAME+1];
+  int icNum;
+} ResTopology;
 
-int ResidueTopologyCreate(ResidueTopology* pThis);
-int ResidueTopologyCreateFromFileReader(ResidueTopology* pThis, FileReader* pFileReader);
-int ResidueTopologyDestroy(ResidueTopology* pThis);
-int ResidueTopologyCopy(ResidueTopology* pThis, ResidueTopology* pOther);
+int ResTopologyCreate(ResTopology* pThis);
+int ResTopologyCreateFromFileReader(ResTopology* pThis, FileReader* fr);
+int ResTopologyDestroy(ResTopology* pThis);
+int ResTopologyCopy(ResTopology* pThis, ResTopology* pOther);
 
-char* ResidueTopologyGetName(ResidueTopology* pThis);
-int ResidueTopologySetName(ResidueTopology* pThis, char* newName);
+char* ResTopologyGetName(ResTopology* pThis);
+int ResTopologySetName(ResTopology* pThis, char* newName);
 
-StringArray* ResidueTopologyGetAtoms(ResidueTopology* pThis);
-StringArray* ResidueTopologyGetDeletes(ResidueTopology* pThis);
-BondSet* ResidueTopologyGetBonds(ResidueTopology* pThis);
+StringArray* ResTopologyGetAtoms(ResTopology* pThis);
+StringArray* ResTopologyGetDeletes(ResTopology* pThis);
+Bonds* ResTopologyGetBonds(ResTopology* pThis);
 
-int ResidueTopologyGetCharmmICCount(ResidueTopology* pThis);
-int ResidueTopologyGetCharmmIC(ResidueTopology* pThis, int index, CharmmIC* pDestIC);
-int ResidueTopologyFindCharmmIC(ResidueTopology* pThis, char* atomDName, CharmmIC* pDestIC);
-int ResidueTopologyFindCharmmICIndex(ResidueTopology* pThis, char* atomDName, int* index);
-int ResidueTopologyAddCharmmIC(ResidueTopology* pThis, CharmmIC* pNewIC);
-int ResidueTopologyShow(ResidueTopology* pThis);
+int ResTopologyGetCharmmICNum(ResTopology* pThis);
+int ResTopologyGetCharmmIC(ResTopology* pThis, int index, CharmmIC* ic);
+int ResTopologyFindCharmmIC(ResTopology* pThis, char* atomDName, CharmmIC* ic);
+int ResTopologyFindCharmmICIndex(ResTopology* pThis, char* atomDName, int* ndx);
+int ResTopologyAddCharmmIC(ResTopology* pThis, CharmmIC* ic);
+int ResTopologyShow(ResTopology* pThis);
 
 
 
-typedef struct _ResiTopoSet
+typedef struct _ResTopos
 {
-  int count;
-  ResidueTopology* topos;
-} ResiTopoSet;
+  int num;
+  ResTopology* topos;
+} ResTopos;
 
-int ResiTopoSetCreate(ResiTopoSet* pThis);
-int ResiTopoSetDestroy(ResiTopoSet* pThis);
-int ResiTopoSetCopy(ResiTopoSet* pThis, ResiTopoSet* pOther);
-int ResiTopoSetGet(ResiTopoSet* pThis, char* resiName, ResidueTopology* pDestTopo);
-int ResiTopoSetGetTopologyIndex(ResiTopoSet* pThis, char* resiName, int* index);
-int ResiTopoSetAdd(ResiTopoSet* pThis, ResidueTopology* pNewTopo);
-int ResiTopoSetAddFromFile(ResiTopoSet* pThis, char* filepath);
-int ResiTopoSetRead(ResiTopoSet* pResiTopo, char* filePath);
-int ResiTopoSetShow(ResiTopoSet* pThis);
+int ResToposCreate(ResTopos* pThis);
+int ResToposDestroy(ResTopos* pThis);
+int ResToposCopy(ResTopos* pThis, ResTopos* pOther);
+int ResToposGet(ResTopos* pThis, char* resName, ResTopology* pTopo);
+int ResToposFindIndexByName(ResTopos* pThis, char* resName, int* ndx);
+int ResToposAdd(ResTopos* pThis, ResTopology* pTopo);
+int ResToposAddFromFile(ResTopos* pThis, char* file);
+int ResToposRead(ResTopos* pThis, char* file);
+int ResToposShow(ResTopos* pThis);
 #endif

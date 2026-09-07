@@ -112,7 +112,7 @@ Type_Chain ChainTypeIdentifiedFromResidueName(char* resiName)
 int ChainCreate(Chain* pThis)
 {
   ChainSetName(pThis, "");
-  pThis->residueNum = 0;
+  pThis->resNum = 0;
   pThis->residues = NULL;
   return Success;
 }
@@ -120,13 +120,13 @@ int ChainCreate(Chain* pThis)
 
 int ChainDestroy(Chain* pThis)
 {
-  for (int i = 0;i < pThis->residueNum;i++)
+  for (int i = 0;i < pThis->resNum;i++)
   {
     ResidueDestroy(&pThis->residues[i]);
   }
   free(pThis->residues);
   pThis->residues = NULL;
-  pThis->residueNum = 0;
+  pThis->resNum = 0;
   return Success;
 }
 
@@ -137,9 +137,9 @@ int ChainCopy(Chain* pThis, Chain* pOther)
   ChainSetName(pThis, pOther->name);
   ChainSetType(pThis, pOther->type);
 
-  pThis->residueNum = pOther->residueNum;
-  pThis->residues = (Residue*)malloc(sizeof(Residue) * pThis->residueNum);
-  for (int i = 0;i < pThis->residueNum;i++)
+  pThis->resNum = pOther->resNum;
+  pThis->residues = (Residue*)malloc(sizeof(Residue) * pThis->resNum);
+  for (int i = 0;i < pThis->resNum;i++)
   {
     int result;
     ResidueCreate(&pThis->residues[i]);
@@ -161,7 +161,7 @@ int ChainSetName(Chain* pThis, char* newName)
 {
   if (strlen(newName) > MAX_LEN_CHAIN_NAME)
   {
-    char errMsg[MAX_LEN_ERR_MSG + 1];
+    char errMsg[MAX_LEN_ERR_MSG+1];
     int result = ValueError;
     sprintf(errMsg, "in file %s line %d, chain name %s is too long", __FILE__, __LINE__, newName);
     TraceError(errMsg, result);
@@ -185,34 +185,34 @@ int ChainSetType(Chain* pThis, Type_Chain newType)
 }
 
 
-int ChainGetResidueCount(Chain* pThis)
+int ChainGetResidueNum(Chain* pThis)
 {
-  return pThis->residueNum;
+  return pThis->resNum;
 }
 
 
 Residue* ChainGetResidue(Chain* pThis, int index)
 {
-  if (index < 0 || index >= ChainGetResidueCount(pThis)) return NULL;
+  if (index < 0 || index >= ChainGetResidueNum(pThis)) return NULL;
   else return &pThis->residues[index];
 }
 
 
-int ChainInsertResidue(Chain* pThis, int index, Residue* pNewResi)
+int ChainInsertResidue(Chain* pThis, int index, Residue* pNewRes)
 {
-  if (index<0 || index>pThis->residueNum) return IndexError;
-  int newCount = pThis->residueNum + 1;
-  pThis->residues = (Residue*)realloc(pThis->residues, sizeof(Residue) * newCount);
-  ResidueCreate(&pThis->residues[newCount - 1]);
-  for (int i = newCount - 1;i > index;i--)
+  if (index<0 || index>pThis->resNum) return IndexError;
+  int newNum = pThis->resNum + 1;
+  pThis->residues = (Residue*)realloc(pThis->residues, sizeof(Residue) * newNum);
+  ResidueCreate(&pThis->residues[newNum - 1]);
+  for (int i = newNum - 1;i > index;i--)
   {
     ResidueCopy(&pThis->residues[i], &pThis->residues[i - 1]);
     ResidueSetPosInChain(&pThis->residues[i], pThis->residues[i - 1].posInChain);
   }
-  ResidueCopy(&pThis->residues[index], pNewResi);
+  ResidueCopy(&pThis->residues[index], pNewRes);
   ResidueSetChainName(&pThis->residues[index], pThis->name);
-  ResidueSetPosInChain(&pThis->residues[index], pNewResi->posInChain);
-  pThis->residueNum = newCount;
+  ResidueSetPosInChain(&pThis->residues[index], pNewRes->posInChain);
+  pThis->resNum = newNum;
 
   return Success;
 }
@@ -220,27 +220,27 @@ int ChainInsertResidue(Chain* pThis, int index, Residue* pNewResi)
 
 int ChainRemoveResidue(Chain* pThis, int index)
 {
-  if (index < 0 || index >= pThis->residueNum) return IndexError;
-  for (int i = index;i < pThis->residueNum - 1;i++)
+  if (index < 0 || index >= pThis->resNum) return IndexError;
+  for (int i = index;i < pThis->resNum - 1;i++)
   {
     ResidueCopy(&pThis->residues[i], &pThis->residues[i + 1]);
     ResidueSetPosInChain(&pThis->residues[i], ResidueGetPosInChain(&pThis->residues[i + 1]));
   }
-  ResidueDestroy(&pThis->residues[pThis->residueNum - 1]);
-  (pThis->residueNum)--;
+  ResidueDestroy(&pThis->residues[pThis->resNum - 1]);
+  (pThis->resNum)--;
   return Success;
 }
 
 
 int ChainAppendResidue(Chain* pThis, Residue* pNewResi)
 {
-  return ChainInsertResidue(pThis, pThis->residueNum, pNewResi);
+  return ChainInsertResidue(pThis, pThis->resNum, pNewResi);
 }
 
 
-int ChainCalcAllAtomXYZ(Chain* pThis, ResiTopoSet* topos)
+int ChainCalcAllAtomXYZ(Chain* pThis, ResTopos* topos)
 {
-  for (int i = 0;i < ChainGetResidueCount(pThis);i++)
+  for (int i = 0;i < ChainGetResidueNum(pThis);i++)
   {
     Residue* prevResi = ChainGetResidue(pThis, i - 1);
     Residue* nextResi = ChainGetResidue(pThis, i + 1);
@@ -248,7 +248,7 @@ int ChainCalcAllAtomXYZ(Chain* pThis, ResiTopoSet* topos)
     int result = ResidueCalcAllAtomXYZ(curResi, topos, prevResi, nextResi);
     if (FAILED(result))
     {
-      char errMsg[MAX_LEN_ERR_MSG + 1];
+      char errMsg[MAX_LEN_ERR_MSG+1];
       sprintf(errMsg, "in file %s line %d, failed to calculate some atoms' coordinates", __FILE__, __LINE__);
       TraceError(errMsg, result);
       return result;
@@ -258,7 +258,7 @@ int ChainCalcAllAtomXYZ(Chain* pThis, ResiTopoSet* topos)
 }
 
 
-int ChainShowInPDBFormat(Chain* pThis, int resiIndex, int atomIndex, FILE* pFile)
+int ChainShowInPDBFormat(Chain* pThis, int resiIndex, int atomNdx, FILE* pOut)
 {
   char header[7];
   char chainName[2];
@@ -273,19 +273,19 @@ int ChainShowInPDBFormat(Chain* pThis, int resiIndex, int atomIndex, FILE* pFile
     strcpy(header, "HETATM");
     strcpy(chainName, " ");
   }
-  int atomCounter = atomIndex;
-  for (int i = 0;i < pThis->residueNum;i++)
+  int num = atomNdx;
+  for (int i = 0;i < pThis->resNum;i++)
   {
-    ResidueShowInPDBFormat(&pThis->residues[i], header, chainName, atomCounter, ResidueGetPosInChain(&pThis->residues[i]) + resiIndex, pFile);
-    atomCounter += ResidueGetAtomCount(&pThis->residues[i]);
+    ResidueShowInPDBFormat(&pThis->residues[i], header, chainName, num, ResidueGetPosInChain(&pThis->residues[i]) + resiIndex, pOut);
+    num += ResidueGetAtomNum(&pThis->residues[i]);
   }
   return Success;
 }
 
 
-int ChainFindResidueByPosInChain(Chain* pThis, int posInchain, int* index)
+int ChainFindResidueIndexByPosInChain(Chain* pThis, int posInchain, int* index)
 {
-  for (int i = 0; i < ChainGetResidueCount(pThis); ++i)
+  for (int i = 0; i < ChainGetResidueNum(pThis); ++i)
   {
     Residue* pResi = ChainGetResidue(pThis, i);
     if (ResidueGetPosInChain(pResi) == posInchain)
@@ -300,7 +300,7 @@ int ChainFindResidueByPosInChain(Chain* pThis, int posInchain, int* index)
 
 int ChainShowAtomParameter(Chain* pThis)
 {
-  for (int i = 0; i < ChainGetResidueCount(pThis); i++)
+  for (int i = 0; i < ChainGetResidueNum(pThis); i++)
   {
     ResidueShowAtomParameter(ChainGetResidue(pThis, i));
   }
@@ -311,7 +311,7 @@ int ChainShowAtomParameter(Chain* pThis)
 int ChainShowBondInformation(Chain* pThis)
 {
   printf("------------------Bonds information for Chain %s--------------\n", ChainGetName(pThis));
-  for (int i = 0; i < ChainGetResidueCount(pThis); i++)
+  for (int i = 0; i < ChainGetResidueNum(pThis); i++)
   {
     Residue* pResidue = ChainGetResidue(pThis, i);
     printf("Residue %s PosInChain %d:\n", ResidueGetName(pResidue), ResidueGetPosInChain(pResidue));

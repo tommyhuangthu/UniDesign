@@ -13,443 +13,248 @@ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
-#pragma warning(disable:6031)
-#pragma warning(disable:4476)
+#pragma warning(disable : 6031)
+#pragma warning(disable : 4476)
 
 #include "ProgramFunction.h"
 #include "RotamerBuilder.h"
 #include "RotamerOptimizer.h"
-#include "Evolution.h"
+//#include "Evolution.h"
 #include <string.h>
 #include <ctype.h>
 
-extern BOOL FLAG_MONOMER;
-extern BOOL FLAG_PPI;
-extern BOOL FLAG_ENZYME;
-extern BOOL FLAG_PROT_LIG;
-
-extern BOOL FLAG_WRITE_HYDROGEN;
-
+extern BOOL FLAG_DESIGN_MON;
+extern BOOL FLAG_DESIGN_PPI;
+extern BOOL FLAG_DESIGN_ENZ;
+extern BOOL FLAG_DESIGN_PLI;
 extern BOOL FLAG_USE_INPUT_SC;
 extern BOOL FLAG_ROTATE_HYDROXYL;
-extern double CUT_TORSION_DEVIATION;
-
-extern double CUT_EXCL_LOW_PROB_ROT;
+extern double TORSION_DEVIATION_THRESHOLD;
+extern double ROTLIB_LOW_PROB_CUTOFF;
 extern char PROGRAM_NAME[MAX_LEN_FILE_NAME + 1];
 extern char PROGRAM_VERSION[MAX_LEN_FILE_NAME + 1];
-
 extern int CUT_NUM_CB_CORE;
 extern int CUT_NUM_CB_SURF;
-
 extern double CUT_PPI_DIST_SHELL1;
-
 extern int MAX_NUM_OF_RUNS;
-
 extern char REFERENCE_RESIDUES[MAX_LEN_ONE_LINE_CONTENT + 1];
-extern double DIST_RANGE_TO_REFERENCE;
+extern double DISTANCE_TO_REFERENCE_RESIDUES;
+extern char EXCLUDE_RESIDUES[MAX_LEN_ONE_LINE_CONTENT + 1];
 
-extern char EXCL_RESI[MAX_LEN_ONE_LINE_CONTENT + 1];
-
-int PrintHelp()
+int PrintProgramHelp()
 {
   printf(
-    "Usage: %s [OPTIONS]\n\n"
-    "OPTIONS:\n"
-    "   -v              print version\n"
-    "   --version       print version\n"
-    "   -h              print help message\n"
-    "   -?              print help message\n"
-    "   --help          print help message\n"
-    "   --command=arg   choose your command:\n"
-    "                   [Energy calculation module]\n"
-    "                     ComputeStability\n"
-    "                     ComputeBinding\n"
-    "                     ComputeEvolutionScore\n"
-    "                     ComputeResiEnergy\n"
-    "                     ComputeRotamersEnergy\n"
-    "                   [Structure modeling module]\n"
-    "                     RepairStructure\n"
-    "                     Minimize\n"
-    "                     BuildMutant\n"
-    "                     AddPolarHydrogen\n"
-    "                     OptimizeHydrogen\n"
-    "                     ProteinDesign\n"
-    "                   [ProteinDesign and side-chain packing module]\n"
-    "                     monomer design: ProteinDesign --monomer\n"
-    "                     PPI design    : ProteinDesign --ppint\n"
-    "                     PLI design    : ProteinDesign --protlig\n"
-    "                     enzyme design : ProteinDesign --enzyme\n"
-    "                     packing       : ProteinDesign --wildtype_only\n"
-    "                   [Enzyme and PLI design module]\n"
-    "                     MakeLigParamAndTopo\n"
-    "                     MakeLigPoses\n"
-    "                     AnalyzeLigPoses\n"
-    "                     ScreenLigPoses\n"
-    "                   [Structure checking and assessment module]\n"
-    "                     CheckClash0\n"
-    "                     CheckClash1\n"
-    "                     CheckClash2\n"
-    "                     CheckResiInRotLib\n"
-    "                     CompareSideChain\n"
-    "                     FindCoreResidue\n"
-    "                     FindInterfaceResidue\n"
-    "                     FindIntermediateResidue\n"
-    "                     FindSurfaceResidue\n"
-    "                     GetPhiPsi\n"
-    "                     GetResiMinRMSD\n"
-    "                     GetResiBfactor\n"
-    "                     ShowResiComposition\n"
-    "                   [Sequence-based feature prediction module]\n"
-    "                     PhiPsiPred\n"
-    "                     SSPred\n"
-    "                     SAPred\n"
-    "                   [Other modules]\n"
-    "                     OptimizeWeight\n"
-    "\n"
-    "command can be used in conjunction with one or more following options:\n\n"
-    "   --pdb=arg                 arg is a standard readable PDB file\n"
-    "   --split_chains=arg        arg specifies chain splitting for ComputeBinding with >=3 protein chains (e.g. AB,C or AB,CDE)\n"
-    "   --mutant_file=arg         arg is a file recording one or more mutants\n"
-    "   --bbdep=arg               arg = yes/no, turning on/off the flag for using bb-dep rotamer library (default: yes)\n"
-    "   --use_input_sc            use input protein structure's side chains as rotamers\n"
-    "   --ppi_shell1=arg          arg is the distance cutoff for the 1st shell of PPI (default: 5.0 Angstroms)\n"
-    "   --ppi_shell2=arg          arg is the distance cutoff for the 2nd shell of PPI (default: 8.0 Angstroms)\n"
-    "   --evolution               protein design using both physics and evolution scores\n"
-    "   --physics                 protein design using physical scoring function (EvoEF) only (default)\n"
-    "   --monomer                 the designing protein is treated as a monomer\n"
-    "   --ppint                   protein-protein interaction design\n"
-    "   --protlig                 protein-ligand interaction design\n"
-    "   --enzyme                  enzyme design (extended version of PLI design) with catalytic constraints\n"
-    "   --design_chains=arg       arg is the designing chain(s)'s identifier (e.g. A, or AB)\n"
-    "   --mol2=arg                arg is a standard readable mol2 file, atomic charge should be included\n"
-    "   --rotate_hydroxyl=arg     arg = yes/no, turning on/off the flag for rotating Ser, Thr, and Tyr hydroxyl hydrogen (default: on)\n"
-    "   --xdeviation=arg          arg is a float value cutoff for side-chain Chi angle deviation\n"
-    "   --wread=arg               arg is a energy-weight file\n"
-    "   --pdblist=arg             arg is a file recording a list of PDB IDs, each in one line\n"
-    "   --wildtype_only\n"
-    "   --rotlib=arg              arg is the name of a rotamer lib\n"
-    "   --pdb2=arg                arg is the 2nd PDB file for comparing side-chains by command CompareSideChain\n"
-    "                             this flag makes design very slow (default: turned off)\n"
-    "   --pli_shell1=arg          arg is the distance cutoff for the 1st shell of protein-ligand interaction (default: 5.0 Angstroms)\n"
-    "   --pli_shell2=arg          arg is the distance cutoff for the 2nd shell of protein-ligand interaction (default: 8.0 Angstroms)\n"
-    "   --clash_ratio=arg         arg is a float value cutoff for the command CheckClash[0-2] (default: 0.6)\n"
-    "   --ntraj=arg               arg is an integer for the number of independent protein design trajectories (default: 1)\n"
-    "   --excl_low_prob=arg       arg is a flat value cutoff for excluding low-probability rotamers (default: 0.03), 0~0.05 suggested\n"
-    "   --interface_only\n"
-    "   --seq=arg                 arg is a single-line plain-text FASTA protein sequence file\n"
-    "   --evo_allterms            turn on the flag for using all-term evolution (including PSSM, SA, SS, and psi-phi) for protein design\n"
-    "   --wprof=arg               arg is a float value (default: 1.0)\n"
-    "   --resfile=arg             arg is the name of residue-restriction file\n"
-    "   --seed_from_nat           turn on the flag for using native sequence as a starting point for protein design\n"
-    "   --excl_rot_cys            exclude the Cystenine rotamers for protein design\n"
-    "   --show_hydrogen=arg       arg = yes, save the coordinates of polar hydrogens to PDB file\n"
-    "                             arg = no, do not write hydrogens into PDB\n"
-    "   --ncut_cb_core=arg        arg is an integer cutoff value for the number of CB atoms for a CORE (buried) residue (default: 20)\n"
-    "   --ncut_cb_surf=arg        arg is an integer cutoff value for the number of CB atoms for a SURFACE (exposed) residue (default: 15)\n"
-    "   --init_3atoms=arg         arg is the name of three atoms divided by commas (e.g. C1,C2,C3)\n"
-    "                             this option is only used with the command GenLigParamAndTopo\n"
-    "   --read_lig_poses=arg      read ligand poses from the file arg, a PDB file recording multiple ligand poses\n"
-    "   --write_lig_poses=arg     write ligand poses to the file arg, a PDB file for recording multiple ligand poses\n"
-    "   --scrn_by_orientation=arg        screen ligand poses using the rule defined in the arg file\n"
-    "   --scrn_by_vdw=arg      screen ligand poses with both internalVDW and backboneVDW ranked in a low percentile, e.g. 25%\n"
-    "   --scrn_by_rmsd=arg        screen ligand poses using an RMSD cutoff value (default: 1.0)\n"
-    "\n\n", PROGRAM_NAME);
+      "NAME \n\n"
+      "  %s - a light weight program for computational protein design and modeling \n\n"
+      "SYNOPSIS\n\n"
+      "  %s [OPTIONS] ...\n\n"
+      "DESCRIPTION\n\n"
+      "  -v, --version \n"
+      "    print out program version \n\n"
+      "  -h, -?, --help \n"
+      "    print out help information \n\n"
+      "  --command <arg> \n"
+      "    supported commands are: \n"
+      "    1. Energy calculation commands, including: \n"
+      "      'ComputeStability', 'ComputeBinding', 'ComputeEvoScore', 'ComputeResEnergy', 'ComputeResPairEnergy',  'ComputeRotamersEnergy'. \n"
+      "    2. Structure modeling commands, including: \n"
+      "      'RepairStructure', 'Minimize', 'BuildMutant', 'AddPolarHydrogen', 'OptimizeHydrogen', and 'ProteinDesign' used with flag \n"
+      "      '--wildtype_only' for protein sidechain repacking. \n"
+      "    3. Protein Design commands: \n"
+      "      'ProteinDesign' used with one of the four flags (--design_mon, --design_ppi, --design_pli, or --design_enz) to design new \n"
+      "      protein sequences or variants (for protein engineering) \n"
+      "    4. Ligand pose generatiion and analysis commands: "
+      "      'MakeLigParamAndTopo', 'MakeLigPoses', 'AnalyzeLigPoses', 'ScreenLigPoses' \n"
+      "    5. Protein structure checking and assessment commands, including: \n"
+      "      'CheckClash0', 'CheckClash1', 'CheckClash2', 'CheckResiInRotLib', 'CompareSideChain', 'FindCoreResidue', 'FindInterfaceResidue', \n"
+      "      'FindIntermediateResidue', 'FindSurfaceResidue', 'GetPhiPsi', 'GetResiMinRMSD', 'GetResiBfactor', 'ShowResiComposition' \n"
+      "    6. Sequence-based feature prediction commands: \n"
+      "      'PhiPsiPred', 'SSPred', 'SAPred' \n"
+      "    7. Other commands: \n"
+      "      'OptimizeWeight' \n"
+      "                               \n"
+      "  commands can be used in conjunction with one or more options below: \n"
+      "    --pdb  <arg> \n"
+      "                            <arg> specifies an input pdb file. \n"
+      "    --split_chains  <arg>\n"
+      "                            <arg> specifies the chain splitting manner for a system with no less than three chains (e.g. 'AB,C', 'AB,CDE'). \n"
+      "    --mutant_file  <arg> \n"
+      "                            <arg> specifies an input file that records mutants. \n"
+      "    --use_input_sc \n"
+      "                            Flag for using the input protein's amino-acid sidechains as rotamers. \n"
+      "    --ppi_shell1  <arg> \n"
+      "                            <arg> specifies the distance cutoff for the first shell of PPI (default: 5 Ang). \n"
+      "    --ppi_shell2  <arg> \n"
+      "                            <arg> specifies the distance cutoff for the second shell of PPI (default: 8 Ang). \n"
+      "    --pli_shell1  <arg> \n"
+      "                            <arg> specifies the distance cutoff for the first shell of protein-ligand interaction (default: 5 Ang). \n"
+      "    --pli_shell2  <arg> \n"
+      "                            <arg> specifies the distance cutoff for the second shell of protein-ligand interaction (default: 8 Ang). \n"
+      "    --evolution \n"
+      "                            This flag turns on the evolutionary score for protein design. \n"
+      "    --design_mon \n"
+      "                            This flag turns on monomer protein design. \n"
+      "    --design_ppi \n"
+      "                            This flag turns on protein-protein interaction design. \n"
+      "    --design_pli \n"
+      "                            This flag turns on protein-ligand interaction design. \n"
+      "    --design_enz \n"
+      "                            This flag turns on small molecule ligand-involved enzyme design. \n"
+      "    --design_chains  <arg> \n"
+      "                            <arg> specifies protein chains to be redesigned (e.g. 'A', 'AB').\n"
+      "    --wildtype_only \n"
+      "                            This flag specifies that rotamers should be generated for native amino acid types. \n"
+      "    --interface_only\n"
+      "                            This flag specifies that only interface residues will be designed. \n"
+      "    --resfile  <arg> \n"
+      "                            <arg> specifies an input file that set residues for protein design. \n"
+      "    --seed_from_wildtype\n"
+      "                            turn on the flag for using native sequence as a starting point for protein design\n"
+      "    --exclude_cys_rots\n"
+      "                            exclude the Cystenine rotamers for protein design\n"
+      "    --mol2  <arg> \n"
+      "                            <arg> specifies an input mol2 file (Note: atomic charge should be already included). \n"
+      "    --rotate_hydroxyl  <arg> \n"
+      "                            <arg> = 'true'/'false'. This option turns on/off the flag for rotating the hydroxyl groups of Ser, \n"
+      "                            Thr, and Tyr to generate extra rotamers to improve sampling (default: true). \n"
+      "    --xdeviation  <arg> \n"
+      "                            <arg> specifies a value threshold (in degrees) to determine the similarity of two torsional angles. \n"
+      "    --wread  <arg> \n"
+      "                            <arg> specifies the file for reading energy weights \n"
+      "    --pdblist  <arg> \n"
+      "                            <arg> specifies a file that records a list of protein IDs, one in each line. \n"
+      "    --compare_pdb  <arg> \n"
+      "                            <arg> specifies another input pdb file, whose model will be compared to the structure specified with '--pdb'. \n"
+      "                            This option is used with command 'CompareSideChain' to compare two proteins' sidechain similarity. \n"
+      "    --clash_ratio  <arg> \n"
+      "                            <arg> specifies a threshold value for command 'CheckClash0', 'CheckClash1', and 'CheckClash2' (default: 0.75). \n"
+      "    --ntraj  <arg> \n"
+      "                            <arg> specifies the number of protein design trajectories (default: 1). \n"
+      "    --low_prob_rot_cutoff  <arg> \n"
+      "                            <arg> specifies a threshold value for excluding low-probability rotamers. \n"
+      "                            Suggested values: 0.01~0.03 (default: 0.03). \n"
+      "    --seq_file  <arg> \n"
+      "                            <arg> specifies an input protein fasta file. Protein sequence should be written in a single line. \n"
+      "    --all_evo_terms \n"
+      "                            turn on the flag for using all-term evolution (including PSSM, SA, SS, and psi-phi) for protein design. \n"
+      "    --wprof  <arg> \n"
+      "                            <arg> is a float value (default: 1.0)\n"
+
+      "    --ncut_cb_core  <arg>\n"
+      "                            <arg> is an integer cutoff value for the number of CB atoms for a CORE (buried) residue (default: 20)\n"
+      "    --ncut_cb_surf  <arg>\n"
+      "                            <arg> is an integer cutoff value for the number of CB atoms for a SURFACE (exposed) residue (default: 15)\n"
+
+      "    --init_3atoms  <arg>\n"
+      "                            <arg> is the name of three atoms divided by commas (e.g. C1,C2,C3)\n"
+      "                            this option is only used with the command GenLigParamAndTopo\n"
+      "    --read_lig_poses  <arg>\n"
+      "                            <arg> is the PDB file from which ligand rotameric poses will be read\n"
+      "    --write_lig_poses  <arg>\n"
+      "                            <arg> is a PDB file into which ligand rotameric poses will be written\n"
+      "    --by_orientation  <arg>\n"
+      "                            This option is used with commend 'ScreenLigPoses'. <arg> is a file that defines the rules for screening ligand poses based on the ligand's orientations \n"
+      "    --by_bbvdw_perc  <arg>\n"
+      "                            <arg> is a value between 0 and 1 that specifies the top percentile threshold (e.g., 0.25) \n"
+      "                            for selecting ligand poses whose internalVDW and backboneVDW scores both fall within this range\n"
+      "    --by_invdw_perc  <arg>\n"
+      "                            <arg> is a value between 0 and 1 that specifies the top percentile threshold (e.g., 0.25) \n"
+      "                            for selecting ligand poses whose internalVDW and backboneVDW scores both fall within this range\n"
+      "    --by_rmsd  <arg>\n"
+      "                            <arg> is a value between 0 and 1 that specifies the top percentile threshold (e.g., 0.25) \n"
+      "                            for selecting ligand poses whose internalVDW and backboneVDW scores both fall within this range\n"
+      "    --lig_param  <arg> \n"
+      "    --lig_topo <arg> \n"
+      "    --lig_catacons <arg>  \n"
+      "    --lig_placing <arg> \n"
+      "    --num_of_runs <arg>  \n"
+      "    --within_residues <arg>  \n"
+      "    --within_range <arg> \n"
+      "    --ntraj_start_ndx <arg> \n"
+      "    --wbind <arg> \n"
+      "    --residue <arg> \n"
+      "    --residue_pair <arg> \n"
+      "    --exclude_residues <arg> \n"
+      "    --min_muts <arg> \n"
+      "    --max_muts <arg>  \n"
+      "    --penalize_identical_seqs \n"
+      "    --min_temperature  \n"
+      "    --max_temperature  \n"
+      "    --num_of_samc_cycles \n"
+      "    --num_of_metropolis_steps \n"
+      "    --samc_temperature_decrease_factor \n"
+      "    --write_mutations \n"
+      "\n"
+      ,PROGRAM_NAME, PROGRAM_NAME);
   return Success;
 }
 
-int PrintVersion()
+int PrintProgramVersion()
 {
-  printf("%s v%s\n", PROGRAM_NAME, PROGRAM_VERSION);
+  printf("%s %s\n", PROGRAM_NAME, PROGRAM_VERSION);
   return Success;
 }
 
-
-int PrintOutProgramInformation()
+int PrintProgramInfo()
 {
   printf(
-    "#############################################################################################################\n"
-    "                                       %s (Version %s)\n"
-    "  A command-line-based tool featuring protein structure modeling and protein design, including:\n\n"
-    "    *) de novo protein sequence design and protein sequence redesign (ProteinDesign)\n"
-    "       can be used to design monomer proteins, protein-protein interactions, protein-ligand interactions, \n"
-    "       protein-nucleic acid interactions, and enzymes\n"
-    "    *) protein side-chain packing (ProteinDesign in conjuncion with the option --wildtype_only)\n"
-    "    *) calculate protein fold stability score (ComputeStability)\n"
-    "    *) calculate protein-protein binding energy score (ComputeBinding)\n"
-    "    *) repair missing protein side chains (RepairStructure)\n"
-    "    *) protein structure energy minimization (Minimize)\n"
-    "    *) build mutant strucure models (BuildMutant)\n"
-    "    *) add polar hydrogen atoms (AddPolarHydrogen)\n"
-    "    *) optimize hydrogen's position to maximize hydrogen bonding networks (OptimizeHydrogen)\n"
-    "\n"
-    "  Copyright (c) Xiaoqiang Huang\n"
-    "  Contact: xiaoqiah@outlook.com\n"
-    "############################################################################################################\n\n",
-    PROGRAM_NAME, PROGRAM_VERSION);
+      "####################################################################################################################\n"
+      "#                                       %s %s\n"
+      "#  A command-line-based tool featuring protein structure modeling and protein design, including:\n"
+      "#    *) de novo protein sequence design and protein sequence redesign (ProteinDesign)\n"
+      "#       can be used to design monomer proteins, protein-protein interactions, protein-ligand interactions, \n"
+      "#       protein-nucleic acid interactions, and enzymes\n"
+      "#    *) protein side-chain packing (ProteinDesign in conjuncion with the option --wildtype_only)\n"
+      "#    *) calculate protein fold stability score (ComputeStability)\n"
+      "#    *) calculate protein-protein binding energy score (ComputeBinding)\n"
+      "#    *) repair missing protein side chains (RepairStructure)\n"
+      "#    *) protein structure energy minimization (Minimize)\n"
+      "#    *) build mutant strucure models (BuildMutant)\n"
+      "#    *) add polar hydrogen atoms (AddPolarHydrogen)\n"
+      "#    *) optimize hydrogen's position to maximize hydrogen bonding networks (OptimizeHydrogen)\n"
+      "#  Copyright (c) Xiaoqiang Huang\n"
+      "#  Contact: xiaoqiah@outlook.com\n"
+      "####################################################################################################################\n",
+      PROGRAM_NAME, PROGRAM_VERSION);
   return Success;
 }
 
-
-int ComputeStructureStability(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, double energyTerms[MAX_ENERGY_TERM])
+int ComputeStability(Structure *pStruct, AAppTable *pAAPP, RamaTable *pRama, BBdepRotLib* pLib, double energyTerms[MAX_ENERGY_TERM])
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    for (int ir = 0; ir < ChainGetResidueCount(pChainI); ir++)
+    Chain *pChainI = StructureGetChain(pStruct, i);
+    for (int ir = 0; ir < ChainGetResidueNum(pChainI); ir++)
     {
-      Residue* pResIR = ChainGetResidue(pChainI, ir);
-      if (ChainGetType(pChainI) == Type_Chain_Protein)
-      {
-        AminoAcidReferenceEnergy(ResidueGetName(pResIR), energyTerms);
-        EnergyIntraResidue(pResIR, energyTerms);
-        AminoAcidPropensityAndRamachandranEnergy(pResIR, pAAppTable, pRama);
-        energyTerms[91] += pResIR->aapp;
-        energyTerms[92] += pResIR->rama;
-      }
-      for (int is = ir + 1; is < ChainGetResidueCount(pChainI); is++)
-      {
-        Residue* pResIS = ChainGetResidue(pChainI, is);
-        if (ResidueGetPosInChain(pResIR) + 1 == ResidueGetPosInChain(pResIS))
-        {
-          EnergyResidueAndNextResidue(pResIR, pResIS, energyTerms);
-        }
-        else
-        {
-          EnergyResidueAndOtherResidueSameChain(pResIR, pResIS, energyTerms);
-        }
-      }
-      for (int k = i + 1; k < StructureGetChainCount(pStructure); k++)
-      {
-        Chain* pChainK = StructureGetChain(pStructure, k);
-        for (int ks = 0; ks < ChainGetResidueCount(pChainK); ks++)
-        {
-          Residue* pResKS = ChainGetResidue(pChainK, ks);
-          if (ChainGetType(pChainI) == Type_Chain_SmallMol)
-          {
-            EnergyResidueAndLigandResidue(pResKS, pResIR, energyTerms);
-          }
-          else if (ChainGetType(pChainK) == Type_Chain_SmallMol)
-          {
-            EnergyResidueAndLigandResidue(pResIR, pResKS, energyTerms);
-          }
-          else
-          {
-            EnergyResidueAndOtherResidueDiffChain(pResIR, pResKS, energyTerms);
-          }
-        }
-      }
-    }
-  }
-
-  EnergyTermWeighting(energyTerms);
-  printf("\nStructure energy details:\n");
-  EnergyTermShowComplex(energyTerms);
-
-  return Success;
-}
-
-
-int ComputeStructureStabilityByBBdepRotLib(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, BBdepRotamerLib* pRotLib, double energyTerms[MAX_ENERGY_TERM])
-{
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    for (int ir = 0; ir < ChainGetResidueCount(pChainI); ir++)
-    {
-      Residue* pResIR = ChainGetResidue(pChainI, ir);
-      if (ChainGetType(pChainI) == Type_Chain_Protein)
-      {
-        AminoAcidReferenceEnergy(ResidueGetName(pResIR), energyTerms);
-        EnergyIntraResidue(pResIR, energyTerms);
-        AminoAcidPropensityAndRamachandranEnergy(pResIR, pAAppTable, pRama);
-        AminoAcidDunbrackEnergy(pResIR, pRotLib);
-        energyTerms[91] += pResIR->aapp;
-        energyTerms[92] += pResIR->rama;
-        energyTerms[93] += ResidueGetDunbrack(pResIR);
-      }
-      for (int is = ir + 1; is < ChainGetResidueCount(pChainI); is++)
-      {
-        Residue* pResIS = ChainGetResidue(pChainI, is);
-        if (ResidueGetPosInChain(pResIR) + 1 == ResidueGetPosInChain(pResIS))
-        {
-          EnergyResidueAndNextResidue(pResIR, pResIS, energyTerms);
-        }
-        else
-        {
-          EnergyResidueAndOtherResidueSameChain(pResIR, pResIS, energyTerms);
-        }
-      }
-      for (int k = i + 1; k < StructureGetChainCount(pStructure); k++)
-      {
-        Chain* pChainK = StructureGetChain(pStructure, k);
-        for (int ks = 0; ks < ChainGetResidueCount(pChainK); ks++)
-        {
-          Residue* pResKS = ChainGetResidue(pChainK, ks);
-          if (ChainGetType(pChainI) == Type_Chain_SmallMol)
-          {
-            EnergyResidueAndLigandResidue(pResKS, pResIR, energyTerms);
-          }
-          else if (ChainGetType(pChainK) == Type_Chain_SmallMol)
-          {
-            EnergyResidueAndLigandResidue(pResIR, pResKS, energyTerms);
-          }
-          else
-          {
-            EnergyResidueAndOtherResidueDiffChain(pResIR, pResKS, energyTerms);
-          }
-        }
-      }
-    }
-  }
-
-  EnergyTermWeighting(energyTerms);
-  printf("\nStructure energy details:\n");
-  EnergyTermShowComplex(energyTerms);
-  return Success;
-}
-
-
-int ComputeStructureStabilityByBBdepRotLib2(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, char* binLib, double energyTerms[MAX_ENERGY_TERM])
-{
-  // ACDEFGHIKLMNPQRSTVWY, only for regular amino acid
-  int xcount[20] = { 0,1,2,3,2,0,2,2,4,2,3,2,2,3,4,1,1,1,2,2 };
-  int nrot[20] = { 0,3,18,54,18,0,36,9,73,9,27,36,2,108,75,3,3,3,36,18 };
-  int lrot[20] = { 0,129,111,240,448,0,294,330,348,339,421,75,466,132,0,468,471,528,474,510 };
-  FILE* pFileLib = fopen(binLib, "rb");
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) == Type_Chain_Protein)
-    {
-      for (int ir = 0;ir < ChainGetResidueCount(pChainI);ir++)
-      {
-        Residue* pResiIR = ChainGetResidue(pChainI, ir);
-        if (pResiIR->isSCIntact)
-        {// calculate dunbrack energy for the amino acids with complete side chains
-          int aaIdx = AA3GetIndex(ResidueGetName(pResiIR));
-          if (aaIdx == 0 || aaIdx == 5)
-          {
-            continue;//skip Ala and Gly
-          }
-          int nchi = xcount[aaIdx];
-          int binIdx = ((int)(pResiIR->phipsi[0] + 180) / 10) * 36 + (int)(pResiIR->phipsi[1] + 180) / 10;
-          fseek(pFileLib, (1296 * lrot[aaIdx] + binIdx * nrot[aaIdx]) * 36, SEEK_SET);
-          int matchIdx = -1;
-          double pMin = 10;
-          double pMatch;
-          for (int rotIdx = 0;rotIdx < nrot[aaIdx];rotIdx++)
-          {
-            float p = 0.;
-            fread((char*)&p, sizeof(char), 4, pFileLib);
-            if (p < CUT_EXCL_LOW_PROB_ROT)
-            {
-              break;
-            }
-            if (p < pMin)
-            {
-              pMin = p;
-            }
-            float val;
-            double libtorsions[4] = { 0 };
-            double libdeviations[4] = { 0 };
-            for (int k = 0;k < nchi;k++)
-            {
-              fread((char*)&val, sizeof(char), 4, pFileLib);
-              libtorsions[k] = (float)val;
-            }
-            fseek(pFileLib, (4 - nchi) * 4, SEEK_CUR);
-            for (int k = 0;k < nchi;k++)
-            {
-              fread((char*)&val, sizeof(char), 4, pFileLib);
-              libdeviations[k] = (float)val;
-            }
-            fseek(pFileLib, (4 - nchi) * 4, SEEK_CUR);
-
-            BOOL match = TRUE;
-            for (int torIdx = 0; torIdx < DoubleArrayGetLength(&pResiIR->Xs); torIdx++)
-            {
-              double min = DegToRad(libtorsions[torIdx]) - DegToRad(libdeviations[torIdx]);
-              double max = DegToRad(libtorsions[torIdx]) + DegToRad(libdeviations[torIdx]);
-              double torsion = DoubleArrayGet(&pResiIR->Xs, torIdx);
-              double torsionm2pi = torsion - 2 * PI;
-              double torsionp2pi = torsion + 2 * PI;
-              double torsion2 = torsion;
-              if ((strcmp(ResidueGetName(pResiIR), "PHE") == 0 && torIdx == 1)
-                || (strcmp(ResidueGetName(pResiIR), "TYR") == 0 && torIdx == 1)
-                || (strcmp(ResidueGetName(pResiIR), "ASP") == 0 && torIdx == 1)
-                || strcmp(ResidueGetName(pResiIR), "GLU") == 0 && torIdx == 2)
-              {
-                torsion2 = torsion + PI;
-                torsion2 = torsion > 0 ? torsion - PI : torsion2;
-              }
-              double torsion2m2pi = torsion2 - 2 * PI;
-              double torsion2p2pi = torsion2 + 2 * PI;
-              if (!((torsion <= max && torsion >= min) || (torsionm2pi <= max && torsionm2pi >= min) || (torsionp2pi <= max && torsionp2pi >= min) ||
-                (torsion2 <= max && torsion2 >= min) || (torsion2m2pi <= max && torsion2m2pi >= min) || (torsion2p2pi <= max && torsion2p2pi >= min)))
-              {
-                match = TRUE;
-              }
-            }
-            if (match)
-            {
-              matchIdx = rotIdx;
-              pMatch = p;
-              break;
-            }
-          }
-          double pDelta = 1e-7;
-          if (matchIdx != -1)
-          {
-            energyTerms[93] += -log(pMatch + pDelta);
-          }
-          else
-          {
-            energyTerms[93] += -log(pMin + pDelta);
-          }
-        }
-      }
-    }
-  }
-  fclose(pFileLib);
-
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    for (int ir = 0; ir < ChainGetResidueCount(pChainI); ir++)
-    {
-      Residue* pResIR = ChainGetResidue(pChainI, ir);
+      Residue *pResIR = ChainGetResidue(pChainI, ir);
       if (ChainGetType(pChainI) == Type_Chain_Protein)
       {
         AminoAcidReferenceEnergy(pResIR->name, energyTerms);
         EnergyIntraResidue(pResIR, energyTerms);
-        AminoAcidPropensityAndRamachandranEnergy(pResIR, pAAppTable, pRama);
+        AminoAcidPropensityAndRamachandranEnergy(pResIR, pAAPP, pRama);
+        AminoAcidDunbrackEnergy(pResIR, pLib);
         energyTerms[91] += pResIR->aapp;
         energyTerms[92] += pResIR->rama;
+        energyTerms[93] += pResIR->dunbrack;
       }
-      for (int is = ir + 1;is < ChainGetResidueCount(pChainI);is++)
+      for (int is = ir + 1; is < ChainGetResidueNum(pChainI); is++)
       {
-        Residue* pResIS = ChainGetResidue(pChainI, is);
+        Residue *pResIS = ChainGetResidue(pChainI, is);
         if (ResidueGetPosInChain(pResIR) + 1 == ResidueGetPosInChain(pResIS))
         {
           EnergyResidueAndNextResidue(pResIR, pResIS, energyTerms);
         }
         else
         {
-          //if (ResidueGetPosInChain(pResIR) == 20 && ResidueGetPosInChain(pResIS) == 30)
-          //{
-          //  getchar();
-          //}
           EnergyResidueAndOtherResidueSameChain(pResIR, pResIS, energyTerms);
         }
-        //printf("debug res %s%d%s and res %s%d%s\n", ResidueGetChainName(pResIR), ResidueGetPosInChain(pResIR), ResidueGetName(pResIR),
-        //  ResidueGetChainName(pResIS), ResidueGetPosInChain(pResIS), ResidueGetName(pResIS));
       }
-      for (int k = i + 1; k < StructureGetChainCount(pStructure); k++)
+      for (int k = i + 1; k < StructureGetChainNum(pStruct); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
-        for (int ks = 0; ks < ChainGetResidueCount(pChainK); ks++)
+        Chain *pChainK = StructureGetChain(pStruct, k);
+        for (int ks = 0; ks < ChainGetResidueNum(pChainK); ks++)
         {
-          Residue* pResKS = ChainGetResidue(pChainK, ks);
+          Residue *pResKS = ChainGetResidue(pChainK, ks);
           if (ChainGetType(pChainI) == Type_Chain_SmallMol)
           {
             EnergyResidueAndLigandResidue(pResKS, pResIR, energyTerms);
@@ -462,46 +267,43 @@ int ComputeStructureStabilityByBBdepRotLib2(Structure* pStructure, AAppTable* pA
           {
             EnergyResidueAndOtherResidueDiffChain(pResIR, pResKS, energyTerms);
           }
-          //printf("debug res %s%d%s and res %s%d%s\n", ResidueGetChainName(pResIR), ResidueGetPosInChain(pResIR), ResidueGetName(pResIR),
-          //  ResidueGetChainName(pResKS), ResidueGetPosInChain(pResKS), ResidueGetName(pResKS));
         }
       }
     }
   }
 
   EnergyTermWeighting(energyTerms);
-  printf("\nStructure energy details:\n");
+  printf("\nStability energy details:\n");
   EnergyTermShowComplex(energyTerms);
   return Success;
 }
 
-
-int ComputeBinding(Structure* pStructure)
+int ComputeBinding(Structure *pStructure)
 {
-  if (StructureGetChainCount(pStructure) > 2)
+  if (StructureGetChainNum(pStructure) > 2)
   {
     printf("Your structure has more than two protein chains, and you should specify how to split chains "
-      "before computing the binding energy. Otherwise, the interactions between any chain pair is calculated\n");
+           "before computing the binding energy. Otherwise, the interactions between any chain pair is calculated\n");
   }
-  else if (StructureGetChainCount(pStructure) <= 1)
+  else if (StructureGetChainNum(pStructure) <= 1)
   {
     printf("Your structure has less than or equal to one chain, binding energy cannot be calculated\n");
     return Warning;
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    for (int k = i + 1; k < StructureGetChainCount(pStructure);k++)
+    Chain *pChainI = StructureGetChain(pStructure, i);
+    for (int k = i + 1; k < StructureGetChainNum(pStructure); k++)
     {
-      Chain* pChainK = StructureGetChain(pStructure, k);
-      double energyTerms[MAX_ENERGY_TERM] = { 0 };
-      for (int j = 0;j < ChainGetResidueCount(pChainI);j++)
+      Chain *pChainK = StructureGetChain(pStructure, k);
+      double energyTerms[MAX_ENERGY_TERM] = {0};
+      for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
       {
-        Residue* pResIJ = ChainGetResidue(pChainI, j);
-        for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+        Residue *pResIJ = ChainGetResidue(pChainI, j);
+        for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
         {
-          Residue* pResKS = ChainGetResidue(pChainK, s);
+          Residue *pResKS = ChainGetResidue(pChainK, s);
           if (ChainGetType(pChainI) == Type_Chain_SmallMol)
           {
             EnergyResidueAndLigandResidue(pResKS, pResIJ, energyTerms);
@@ -517,8 +319,7 @@ int ComputeBinding(Structure* pStructure)
         }
       }
       EnergyTermWeighting(energyTerms);
-      // energy terms are weighted during the calculation, don't weight them for the difference
-      printf("Binding energy details between chain %s and chain %s:\n", ChainGetName(pChainI), ChainGetName(pChainK));
+      printf("Structure binding energy details between chain %s and chain %s:\n", ChainGetName(pChainI), ChainGetName(pChainK));
       EnergyTermShowComplex(energyTerms);
     }
   }
@@ -526,25 +327,24 @@ int ComputeBinding(Structure* pStructure)
   return Success;
 }
 
-
-int ComputeBindingWithChainSplitting(Structure* pStructure, char split1[], char split2[])
+int ComputeBinding2(Structure *pStructure, char split1[], char split2[])
 {
-  double energyTerms[MAX_ENERGY_TERM] = { 0 };
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  double energyTerms[MAX_ENERGY_TERM] = {0};
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    for (int k = i + 1;k < StructureGetChainCount(pStructure);k++)
+    Chain *pChainI = StructureGetChain(pStructure, i);
+    for (int k = i + 1; k < StructureGetChainNum(pStructure); k++)
     {
-      Chain* pChainK = StructureGetChain(pStructure, k);
-      if ((strstr(split1, ChainGetName(pChainI)) != NULL && strstr(split1, ChainGetName(pChainK)) == NULL)
-        || ((strstr(split1, ChainGetName(pChainI)) == NULL && strstr(split1, ChainGetName(pChainK)) != NULL)))
+      Chain *pChainK = StructureGetChain(pStructure, k);
+      if ( (strstr(split1, ChainGetName(pChainI)) != NULL && strstr(split1, ChainGetName(pChainK)) == NULL) || 
+      ((strstr(split1, ChainGetName(pChainI)) == NULL && strstr(split1, ChainGetName(pChainK)) != NULL)) )
       {
-        for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+        for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
         {
-          Residue* pResIJ = ChainGetResidue(pChainI, j);
-          for (int s = 0; s < ChainGetResidueCount(pChainK); s++)
+          Residue *pResIJ = ChainGetResidue(pChainI, j);
+          for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
           {
-            Residue* pResKS = ChainGetResidue(pChainK, s);
+            Residue *pResKS = ChainGetResidue(pChainK, s);
             if (ChainGetType(pChainI) == Type_Chain_SmallMol)
             {
               EnergyResidueAndLigandResidue(pResKS, pResIJ, energyTerms);
@@ -563,205 +363,23 @@ int ComputeBindingWithChainSplitting(Structure* pStructure, char split1[], char 
     }
   }
   EnergyTermWeighting(energyTerms);
-  printf("Binding energy details between chain(s) %s and chain(s) %s (DG_bind = DG(stability,complex) - DG(stability,%s) - DG(stability,%s):\n", split1, split2, split1, split2);
+  printf("Binding energy details between chain(s) %s and chain(s) %s "
+  "(DG_bind = DG(stability,complex) - DG(stability,%s) - DG(stability,%s):\n", split1, split2, split1, split2);
   EnergyTermShowComplex(energyTerms);
   return Success;
 }
 
-
-//this function is used to build the structure model of mutations
-int BuildMutant(Structure* pStructure, char* mutantfile, BBindRotamerLib* rotlib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
+int BuildMutant(Structure *pStruct, char *mutfile, BBdepRotLib *pLib, AtomParams *pParams, ResTopos *pTops)
 {
   FileReader fr;
-  FileReaderCreate(&fr, mutantfile);
-  int mutantcount = FileReaderGetLineCount(&fr);
-  if (mutantcount <= 0)
+  FileReaderCreate(&fr, mutfile);
+  int mutNum = FileReaderGetLineNum(&fr);
+  if (mutNum <= 0)
   {
-    printf("There is no mutant found in the mutant file\n");
-    return DataNotExistError;
-  }
-
-  StringArray* mutants = (StringArray*)malloc(sizeof(StringArray) * mutantcount);
-  char line[MAX_LEN_ONE_LINE_CONTENT + 1];
-  int mutantIndex = 0;
-  while (!FAILED(FileReaderGetNextLine(&fr, line)))
-  {
-    StringArrayCreate(&mutants[mutantIndex]);
-    StringArraySplitString(&mutants[mutantIndex], line, ',');
-    char lastMutant[MAX_LEN_ONE_LINE_CONTENT + 1];
-    int lastmutindex = StringArrayGetCount(&mutants[mutantIndex]) - 1;
-    strcpy(lastMutant, StringArrayGet(&mutants[mutantIndex], lastmutindex));
-    //deal with the last char of the last single mutant
-    if ((!isdigit(lastMutant[strlen(lastMutant) - 1])) && !isalpha(lastMutant[strlen(lastMutant) - 1]))
-    {
-      lastMutant[strlen(lastMutant) - 1] = '\0';
-    }
-    StringArraySet(&mutants[mutantIndex], lastmutindex, lastMutant);
-    mutantIndex++;
-  }
-  FileReaderDestroy(&fr);
-
-  for (int mutantIndex = 0; mutantIndex < mutantcount; mutantIndex++)
-  {
-    Structure tempStruct;
-    StructureCreate(&tempStruct);
-    StructureCopy(&tempStruct, pStructure);
-    Structure tempStruct2;
-    StructureCreate(&tempStruct2);
-    StructureCopy(&tempStruct2, pStructure);
-    //for each mutant, build the rotamer-tree
-    IntArray mutantArray, rotamersArray;
-    IntArrayCreate(&mutantArray, 0);
-    IntArrayCreate(&rotamersArray, 0);
-    for (int mutation = 0; mutation < StringArrayGetCount(&mutants[mutantIndex]); mutation++)
-    {
-      char mutstr[10];
-      char aa1, chn, aa2;
-      int posInChain;
-      strcpy(mutstr, StringArrayGet(&mutants[mutantIndex], mutation));
-      sscanf(mutstr, "%c%c%d%c", &aa1, &chn, &posInChain, &aa2);
-      int chnNdx = -1, resNdx = -1;
-      char chainname[MAX_LEN_CHAIN_NAME]; chainname[0] = chn; chainname[1] = '\0';
-      StructureFindChainIndex(&tempStruct, chainname, &chnNdx);
-      if (chnNdx == -1)
-      {
-        printf("in file %s line %d, cannot find mutation %s\n", __FILE__, __LINE__, mutstr);
-        exit(ValueError);
-      }
-      ChainFindResidueByPosInChain(StructureGetChain(&tempStruct, chnNdx), posInChain, &resNdx);
-      if (resNdx == -1)
-      {
-        printf("in file %s line %d, cannot find mutation %s\n", __FILE__, __LINE__, mutstr);
-        exit(ValueError);
-      }
-      char mutaatype[MAX_LEN_RES_NAME];
-      AA1ToAA3(aa2, mutaatype);
-      StringArray mutRotType, mutPatch;
-      StringArrayCreate(&mutRotType);
-      StringArrayCreate(&mutPatch);
-      // for histidine, the default mutAAType is HSD, we need to add HSE
-      StringArrayAppend(&mutRotType, mutaatype);
-      StringArrayAppend(&mutPatch, "");
-      if (aa2 == 'H')
-      {
-        StringArrayAppend(&mutRotType, "HSE");
-        StringArrayAppend(&mutPatch, "");
-      }
-      ProteinSiteBuildMutatedRotamers(&tempStruct, chnNdx, resNdx, rotlib, atomParams, resiTopos, &mutRotType, &mutPatch);
-      IntArrayAppend(&mutantArray, chnNdx);
-      IntArrayAppend(&mutantArray, resNdx);
-      IntArrayAppend(&rotamersArray, chnNdx);
-      IntArrayAppend(&rotamersArray, resNdx);
-      StringArrayDestroy(&mutRotType);
-      StringArrayDestroy(&mutPatch);
-
-      // create a reference model for the wild-type
-      StringArray wtRotType, wtPatch;
-      StringArrayCreate(&wtRotType);
-      StringArrayCreate(&wtPatch);
-      char wtAAType[MAX_LEN_RES_NAME];
-      AA1ToAA3(aa1, wtAAType);
-      StringArrayAppend(&wtRotType, wtAAType);
-      StringArrayAppend(&wtPatch, "");
-      ProteinSiteBuildMutatedRotamers(&tempStruct2, chnNdx, resNdx, rotlib, atomParams, resiTopos, &wtRotType, &wtPatch);
-      StringArrayDestroy(&wtRotType);
-      StringArrayDestroy(&wtPatch);
-    }
-
-    // for each mutant, find the surrounding residues and build the wild-type rotamer-tree
-    for (int ii = 0; ii < IntArrayGetLength(&mutantArray); ii += 2)
-    {
-      int chainIndex = IntArrayGet(&mutantArray, ii);
-      int resiIndex = IntArrayGet(&mutantArray, ii + 1);
-      Residue* pResi1 = ChainGetResidue(StructureGetChain(&tempStruct, chainIndex), resiIndex);
-      for (int j = 0; j < StructureGetChainCount(&tempStruct); j++)
-      {
-        Chain* pChain = StructureGetChain(&tempStruct, j);
-        for (int k = 0; k < ChainGetResidueCount(pChain); k++)
-        {
-          Residue* pResi2 = ChainGetResidue(pChain, k);
-          if (AtomArrayCalcMinDistance(&pResi1->atoms, &pResi2->atoms) < ENERGY_DISTANCE_CUTOFF)
-          {
-            if (pResi2->desType == Type_DesType_Fixed)
-            {
-              ProteinSiteBuildWildtypeRotamers(&tempStruct, j, k, rotlib, atomParams, resiTopos);
-              ProteinSiteBuildWildtypeRotamers(&tempStruct2, j, k, rotlib, atomParams, resiTopos);
-              if (pResi2->isSCIntact)
-              {
-                ProteinSiteBuildNativeRotamer(&tempStruct, j, k, resiTopos);
-                ProteinSiteBuildNativeRotamer(&tempStruct2, j, k, resiTopos);
-              }
-              IntArrayAppend(&rotamersArray, j);
-              IntArrayAppend(&rotamersArray, k);
-            }
-          }
-        }
-      }
-    }
-
-    // optimization rots sequentially
-    printf("Building mutation model %d, the following sites will be optimized:\n", mutantIndex + 1);
-    printf("chnIndex resIndex (both of them starts from zero on the chain)\n");
-    for (int ii = 0; ii < IntArrayGetLength(&rotamersArray); ii += 2)
-    {
-      printf("%8d %8d\n", IntArrayGet(&rotamersArray, ii), IntArrayGet(&rotamersArray, ii + 1));
-    }
-    for (int iter = 0; iter < MAX_NUM_OF_RUNS; iter++)
-    {
-      printf("optimization iteration %d ... \n", iter + 1);
-      for (int ii = 0; ii < IntArrayGetLength(&rotamersArray); ii += 2)
-      {
-        int chainIndex = IntArrayGet(&rotamersArray, ii);
-        int resiIndex = IntArrayGet(&rotamersArray, ii + 1);
-        ProteinSiteOptimizeRotamer(&tempStruct, chainIndex, resiIndex);
-      }
-    }
-    IntArrayDestroy(&mutantArray);
-    IntArrayDestroy(&rotamersArray);
-    //remember to delete rots for previous mutant
-    StructureRemoveAllDesignSites(&tempStruct);
-    StructureRemoveAllDesignSites(&tempStruct2);
-
-    char modFile[MAX_LEN_ONE_LINE_CONTENT + 1];
-    char wtModFile[MAX_LEN_ONE_LINE_CONTENT + 1];
-    if (pdbid != NULL)
-    {
-      sprintf(modFile, "%s_Model_%04d.pdb", pdbid, mutantIndex + 1);
-      sprintf(wtModFile, "%s_Model_%04d_WT.pdb", pdbid, mutantIndex + 1);
-    }
-    else
-    {
-      sprintf(modFile, "Model_%04d.pdb", mutantIndex + 1);
-      sprintf(wtModFile, "Model_%04d_WT.pdb", mutantIndex + 1);
-    }
-    FILE* pFile = fopen(modFile, "w");
-    fprintf(pFile, "REMARK file generated by module <BuildMutant> with backbone-independent rotlib\n");
-    StructureShowInPDBFormat(&tempStruct, pFile);
-    fclose(pFile);
-
-    pFile = fopen(wtModFile, "w");
-    fprintf(pFile, "REMARK file generated by module <BuildMutant> with backbone-independent rotlib\n");
-    StructureShowInPDBFormat(&tempStruct2, pFile);
-    fclose(pFile);
-
-    StructureDestroy(&tempStruct);
-  }
-
-  return Success;
-}
-
-
-int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotamerLib* pBBdepRotLib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
-{
-  FileReader fr;
-  FileReaderCreate(&fr, mutantfile);
-  int mutCount = FileReaderGetLineCount(&fr);
-  if (mutCount <= 0)
-  {
-    printf("in file %s line %d, no mutation was found in file %s\n", __FILE__, __LINE__, mutantfile);
+    printf("in file %s line %d, no mutation was found in file %s\n", __FILE__, __LINE__, mutfile);
     exit(DataNotExistError);
   }
-  StringArray* mutants = (StringArray*)malloc(sizeof(StringArray) * mutCount);
+  StringArray *mutants = (StringArray *)malloc(sizeof(StringArray) * mutNum);
   char line[MAX_LEN_ONE_LINE_CONTENT + 1];
   int mutNdx = 0;
   while (!FAILED(FileReaderGetNextLine(&fr, line)))
@@ -769,9 +387,9 @@ int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotam
     StringArrayCreate(&mutants[mutNdx]);
     StringArraySplitString(&mutants[mutNdx], line, ',');
     char lastMutant[MAX_LEN_ONE_LINE_CONTENT + 1];
-    int lastMutNdx = StringArrayGetCount(&mutants[mutNdx]) - 1;
+    int lastMutNdx = StringArrayGetNum(&mutants[mutNdx]) - 1;
     strcpy(lastMutant, StringArrayGet(&mutants[mutNdx], lastMutNdx));
-    //deal with the last char of the last single mutant
+    // deal with the last char of the last single mutant
     if ((!isdigit(lastMutant[strlen(lastMutant) - 1])) && !isalpha(lastMutant[strlen(lastMutant) - 1]))
     {
       lastMutant[strlen(lastMutant) - 1] = '\0';
@@ -781,70 +399,46 @@ int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotam
   }
   FileReaderDestroy(&fr);
 
-  for (int mutNdx = 0; mutNdx < mutCount; mutNdx++)
+  for (int mutNdx = 0; mutNdx < mutNum; mutNdx++)
   {
     Structure tempStruct;
     StructureCreate(&tempStruct);
-    StructureCopy(&tempStruct, pStructure);
+    StructureCopy(&tempStruct, pStruct);
     Structure tempStruct2;
     StructureCreate(&tempStruct2);
-    StructureCopy(&tempStruct2, pStructure);
+    StructureCopy(&tempStruct2, pStruct);
 
     // 1.deal with mutations on the nucleotide
     IntArray flagNucleotides;
-    IntArrayCreate(&flagNucleotides, StringArrayGetCount(&mutants[mutNdx]));
-    for (int mutation = 0; mutation < StringArrayGetCount(&mutants[mutNdx]); mutation++)
+    IntArrayCreate(&flagNucleotides, StringArrayGetNum(&mutants[mutNdx]));
+    for (int mutation = 0; mutation < StringArrayGetNum(&mutants[mutNdx]); mutation++)
     {
       char mutstr[10];
-      char aa1, chn, aa2;
+      char aa1, chain, aa2;
       int posInChain;
       strcpy(mutstr, StringArrayGet(&mutants[mutNdx], mutation));
-      sscanf(mutstr, "%c%c%d%c", &aa1, &chn, &posInChain, &aa2);
-      int chIdx = -1, resIdx = -1;
-      char chName[MAX_LEN_CHAIN_NAME];
-      chName[0] = chn;
-      chName[1] = '\0';
-      StructureFindChainIndex(&tempStruct, chName, &chIdx);
-      if (chIdx == -1)
+      sscanf(mutstr, "%c%c%d%c", &aa1, &chain, &posInChain, &aa2);
+      int chainIndex = -1, resIndex = -1;
+      char chainName[MAX_LEN_CHAIN_NAME];
+      chainName[0] = chain;
+      chainName[1] = '\0';
+      StructureFindChainIndex(&tempStruct, chainName, &chainIndex);
+      if (chainIndex == -1)
       {
         printf("in file %s line %d, cannot find mutation %s due to an incorrect chain id\n", __FILE__, __LINE__, mutstr);
         exit(ValueError);
       }
-      ChainFindResidueByPosInChain(StructureGetChain(&tempStruct, chIdx), posInChain, &resIdx);
-      if (resIdx == -1)
+      ChainFindResidueIndexByPosInChain(StructureGetChain(&tempStruct, chainIndex), posInChain, &resIndex);
+      if (resIndex == -1)
       {
         printf("in file %s line %d, cannot find mutation %s due to an incorrect position\n", __FILE__, __LINE__, mutstr);
         exit(ValueError);
       }
-      Chain* pChain = StructureFindChainByName(&tempStruct, chName);
+      Chain *pChain = StructureFindChainByName(&tempStruct, chainName);
       if (ChainGetType(pChain) == Type_Chain_DNA || ChainGetType(pChain) == Type_Chain_RNA)
       {
-        Residue* pTargetNucleotide = ChainGetResidue(StructureGetChain(&tempStruct, chIdx), resIdx);
-        Residue* pPairedNucleotide = StructureFindNucleotidePair(&tempStruct, pTargetNucleotide);
-        StructureMutateNucleotide(pTargetNucleotide, aa2, &tempStruct, atomParams, resiTopos);
-        if (pPairedNucleotide != NULL)
-        {
-          char aa22;
-          if (ChainGetType(StructureFindChainByName(&tempStruct, ResidueGetChainName(pPairedNucleotide))) == Type_Chain_DNA)
-          {
-            if (aa2 == 'a') aa22 = 't';
-            else if (aa2 == 'g') aa22 = 'c';
-            else if (aa2 == 'c') aa22 = 'g';
-            else if (aa2 == 't') aa22 = 'a';
-            else if (aa2 == 'u') aa22 = 'a';
-            else if (aa2 == 'n') aa22 = 'n';
-          }
-          else if (ChainGetType(StructureFindChainByName(&tempStruct, ResidueGetChainName(pPairedNucleotide))) == Type_Chain_RNA)
-          {
-            if (aa2 == 'a') aa22 = 'u';
-            else if (aa2 == 'g') aa22 = 'c';
-            else if (aa2 == 'c') aa22 = 'g';
-            else if (aa2 == 't') aa22 = 'a';
-            else if (aa2 == 'u') aa22 = 'a';
-            else if (aa2 == 'n') aa22 = 'n';
-          }
-          StructureMutateNucleotide(pPairedNucleotide, aa22, &tempStruct, atomParams, resiTopos);
-        }
+        Residue *pTargetNucleotide = ChainGetResidue(StructureGetChain(&tempStruct, chainIndex), resIndex);
+        StructureMutateNucleotide(pTargetNucleotide, aa2, &tempStruct, pParams, pTops);
         IntArraySet(&flagNucleotides, mutation, 1);
       }
     }
@@ -853,24 +447,27 @@ int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotam
     IntArray mutatedArray, rotamericArray;
     IntArrayCreate(&mutatedArray, 0);
     IntArrayCreate(&rotamericArray, 0);
-    for (int mutation = 0; mutation < StringArrayGetCount(&mutants[mutNdx]); mutation++)
+    for (int mutation = 0; mutation < StringArrayGetNum(&mutants[mutNdx]); mutation++)
     {
       // skip the nucleotide mutation
-      if (IntArrayGet(&flagNucleotides, mutation) == 1) continue;
+      if (IntArrayGet(&flagNucleotides, mutation) == 1)
+        continue;
       char mutstr[10];
       char aa1, chn, aa2;
       int posInChain;
       strcpy(mutstr, StringArrayGet(&mutants[mutNdx], mutation));
       sscanf(mutstr, "%c%c%d%c", &aa1, &chn, &posInChain, &aa2);
       int chnNdx = -1, resNdx = -1;
-      char chnName[MAX_LEN_CHAIN_NAME]; chnName[0] = chn; chnName[1] = '\0';
+      char chnName[MAX_LEN_CHAIN_NAME];
+      chnName[0] = chn;
+      chnName[1] = '\0';
       StructureFindChainIndex(&tempStruct, chnName, &chnNdx);
       if (chnNdx == -1)
       {
         printf("in file %s line %d, cannot find mutation %s\n", __FILE__, __LINE__, mutstr);
         exit(ValueError);
       }
-      ChainFindResidueByPosInChain(StructureGetChain(&tempStruct, chnNdx), posInChain, &resNdx);
+      ChainFindResidueIndexByPosInChain(StructureGetChain(&tempStruct, chnNdx), posInChain, &resNdx);
       if (resNdx == -1)
       {
         printf("in file %s line %d, cannot find mutation %s\n", __FILE__, __LINE__, mutstr);
@@ -883,13 +480,13 @@ int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotam
       StringArrayCreate(&mutPatch);
       StringArrayAppend(&mutRotType, mutAAType);
       StringArrayAppend(&mutPatch, "");
-      //for histidine, the default mutAAType is HSD, we need to add HSE
+      // for histidine, the default mutAAType is HSD, we need to add HSE
       if (aa2 == 'H')
       {
         StringArrayAppend(&mutRotType, "HSE");
         StringArrayAppend(&mutPatch, "");
       }
-      ProteinSiteBuildMutatedRotamersByBBdepRotLib(&tempStruct, chnNdx, resNdx, pBBdepRotLib, atomParams, resiTopos, &mutRotType, &mutPatch);
+      ProteinSiteBuildMutatedRotamersByBBdepRotLib(&tempStruct, chnNdx, resNdx, pLib, pParams, pTops, &mutRotType, &mutPatch);
       StringArrayDestroy(&mutRotType);
       StringArrayDestroy(&mutPatch);
 
@@ -906,7 +503,7 @@ int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotam
       AA1ToAA3(aa1, wtAAType);
       StringArrayAppend(&wtRotType, wtAAType);
       StringArrayAppend(&wtPatch, "");
-      ProteinSiteBuildMutatedRotamersByBBdepRotLib(&tempStruct2, chnNdx, resNdx, pBBdepRotLib, atomParams, resiTopos, &wtRotType, &wtPatch);
+      ProteinSiteBuildMutatedRotamersByBBdepRotLib(&tempStruct2, chnNdx, resNdx, pLib, pParams, pTops, &wtRotType, &wtPatch);
       StringArrayDestroy(&mutRotType);
       StringArrayDestroy(&mutPatch);
     }
@@ -917,24 +514,25 @@ int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotam
     {
       int chnNdx = IntArrayGet(&mutatedArray, i);
       int resNdx = IntArrayGet(&mutatedArray, i + 1);
-      Residue* pResi1 = ChainGetResidue(StructureGetChain(&tempStruct, chnNdx), resNdx);
-      for (int j = 0; j < StructureGetChainCount(&tempStruct); j++)
+      Residue *pResi1 = ChainGetResidue(StructureGetChain(&tempStruct, chnNdx), resNdx);
+      for (int j = 0; j < StructureGetChainNum(&tempStruct); j++)
       {
-        Chain* pChain = StructureGetChain(&tempStruct, j);
-        if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-        for (int k = 0; k < ChainGetResidueCount(pChain); k++)
+        Chain *pChain = StructureGetChain(&tempStruct, j);
+        if (ChainGetType(pChain) != Type_Chain_Protein)
+          continue;
+        for (int k = 0; k < ChainGetResidueNum(pChain); k++)
         {
-          Residue* pResi2 = ChainGetResidue(pChain, k);
+          Residue *pResi2 = ChainGetResidue(pChain, k);
           if (AtomArrayCalcMinDistance(&pResi1->atoms, &pResi2->atoms) < ENERGY_DISTANCE_CUTOFF)
           {
             if (pResi2->desType == Type_DesType_Fixed)
             {
-              ProteinSiteBuildWildtypeRotamersByBBdepRotLib(&tempStruct, j, k, pBBdepRotLib, atomParams, resiTopos);
-              ProteinSiteBuildWildtypeRotamersByBBdepRotLib(&tempStruct2, j, k, pBBdepRotLib, atomParams, resiTopos);
+              ProteinSiteBuildWildtypeRotamersByBBdepRotLib(&tempStruct, j, k, pLib, pParams, pTops);
+              ProteinSiteBuildWildtypeRotamersByBBdepRotLib(&tempStruct2, j, k, pLib, pParams, pTops);
               if (pResi2->isSCIntact)
               {
-                ProteinSiteBuildNativeRotamer(&tempStruct, j, k, resiTopos);
-                ProteinSiteBuildNativeRotamer(&tempStruct2, j, k, resiTopos);
+                ProteinSiteBuildNativeRotamer(&tempStruct, j, k, pTops);
+                ProteinSiteBuildNativeRotamer(&tempStruct2, j, k, pTops);
               }
               IntArrayAppend(&rotamericArray, j);
               IntArrayAppend(&rotamericArray, k);
@@ -951,15 +549,15 @@ int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotam
     {
       printf("%8d %8d\n", IntArrayGet(&rotamericArray, i), IntArrayGet(&rotamericArray, i + 1));
     }
-    for (int iter = 0; iter < MAX_NUM_OF_RUNS; iter++)
+    for (int run = 0; run < MAX_NUM_OF_RUNS; run++)
     {
-      printf("optimization iteration %d ... \n", iter + 1);
+      printf("optimization run %d ... \n", run + 1);
       for (int i = 0; i < IntArrayGetLength(&rotamericArray); i += 2)
       {
         int chnNdx = IntArrayGet(&rotamericArray, i);
         int resNdx = IntArrayGet(&rotamericArray, i + 1);
-        ProteinSiteOptimizeRotamerWithBBdepRotLib(&tempStruct, chnNdx, resNdx, pBBdepRotLib);
-        ProteinSiteOptimizeRotamerWithBBdepRotLib(&tempStruct2, chnNdx, resNdx, pBBdepRotLib);
+        ProteinSiteOptimizeRotamer(&tempStruct, chnNdx, resNdx, pLib);
+        ProteinSiteOptimizeRotamer(&tempStruct2, chnNdx, resNdx, pLib);
       }
     }
     IntArrayDestroy(&mutatedArray);
@@ -970,25 +568,17 @@ int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotam
     StructureRemoveAllDesignSites(&tempStruct2);
 
     // finally, write the mutant and reference WT model into files
-    char modFile[MAX_LEN_ONE_LINE_CONTENT + 1];
-    char WTModFile[MAX_LEN_ONE_LINE_CONTENT + 1];
-    if (pdbid != NULL)
-    {
-      sprintf(modFile, "%s_Model_%04d.pdb", pdbid, mutNdx + 1);
-      sprintf(WTModFile, "%s_Model_%04d_WT.pdb", pdbid, mutNdx + 1);
-    }
-    else
-    {
-      sprintf(modFile, "Model_%04d.pdb", mutNdx + 1);
-      sprintf(WTModFile, "Model_%04d_WT.pdb", mutNdx + 1);
-    }
-    FILE* pFile = fopen(modFile, "w");
-    fprintf(pFile, "REMARK file generated by module <BuildMutant> with backbone-dependent rotlib\n");
+    char mut_model_file[MAX_LEN_ONE_LINE_CONTENT + 1];
+    char wt_model_file[MAX_LEN_ONE_LINE_CONTENT + 1];
+    sprintf(mut_model_file, "UD_model_%04d.pdb", mutNdx + 1);
+    sprintf(wt_model_file, "UD_model_%04d_WT.pdb", mutNdx + 1);
+    FILE *pFile = fopen(mut_model_file, "w");
+    fprintf(pFile, "REMARK file generated by module <BuildMutant> with backbone-dependent rotamer library\n");
     StructureShowInPDBFormat(&tempStruct, pFile);
     fclose(pFile);
 
-    pFile = fopen(WTModFile, "w");
-    fprintf(pFile, "REMARK file generated by module <BuildMutant> with backbone-dependent rotlib\n");
+    pFile = fopen(wt_model_file, "w");
+    fprintf(pFile, "REMARK file generated by module <BuildMutant> with backbone-dependent rotamer library\n");
     StructureShowInPDBFormat(&tempStruct2, pFile);
     fclose(pFile);
 
@@ -999,150 +589,90 @@ int BuildMutantByBBdepRotLib(Structure* pStructure, char* mutantfile, BBdepRotam
   return Success;
 }
 
-
-int RepairStructure(Structure* pStructure, BBindRotamerLib* pBBindRotLib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
+int RepairStructure(Structure *pStruct, BBdepRotLib *pLib, AtomParams *pParams, ResTopos *pTopos)
 {
-  for (int iter = 0; iter < MAX_NUM_OF_RUNS; iter++)
+  for (int run = 0; run < MAX_NUM_OF_RUNS; run++)
   {
-    printf("Repairing PDB with Honig's backbone-independent rotamers iteration %d ... \n", iter + 1);
-    for (int i = 0; i < StructureGetChainCount(pStructure); ++i)
+    printf("Repairing structure run %d ... \n", run + 1);
+    for (int i = 0; i < StructureGetChainNum(pStruct); ++i)
     {
-      Chain* pChain = StructureGetChain(pStructure, i);
-      if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-      for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+      Chain *pChain = StructureGetChain(pStruct, i);
+      if (ChainGetType(pChain) != Type_Chain_Protein)
       {
-        Residue* pResi = ChainGetResidue(pChain, j);
-        if (pResi->isSCIntact)
-        {
-          if (strcmp(ResidueGetName(pResi), "ALA") == 0 || strcmp(ResidueGetName(pResi), "GLY") == 0) continue;
-          //skip CYS which may form disulfide bonds
-          if (strcmp(ResidueGetName(pResi), "CYS") == 0) continue;
-          if (strcmp(ResidueGetName(pResi), "ASN") == 0 || strcmp(ResidueGetName(pResi), "GLN") == 0 || strcmp(ResidueGetName(pResi), "HSD") == 0 || strcmp(ResidueGetName(pResi), "HSE") == 0)
-          {
-            printf("We now flip residue %s%d%s to optimize hydrogen bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
-            ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-            ProteinSiteBuildFlippedNativeRotamer(pStructure, i, j, resiTopos);
-            ProteinSiteOptimizeRotamerHBondEnergy(pStructure, i, j);
-            ProteinSiteRemoveDesignSite(pStructure, i, j);
-          }
-          else if (strcmp(ResidueGetName(pResi), "SER") == 0 || strcmp(ResidueGetName(pResi), "THR") == 0 || strcmp(ResidueGetName(pResi), "TYR") == 0)
-          {
-            printf("We now rotate hydroxyl group of residue %s%d%s to optimize hydrogen bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
-            ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-            ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-            ProteinSiteOptimizeRotamerHBondEnergy(pStructure, i, j);
-            ProteinSiteRemoveDesignSite(pStructure, i, j);
-          }
-        }
-        else
-        {
-          printf("We now optimize side-chain conformation of residue %s%d%s\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
-          ResidueCalcAllAtomXYZ(pResi, resiTopos, ChainGetResidue(pChain, j - 1), ChainGetResidue(pChain, j + 1));
-          ResidueCalcSidechainTorsion(pResi, resiTopos);
-          ProteinSiteBuildWildtypeRotamers(pStructure, i, j, pBBindRotLib, atomParams, resiTopos);
-          ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-          ProteinSiteOptimizeRotamer(pStructure, i, j);
-          ProteinSiteRemoveDesignSite(pStructure, i, j);
-        }
-
+        continue;
       }
-    }
-  }
-
-  //output the repaired structure
-  char modelfile[MAX_LEN_ONE_LINE_CONTENT + 1];
-  if (pdbid != NULL) { sprintf(modelfile, "%s_Repaired.pdb", pdbid); }
-  else { strcpy(modelfile, "Repaired.pdb"); }
-  FILE* pf = fopen(modelfile, "w");
-  fprintf(pf, "REMARK file generated by module <RepairStructure>\n");
-  StructureShowInPDBFormat(pStructure, pf);
-  fclose(pf);
-
-  return Success;
-}
-
-
-int RepairStructureByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pBBdepRotLib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
-{
-  for (int iter = 0; iter < MAX_NUM_OF_RUNS; iter++)
-  {
-    printf("Repairing PDB with Dunbrack's backbone-dependent rotamers iteration %d ... \n", iter + 1);
-    for (int i = 0; i < StructureGetChainCount(pStructure); ++i)
-    {
-      Chain* pChain = StructureGetChain(pStructure, i);
-      if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-      for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++)
       {
-        Residue* pResi = ChainGetResidue(pChain, j);
-        if (pResi->isSCIntact)
+        Residue *pResi = ChainGetResidue(pChain, j);
+        if (pResi->isSCIntact == TRUE)
         {
-          if (strcmp(ResidueGetName(pResi), "ALA") == 0 || strcmp(ResidueGetName(pResi), "GLY") == 0) continue;
-          //skip CYS which may form disulfide bonds
-          if (strcmp(ResidueGetName(pResi), "CYS") == 0) continue;
+          if (strcmp(ResidueGetName(pResi), "ALA") == 0 || strcmp(ResidueGetName(pResi), "GLY") == 0)
+            continue;
+          // skip CYS which may form disulfide bonds
+          if (strcmp(ResidueGetName(pResi), "CYS") == 0)
+            continue;
           if (strcmp(ResidueGetName(pResi), "ASN") == 0 || strcmp(ResidueGetName(pResi), "GLN") == 0 || strcmp(ResidueGetName(pResi), "HSD") == 0 || strcmp(ResidueGetName(pResi), "HSE") == 0)
           {
-            printf("We now flip residue %s%d%s to optimize hydrogen bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
-            ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-            ProteinSiteBuildFlippedNativeRotamer(pStructure, i, j, resiTopos);
-            ProteinSiteOptimizeRotamerHBondEnergy(pStructure, i, j);
-            ProteinSiteRemoveDesignSite(pStructure, i, j);
+            printf("flip %s%d%s sidechain to optimize H-bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
+            ProteinSiteBuildNativeRotamer(pStruct, i, j, pTopos);
+            ProteinSiteBuildFlippedNativeRotamer(pStruct, i, j, pTopos);
+            ProteinSiteOptimizeRotamerHBondEnergy(pStruct, i, j);
+            ProteinSiteRemoveDesignSite(pStruct, i, j);
           }
           else if (strcmp(ResidueGetName(pResi), "SER") == 0 || strcmp(ResidueGetName(pResi), "THR") == 0 || strcmp(ResidueGetName(pResi), "TYR") == 0)
           {
-            printf("We now rotate hydroxyl group of residue %s%d%s to optimize hydrogen bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
-            ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-            ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-            ProteinSiteOptimizeRotamerHBondEnergy(pStructure, i, j);
-            ProteinSiteRemoveDesignSite(pStructure, i, j);
+            printf("rotate %s%d%s hydroxyl group to optimize H-bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
+            ProteinSiteBuildNativeRotamer(pStruct, i, j, pTopos);
+            ProteinSiteExpandHydroxylRotamers(pStruct, i, j, pTopos);
+            ProteinSiteOptimizeRotamerHBondEnergy(pStruct, i, j);
+            ProteinSiteRemoveDesignSite(pStruct, i, j);
           }
         }
         else
         {
-          printf("We now optimize side-chain conformation of residue %s%d%s\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
-          ResidueCalcAllAtomXYZ(pResi, resiTopos, ChainGetResidue(pChain, j - 1), ChainGetResidue(pChain, j + 1));
-          //ResidueCalcSidechainTorsion(pResi,resiTopos);
-          ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStructure, i, j, pBBdepRotLib, atomParams, resiTopos);
-          ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-          ProteinSiteOptimizeRotamerWithBBdepRotLib(pStructure, i, j, pBBdepRotLib);
-          ProteinSiteRemoveDesignSite(pStructure, i, j);
+          printf("repair %s%d%s sidechain to complete atoms\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
+          ResidueCalcAllAtomXYZ(pResi, pTopos, ChainGetResidue(pChain, j - 1), ChainGetResidue(pChain, j + 1));
+          //ResidueCalcSidechainTorsion(pResi,pTopos);
+          ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStruct, i, j, pLib, pParams, pTopos);
+          ProteinSiteExpandHydroxylRotamers(pStruct, i, j, pTopos);
+          ProteinSiteOptimizeRotamer(pStruct, i, j, pLib);
+          ProteinSiteRemoveDesignSite(pStruct, i, j);
         }
       }
     }
   }
 
-  //output the repaired structure
-  char modelfile[MAX_LEN_ONE_LINE_CONTENT + 1];
-  if (pdbid != NULL) { sprintf(modelfile, "%s_Repaired.pdb", pdbid); }
-  else { strcpy(modelfile, "Repaired.pdb"); }
-  FILE* pf = fopen(modelfile, "w");
-  fprintf(pf, "REMARK file generated by module <RepairStructure>\n");
-  StructureShowInPDBFormat(pStructure, pf);
-  fclose(pf);
+  FILE *pFile = fopen("UD_RepairedStructure.pdb", "w");
+  fprintf(pFile, "REMARK file generated by module <RepairStructure>\n");
+  StructureShowInPDBFormat(pStruct, pFile);
+  fclose(pFile);
 
   return Success;
 }
 
-
-int EnergyMinimizationByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pBBdepRotLib, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
+int EnergyMinimization(Structure *pStructure, BBdepRotLib *pBBdepRotLib, AtomParams *atomParams, ResTopos *resiTopos)
 {
-  for (int iter = 0; iter < MAX_NUM_OF_RUNS; iter++)
+  for (int run = 0; run < MAX_NUM_OF_RUNS; run++)
   {
-    printf("Minimzation iteration %d ... \n", iter + 1);
-    for (int i = 0; i < StructureGetChainCount(pStructure); ++i)
+    printf("Minimzation run %d ... \n", run + 1);
+    for (int i = 0; i < StructureGetChainNum(pStructure); ++i)
     {
-      Chain* pChain = StructureGetChain(pStructure, i);
-      if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-      for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+      Chain *pChain = StructureGetChain(pStructure, i);
+      if (ChainGetType(pChain) != Type_Chain_Protein)
+        continue;
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++)
       {
-        Residue* pResi = ChainGetResidue(pChain, j);
-        if (pResi->isSCIntact)
+        Residue *pResi = ChainGetResidue(pChain, j);
+        if (pResi->isSCIntact == TRUE)
         {
-          if (strcmp(ResidueGetName(pResi), "ALA") == 0 || strcmp(ResidueGetName(pResi), "GLY") == 0) continue;
-          //skip CYS which may form disulfide bonds
-          if (strcmp(ResidueGetName(pResi), "CYS") == 0) continue;
+          if (strcmp(ResidueGetName(pResi), "ALA") == 0 || strcmp(ResidueGetName(pResi), "GLY") == 0)
+            continue;
+          // skip CYS which may form disulfide bonds
+          if (strcmp(ResidueGetName(pResi), "CYS") == 0)
+            continue;
           if (strcmp(ResidueGetName(pResi), "ASN") == 0 || strcmp(ResidueGetName(pResi), "GLN") == 0 || strcmp(ResidueGetName(pResi), "HSD") == 0 || strcmp(ResidueGetName(pResi), "HSE") == 0)
           {
-            printf("We now flip residue %s%d%s to optimize hydrogen bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
+            printf("flip %s%d%s to optimize H-bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
             ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
             ProteinSiteBuildFlippedNativeRotamer(pStructure, i, j, resiTopos);
             ProteinSiteOptimizeRotamerHBondEnergy(pStructure, i, j);
@@ -1150,38 +680,34 @@ int EnergyMinimizationByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pBBd
           }
           else if (strcmp(ResidueGetName(pResi), "SER") == 0 || strcmp(ResidueGetName(pResi), "THR") == 0 || strcmp(ResidueGetName(pResi), "TYR") == 0)
           {
-            printf("We now rotate hydroxyl group of residue %s%d%s to optimize hydrogen bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
+            printf("rotate %s%d%s hydroxyl group to optimize H-bonds\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
             ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
             ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
             ProteinSiteOptimizeRotamerHBondEnergy(pStructure, i, j);
             ProteinSiteRemoveDesignSite(pStructure, i, j);
           }
-          printf("We now optimize side-chain conformation of residue %s%d%s\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
+          printf("optimize %s%d%s sidechain conformation\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
           ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStructure, i, j, pBBdepRotLib, atomParams, resiTopos);
           ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
           ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-          ProteinSiteOptimizeRotamerWithBBdepRotLib(pStructure, i, j, pBBdepRotLib);
+          ProteinSiteOptimizeRotamer(pStructure, i, j, pBBdepRotLib);
           ProteinSiteRemoveDesignSite(pStructure, i, j);
         }
         else
         {
-          printf("We now optimize side-chain conformation of residue %s%d%s\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
+          printf("repair %s%d%s sidechain and optimize conformation\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), ResidueGetName(pResi));
           ResidueCalcAllAtomXYZ(pResi, resiTopos, ChainGetResidue(pChain, j - 1), ChainGetResidue(pChain, j + 1));
-          //ResidueCalcSidechainTorsion(pResi,resiTopos);
+          // ResidueCalcSidechainTorsion(pResi,resiTopos);
           ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStructure, i, j, pBBdepRotLib, atomParams, resiTopos);
           ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-          ProteinSiteOptimizeRotamerWithBBdepRotLib(pStructure, i, j, pBBdepRotLib);
+          ProteinSiteOptimizeRotamer(pStructure, i, j, pBBdepRotLib);
           ProteinSiteRemoveDesignSite(pStructure, i, j);
         }
       }
     }
   }
 
-  //output the repaired structure
-  char modelfile[MAX_LEN_ONE_LINE_CONTENT + 1];
-  if (pdbid != NULL) { sprintf(modelfile, "%s_Minimized.pdb", pdbid); }
-  else { strcpy(modelfile, "Minimized.pdb"); }
-  FILE* pOut = fopen(modelfile, "w");
+  FILE *pOut = fopen("UD_sidechainEnergyMinimized.pdb", "w");
   fprintf(pOut, "REMARK file generated by module <Minimize>\n");
   StructureShowInPDBFormat(pStructure, pOut);
   fclose(pOut);
@@ -1189,38 +715,33 @@ int EnergyMinimizationByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pBBd
   return Success;
 }
 
-
-int AddPolarHydrogen(Structure* pStructure, char* pdbid)
+int AddPolarHydrogen(Structure *pStructure)
 {
-  FLAG_WRITE_HYDROGEN = TRUE;
-  char modelfile[MAX_LEN_ONE_LINE_CONTENT + 1];
-  if (pdbid != NULL) { sprintf(modelfile, "%s_PolarH.pdb", pdbid); }
-  else { strcpy(modelfile, "PolarH.pdb"); }
-  FILE* pOut = fopen(modelfile, "w");
+  FILE *pOut = fopen("UD_polarHydrogensAdded.pdb", "w");
   fprintf(pOut, "REMARK file generated by module <AddPolarHydrogen>\n");
   StructureShowInPDBFormat(pStructure, pOut);
   fclose(pOut);
   return Success;
 }
 
-
-int OptimizeHydrogen(Structure* pStructure, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
+int OptimizeHydrogen(Structure *pStructure, AtomParams *atomParams, ResTopos *resiTopos)
 {
-  for (int iter = 0; iter < MAX_NUM_OF_RUNS; iter++)
+  for (int run = 0; run < MAX_NUM_OF_RUNS; run++)
   {
-    printf("Optimizing hydrogen iteration %d ... \n", iter + 1);
-    for (int i = 0; i < StructureGetChainCount(pStructure); ++i)
+    printf("Optimizing hydrogen run %d \n", run + 1);
+    for (int i = 0; i < StructureGetChainNum(pStructure); ++i)
     {
-      Chain* pChain = StructureGetChain(pStructure, i);
-      for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+      Chain *pChain = StructureGetChain(pStructure, i);
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++)
       {
-        Residue* pResi = ChainGetResidue(pChain, j);
+        Residue *pResi = ChainGetResidue(pChain, j);
         if (strcmp(ResidueGetName(pResi), "SER") == 0 ||
-          strcmp(ResidueGetName(pResi), "THR") == 0 ||
-          strcmp(ResidueGetName(pResi), "TYR") == 0)
+            strcmp(ResidueGetName(pResi), "THR") == 0 ||
+            strcmp(ResidueGetName(pResi), "TYR") == 0)
         {
-          printf("We will rotate hydroxyl group of residue %s%d%c to optimize hbond\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), AA3ToAA1(ResidueGetName(pResi)));
-          if (pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
+          printf("rotating hydroxyl group of residue %s%d%c to optimize hbond\n", ResidueGetChainName(pResi), ResidueGetPosInChain(pResi), AA3ToAA1(ResidueGetName(pResi)));
+          if (pResi->isSCIntact)
+            ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
           ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
           ProteinSiteOptimizeRotamerHBondEnergy(pStructure, i, j);
           ProteinSiteRemoveDesignSite(pStructure, i, j);
@@ -1229,11 +750,8 @@ int OptimizeHydrogen(Structure* pStructure, AtomParamsSet* atomParams, ResiTopoS
     }
   }
 
-  //output the struture with optimized hydrogens
-  char modelfile[MAX_LEN_ONE_LINE_CONTENT + 1];
-  if (pdbid != NULL) { sprintf(modelfile, "%s_OptH.pdb", pdbid); }
-  else { strcpy(modelfile, "OptH.pdb"); }
-  FILE* pFile = fopen(modelfile, "w");
+  // output the struture with optimized polar hydrogens
+  FILE *pFile = fopen("UD_polarHydrogensOptimized.pdb", "w");
   fprintf(pFile, "REMARK file generated by module <OptimizeHydrogen>\n");
   StructureShowInPDBFormat(pStructure, pFile);
   fclose(pFile);
@@ -1241,28 +759,26 @@ int OptimizeHydrogen(Structure* pStructure, AtomParamsSet* atomParams, ResiTopoS
   return Success;
 }
 
-
-int ComputeResidueInteractionWithFixedEnvironment(Structure* pStruct, int chnNdx, int resNdx)
+int ComputeResidueInteractionWithFixedEnvironment(Structure *pStruct, AAppTable *pAAppTable, RamaTable *pRama, BBdepRotLib* pBBdepRotLib, int chnNdx, int resNdx)
 {
-  Chain* pChainI = StructureGetChain(pStruct, chnNdx);
-  Residue* pResIR = ChainGetResidue(pChainI, resNdx);
+  Chain *pChainI = StructureGetChain(pStruct, chnNdx);
+  Residue *pResIR = ChainGetResidue(pChainI, resNdx);
   int surroundingResiNum = 0;
-  Residue** ppSurroundingResidues = NULL;
+  Residue **ppSurroundingResidues = NULL;
 
   StringArray resStrs;
   StringArrayCreate(&resStrs);
-  if (strcmp(EXCL_RESI, "") != 0)
+  if (strcmp(EXCLUDE_RESIDUES, "") != 0)
   {
-    StringArraySplitString(&resStrs, EXCL_RESI, ',');
+    StringArraySplitString(&resStrs, EXCLUDE_RESIDUES, ',');
   }
-  for (int i = 0; i < StructureGetChainCount(pStruct); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChainI = StructureGetChain(pStruct, i);
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+    Chain *pChainI = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
     {
-      Residue* pResi2 = ChainGetResidue(pChainI, j);
-      if ( strcmp(ResidueGetName(pResIR), ResidueGetName(pResi2)) == 0 
-        && ResidueGetPosInChain(pResIR) == ResidueGetPosInChain(pResi2) )
+      Residue *pResi2 = ChainGetResidue(pChainI, j);
+      if (strcmp(ResidueGetName(pResIR), ResidueGetName(pResi2)) == 0 && ResidueGetPosInChain(pResIR) == ResidueGetPosInChain(pResi2))
       {
         continue;
       }
@@ -1277,22 +793,27 @@ int ComputeResidueInteractionWithFixedEnvironment(Structure* pStruct, int chnNdx
           continue;
         }
         surroundingResiNum++;
-        ppSurroundingResidues = (Residue**)realloc(ppSurroundingResidues, sizeof(Residue*) * surroundingResiNum);
+        ppSurroundingResidues = (Residue **)realloc(ppSurroundingResidues, sizeof(Residue *) * surroundingResiNum);
         ppSurroundingResidues[surroundingResiNum - 1] = pResi2;
       }
     }
   }
   StringArrayDestroy(&resStrs);
 
-  double energyTerms[MAX_ENERGY_TERM] = { 0 };
+  double energyTerms[MAX_ENERGY_TERM] = {0};
   if (ChainGetType(pChainI) == Type_Chain_Protein)
   {
     AminoAcidReferenceEnergy(ResidueGetName(pResIR), energyTerms);
     EnergyIntraResidue(pResIR, energyTerms);
+    AminoAcidPropensityAndRamachandranEnergy(pResIR, pAAppTable, pRama);
+    AminoAcidDunbrackEnergy(pResIR, pBBdepRotLib);
+    energyTerms[91] += pResIR->aapp;
+    energyTerms[92] += pResIR->rama;
+    energyTerms[93] += pResIR->dunbrack;
   }
   for (int is = 0; is < surroundingResiNum; is++)
   {
-    Residue* pResIS = ppSurroundingResidues[is];
+    Residue *pResIS = ppSurroundingResidues[is];
     if (!strcmp(ResidueGetChainName(pResIR), ResidueGetChainName(pResIS)))
     {
       if (ResidueGetPosInChain(pResIR) == ResidueGetPosInChain(pResIS) - 1)
@@ -1322,165 +843,36 @@ int ComputeResidueInteractionWithFixedEnvironment(Structure* pStruct, int chnNdx
   }
 
   EnergyTermWeighting(energyTerms);
-  //printf("\nStructure energy details:\n");
   EnergyTermShowComplex(energyTerms);
 
   return Success;
 }
 
-
-//////////////////////////////////////////////////////////////////////////////
-//The following are new program functions
-//////////////////////////////////////////////////////////////////////////////
-int ComputeAllRotamersEnergy(Structure* pStructure, BBindRotamerLib* pBBindRotLib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
+int FindInterfaceResidues(Structure *pStructure)
 {
-  char energyfile[MAX_LEN_ONE_LINE_CONTENT + 1];
-  sprintf(energyfile, "%s_rotenergy.txt", pdbid);
-  FILE* fp = fopen(energyfile, "w");
-  for (int i = 0; i < StructureGetChainCount(pStructure); ++i)
+  IntArray *flagArrays = (IntArray *)malloc(sizeof(IntArray) * StructureGetChainNum(pStructure));
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
-    {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      if (FLAG_PPI)
-      {
-        //check if residue is an interface residue
-        for (int k = 0;k < StructureGetChainCount(pStructure);k++)
-        {
-          if (k == i) continue;
-          Chain* pChainK = StructureGetChain(pStructure, k);
-          for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
-          {
-            Residue* pResiKS = ChainGetResidue(pChainK, s);
-            if (AtomArrayCalcMinDistance(&pResi->atoms, &pResiKS->atoms) < ENERGY_DISTANCE_CUTOFF)
-            {
-              ProteinSiteBuildAllRotamers(pStructure, i, j, pBBindRotLib, atomParams, resiTopos);
-              if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-              if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-              ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, fp);
-              ProteinSiteRemoveDesignSite(pStructure, i, j);
-            }
-          }
-        }
-      }
-      else if (FLAG_ENZYME || FLAG_PROT_LIG)
-      {
-        Residue* pSmallMol = NULL;
-        StructureFindSmallMol(pStructure, &pSmallMol);
-        if (AtomArrayCalcMinDistance(&pResi->atoms, &pSmallMol->atoms) < ENERGY_DISTANCE_CUTOFF)
-        {
-          ProteinSiteBuildAllRotamers(pStructure, i, j, pBBindRotLib, atomParams, resiTopos);
-          if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-          if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-          ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, fp);
-          ProteinSiteRemoveDesignSite(pStructure, i, j);
-        }
-      }
-      else
-      {
-        ProteinSiteBuildAllRotamers(pStructure, i, j, pBBindRotLib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-        ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, fp);
-        ProteinSiteRemoveDesignSite(pStructure, i, j);
-      }
-    }
-  }
-  fclose(fp);
-
-  return Success;
-}
-
-
-int ComputeWildtypeRotamersEnergy(Structure* pStructure, BBindRotamerLib* pBBindRotLib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
-{
-  char energyfile[MAX_LEN_ONE_LINE_CONTENT + 1];
-  sprintf(energyfile, "%s_rotenergy.txt", pdbid);
-  FILE* fp = fopen(energyfile, "w");
-  for (int i = 0; i < StructureGetChainCount(pStructure); ++i)
-  {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
-    {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      if (FLAG_PPI)
-      {
-        //check if residue is an interface residue
-        for (int k = 0;k < StructureGetChainCount(pStructure);k++)
-        {
-          if (k == i) continue;
-          Chain* pChainK = StructureGetChain(pStructure, k);
-          for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
-          {
-            Residue* pResiKS = ChainGetResidue(pChainK, s);
-            if (AtomArrayCalcMinDistance(&pResi->atoms, &pResiKS->atoms) < ENERGY_DISTANCE_CUTOFF)
-            {
-              ProteinSiteBuildWildtypeRotamers(pStructure, i, j, pBBindRotLib, atomParams, resiTopos);
-              if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-              if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-              ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, fp);
-              ProteinSiteRemoveDesignSite(pStructure, i, j);
-            }
-          }
-        }
-      }
-      else if (FLAG_ENZYME || FLAG_PROT_LIG)
-      {
-        Residue* pSmallMol = NULL;
-        StructureFindSmallMol(pStructure, &pSmallMol);
-        if (AtomArrayCalcMinDistance(&pResi->atoms, &pSmallMol->atoms) < ENERGY_DISTANCE_CUTOFF)
-        {
-          ProteinSiteBuildWildtypeRotamers(pStructure, i, j, pBBindRotLib, atomParams, resiTopos);
-          if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-          if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-          ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, fp);
-          ProteinSiteRemoveDesignSite(pStructure, i, j);
-        }
-      }
-      else
-      {
-        ProteinSiteBuildWildtypeRotamers(pStructure, i, j, pBBindRotLib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-        ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, fp);
-        ProteinSiteRemoveDesignSite(pStructure, i, j);
-      }
-    }
-  }
-  fclose(fp);
-
-  return Success;
-}
-
-
-int FindInterfaceResidues(Structure* pStructure)
-{
-  IntArray* flagArrays = (IntArray*)malloc(sizeof(IntArray) * StructureGetChainCount(pStructure));
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
-  {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    IntArrayCreate(&flagArrays[i], ChainGetResidueCount(pChainI));
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+    Chain *pChainI = StructureGetChain(pStructure, i);
+    IntArrayCreate(&flagArrays[i], ChainGetResidueNum(pChainI));
+    for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
     {
       IntArraySet(&flagArrays[i], j, 0);
     }
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    for (int k = i + 1; k < StructureGetChainCount(pStructure); k++)
+    Chain *pChainI = StructureGetChain(pStructure, i);
+    for (int k = i + 1; k < StructureGetChainNum(pStructure); k++)
     {
-      Chain* pChainK = StructureGetChain(pStructure, k);
-      for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+      Chain *pChainK = StructureGetChain(pStructure, k);
+      for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
       {
-        Residue* pResiIJ = ChainGetResidue(pChainI, j);
-        for (int s = 0; s < ChainGetResidueCount(pChainK); s++)
+        Residue *pResiIJ = ChainGetResidue(pChainI, j);
+        for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
         {
-          Residue* pResiKS = ChainGetResidue(pChainK, s);
+          Residue *pResiKS = ChainGetResidue(pChainK, s);
           if (AtomArrayCalcMinDistance(&pResiIJ->atoms, &pResiKS->atoms) < CUT_PPI_DIST_SHELL1)
           {
             IntArraySet(&flagArrays[i], j, 1);
@@ -1492,14 +884,14 @@ int FindInterfaceResidues(Structure* pStructure)
   }
 
   printf("Interface residues: \n");
-  for (int j = 0; j < StructureGetChainCount(pStructure); j++)
+  for (int j = 0; j < StructureGetChainNum(pStructure); j++)
   {
-    Chain* pChain = StructureGetChain(pStructure, j);
+    Chain *pChain = StructureGetChain(pStructure, j);
     if (ChainGetType(pChain) == Type_Chain_Protein || ChainGetType(pChain) == Type_Chain_DNA || ChainGetType(pChain) == Type_Chain_RNA)
     {
-      for (int i = 0; i < ChainGetResidueCount(pChain); i++)
+      for (int i = 0; i < ChainGetResidueNum(pChain); i++)
       {
-        Residue* pResidue = ChainGetResidue(pChain, i);
+        Residue *pResidue = ChainGetResidue(pChain, i);
         if (IntArrayGet(&flagArrays[j], i) == 1)
         {
           printf("%s %4d %c\n", ResidueGetChainName(pResidue), ResidueGetPosInChain(pResidue), AA3ToAA1(ResidueGetName(pResidue)));
@@ -1508,7 +900,7 @@ int FindInterfaceResidues(Structure* pStructure)
     }
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
     IntArrayDestroy(&flagArrays[i]);
   }
@@ -1518,35 +910,33 @@ int FindInterfaceResidues(Structure* pStructure)
   return Success;
 }
 
-
-int FindInterfaceResiduesWithChainSplitting(Structure* pStructure, char split1[], char split2[])
+int FindInterfaceResidues2(Structure *pStructure, char split1[], char split2[])
 {
-  IntArray* flagArrays = (IntArray*)malloc(sizeof(IntArray) * StructureGetChainCount(pStructure));
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  IntArray *flagArrays = (IntArray *)malloc(sizeof(IntArray) * StructureGetChainNum(pStructure));
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    IntArrayCreate(&flagArrays[i], ChainGetResidueCount(pChainI));
-    for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+    Chain *pChainI = StructureGetChain(pStructure, i);
+    IntArrayCreate(&flagArrays[i], ChainGetResidueNum(pChainI));
+    for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
     {
       IntArraySet(&flagArrays[i], j, 0);
     }
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    for (int k = i + 1; k < StructureGetChainCount(pStructure); k++)
+    Chain *pChainI = StructureGetChain(pStructure, i);
+    for (int k = i + 1; k < StructureGetChainNum(pStructure); k++)
     {
-      Chain* pChainK = StructureGetChain(pStructure, k);
-      if ((strstr(split1, ChainGetName(pChainI)) != NULL && strstr(split1, ChainGetName(pChainK)) == NULL)
-        || ((strstr(split1, ChainGetName(pChainI)) == NULL && strstr(split1, ChainGetName(pChainK)) != NULL)))
+      Chain *pChainK = StructureGetChain(pStructure, k);
+      if ((strstr(split1, ChainGetName(pChainI)) != NULL && strstr(split1, ChainGetName(pChainK)) == NULL) || ((strstr(split1, ChainGetName(pChainI)) == NULL && strstr(split1, ChainGetName(pChainK)) != NULL)))
       {
-        for (int j = 0; j < ChainGetResidueCount(pChainI); j++)
+        for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
         {
-          Residue* pResiIJ = ChainGetResidue(pChainI, j);
-          for (int s = 0; s < ChainGetResidueCount(pChainK); s++)
+          Residue *pResiIJ = ChainGetResidue(pChainI, j);
+          for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
           {
-            Residue* pResiKS = ChainGetResidue(pChainK, s);
+            Residue *pResiKS = ChainGetResidue(pChainK, s);
             if (AtomArrayCalcMinDistance(&pResiIJ->atoms, &pResiKS->atoms) < CUT_PPI_DIST_SHELL1)
             {
               IntArraySet(&flagArrays[i], j, 1);
@@ -1554,20 +944,19 @@ int FindInterfaceResiduesWithChainSplitting(Structure* pStructure, char split1[]
             }
           }
         }
-
       }
     }
   }
 
   printf("Interface residues: \n");
-  for (int j = 0;j < StructureGetChainCount(pStructure);j++)
+  for (int j = 0; j < StructureGetChainNum(pStructure); j++)
   {
-    Chain* pChain = StructureGetChain(pStructure, j);
+    Chain *pChain = StructureGetChain(pStructure, j);
     if (ChainGetType(pChain) == Type_Chain_Protein || ChainGetType(pChain) == Type_Chain_DNA || ChainGetType(pChain) == Type_Chain_RNA)
     {
-      for (int i = 0; i < ChainGetResidueCount(pChain); i++)
+      for (int i = 0; i < ChainGetResidueNum(pChain); i++)
       {
-        Residue* pResidue = ChainGetResidue(pChain, i);
+        Residue *pResidue = ChainGetResidue(pChain, i);
         if (IntArrayGet(&flagArrays[j], i) == 1)
         {
           printf("%s %4d %c\n", ResidueGetChainName(pResidue), ResidueGetPosInChain(pResidue), AA3ToAA1(ResidueGetName(pResidue)));
@@ -1576,7 +965,7 @@ int FindInterfaceResiduesWithChainSplitting(Structure* pStructure, char split1[]
     }
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
     IntArrayDestroy(&flagArrays[i]);
   }
@@ -1586,19 +975,18 @@ int FindInterfaceResiduesWithChainSplitting(Structure* pStructure, char split1[]
   return Success;
 }
 
-
-int FindCoreResidues(Structure* pStructure)
+int FindCoreResidues(Structure *pStructure)
 {
   StructureComputeResiduePosition(pStructure);
   printf("Core residues:\n");
-  for (int j = 0;j < StructureGetChainCount(pStructure);j++)
+  for (int j = 0; j < StructureGetChainNum(pStructure); j++)
   {
-    Chain* pChain = StructureGetChain(pStructure, j);
+    Chain *pChain = StructureGetChain(pStructure, j);
     if (ChainGetType(pChain) == Type_Chain_Protein)
     {
-      for (int i = 0; i < ChainGetResidueCount(pChain); i++)
+      for (int i = 0; i < ChainGetResidueNum(pChain); i++)
       {
-        Residue* pResidue = ChainGetResidue(pChain, i);
+        Residue *pResidue = ChainGetResidue(pChain, i);
         if (pResidue->nCbIn10A > CUT_NUM_CB_CORE)
         {
           printf("%s %4d %c\n", ResidueGetChainName(pResidue), ResidueGetPosInChain(pResidue), AA3ToAA1(ResidueGetName(pResidue)));
@@ -1609,19 +997,18 @@ int FindCoreResidues(Structure* pStructure)
   return Success;
 }
 
-
-int FindSurfaceResidues(Structure* pStructure)
+int FindSurfaceResidues(Structure *pStructure)
 {
   StructureComputeResiduePosition(pStructure);
   printf("Surface residues:\n");
-  for (int j = 0;j < StructureGetChainCount(pStructure);j++)
+  for (int j = 0; j < StructureGetChainNum(pStructure); j++)
   {
-    Chain* pChain = StructureGetChain(pStructure, j);
+    Chain *pChain = StructureGetChain(pStructure, j);
     if (ChainGetType(pChain) == Type_Chain_Protein)
     {
-      for (int i = 0; i < ChainGetResidueCount(pChain); i++)
+      for (int i = 0; i < ChainGetResidueNum(pChain); i++)
       {
-        Residue* pResidue = ChainGetResidue(pChain, i);
+        Residue *pResidue = ChainGetResidue(pChain, i);
         if (pResidue->nCbIn10A < CUT_NUM_CB_SURF)
         {
           printf("%s %4d %c\n", ResidueGetChainName(pResidue), ResidueGetPosInChain(pResidue), AA3ToAA1(ResidueGetName(pResidue)));
@@ -1632,18 +1019,18 @@ int FindSurfaceResidues(Structure* pStructure)
   return Success;
 }
 
-int FindIntermediateResidues(Structure* pStructure)
+int FindIntermediateResidues(Structure *pStructure)
 {
   StructureComputeResiduePosition(pStructure);
   printf("Intermediate residues:\n");
-  for (int j = 0;j < StructureGetChainCount(pStructure);j++)
+  for (int j = 0; j < StructureGetChainNum(pStructure); j++)
   {
-    Chain* pChain = StructureGetChain(pStructure, j);
+    Chain *pChain = StructureGetChain(pStructure, j);
     if (ChainGetType(pChain) == Type_Chain_Protein)
     {
-      for (int i = 0; i < ChainGetResidueCount(pChain); i++)
+      for (int i = 0; i < ChainGetResidueNum(pChain); i++)
       {
-        Residue* pResidue = ChainGetResidue(pChain, i);
+        Residue *pResidue = ChainGetResidue(pChain, i);
         if (pResidue->nCbIn10A <= CUT_NUM_CB_CORE && pResidue->nCbIn10A >= CUT_NUM_CB_SURF)
         {
           printf("%s %4d %c\n", ResidueGetChainName(pResidue), ResidueGetPosInChain(pResidue), AA3ToAA1(ResidueGetName(pResidue)));
@@ -1654,81 +1041,89 @@ int FindIntermediateResidues(Structure* pStructure)
   return Success;
 }
 
-
-int ShowPhiPsi(Structure* pStructure, char* file)
+int WritePhiPsi(Structure *pStruct, char *filename)
 {
-  FILE* fout = NULL;
-  if (file == NULL) fout = stdout;
-  else fout = fopen(file, "w");
+  FILE *fout = NULL;
+  if (filename == NULL)
+    fout = stdout;
+  else
+    fout = fopen(filename, "w");
   fprintf(fout, "#phi-psi angles of protein residues: \n");
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain *pChain = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChain) != Type_Chain_Protein)
+      continue;
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResi1 = ChainGetResidue(pChain, j);
+      Residue *pResi1 = ChainGetResidue(pChain, j);
       fprintf(fout, "%s %s %4d %8.3f %8.3f\n", ResidueGetChainName(pResi1), ResidueGetName(pResi1), ResidueGetPosInChain(pResi1), pResi1->phipsi[0], pResi1->phipsi[1]);
     }
   }
-  if (fout != stdout) fclose(fout);
+  if (fout != stdout)
+    fclose(fout);
 
   return Success;
 }
 
-
-int ComputeRotamersEnergyByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pBBdepRotLib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
+int ComputeRotamersEnergy(Structure *pStruct, BBdepRotLib *pLib, AAppTable *pAAPP, RamaTable *pRama, AtomParams *pParams, ResTopos *pTops)
 {
-  char energyfile[MAX_LEN_ONE_LINE_CONTENT + 1];
-  sprintf(energyfile, "%s_rotenergy.txt", pdbid);
-  FILE* pFile = fopen(energyfile, "w");
-  for (int i = 0; i < StructureGetChainCount(pStructure); ++i)
+  FILE *pFile = fopen("UD_rotamers_energy.txt", "w");
+  for (int i = 0; i < StructureGetChainNum(pStruct); ++i)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+    Chain *pChain = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChain) != Type_Chain_Protein)
+      continue;
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      if (FLAG_PPI)
+      Residue *pRes = ChainGetResidue(pChain, j);
+      if (FLAG_DESIGN_PPI)
       {
-        for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+        for (int k = 0; k < StructureGetChainNum(pStruct); k++)
         {
-          if (k == i) continue;
-          Chain* pChainK = StructureGetChain(pStructure, k);
-          for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+          if (k == i)
+            continue;
+          Chain *pChainK = StructureGetChain(pStruct, k);
+          for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
           {
-            Residue* pResiKS = ChainGetResidue(pChainK, s);
-            if (AtomArrayCalcMinDistance(&pResi->atoms, &pResiKS->atoms) < ENERGY_DISTANCE_CUTOFF)
+            Residue *pResKS = ChainGetResidue(pChainK, s);
+            if (AtomArrayCalcMinDistance(&pRes->atoms, &pResKS->atoms) < ENERGY_DISTANCE_CUTOFF)
             {
-              ProteinSiteBuildAllRotamersByBBdepRotLib(pStructure, i, j, pBBdepRotLib, atomParams, resiTopos);
-              if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-              if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-              ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, pFile);
-              ProteinSiteRemoveDesignSite(pStructure, i, j);
+              ProteinSiteBuildAllRotamersByBBdepRotLib(pStruct, i, j, pLib, pParams, pTops);
+              if (FLAG_USE_INPUT_SC && pRes->isSCIntact)
+                ProteinSiteBuildNativeRotamer(pStruct, i, j, pTops);
+              if (FLAG_ROTATE_HYDROXYL)
+                ProteinSiteExpandHydroxylRotamers(pStruct, i, j, pTops);
+              ProteinSiteCalcRotamersEnergy(pStruct, pAAPP, pRama, i, j, pFile);
+              ProteinSiteRemoveDesignSite(pStruct, i, j);
             }
           }
         }
       }
-      else if (FLAG_ENZYME || FLAG_PROT_LIG)
+      else if (FLAG_DESIGN_ENZ || FLAG_DESIGN_PLI)
       {
-        Residue* pSmallMol = NULL;
-        StructureFindSmallMol(pStructure, &pSmallMol);
-        if (AtomArrayCalcMinDistance(&pResi->atoms, &pSmallMol->atoms) < ENERGY_DISTANCE_CUTOFF)
+        Residue *pSmallMol = NULL;
+        StructureFindSmallMol(pStruct, &pSmallMol);
+        if (AtomArrayCalcMinDistance(&pRes->atoms, &pSmallMol->atoms) < ENERGY_DISTANCE_CUTOFF)
         {
-          ProteinSiteBuildAllRotamersByBBdepRotLib(pStructure, i, j, pBBdepRotLib, atomParams, resiTopos);
-          if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-          if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-          ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, pFile);
-          ProteinSiteRemoveDesignSite(pStructure, i, j);
+          ProteinSiteBuildAllRotamersByBBdepRotLib(pStruct, i, j, pLib, pParams, pTops);
+          if (FLAG_USE_INPUT_SC && pRes->isSCIntact)
+            ProteinSiteBuildNativeRotamer(pStruct, i, j, pTops);
+          if (FLAG_ROTATE_HYDROXYL)
+            ProteinSiteExpandHydroxylRotamers(pStruct, i, j, pTops);
+          ProteinSiteCalcRotamersEnergy(pStruct, pAAPP, pRama, i, j, pFile);
+          ProteinSiteRemoveDesignSite(pStruct, i, j);
         }
       }
       else
       {
-        ProteinSiteBuildAllRotamersByBBdepRotLib(pStructure, i, j, pBBdepRotLib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-        ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, pFile);
-        ProteinSiteRemoveDesignSite(pStructure, i, j);
+        ProteinSiteBuildAllRotamersByBBdepRotLib(pStruct, i, j, pLib, pParams, pTops);
+        if (FLAG_USE_INPUT_SC && pRes->isSCIntact)
+          ProteinSiteBuildNativeRotamer(pStruct, i, j, pTops);
+        if (FLAG_ROTATE_HYDROXYL)
+          ProteinSiteExpandHydroxylRotamers(pStruct, i, j, pTops);
+        ProteinSiteCalcRotamersEnergy(pStruct, pAAPP, pRama, i, j, pFile);
+        ProteinSiteRemoveDesignSite(pStruct, i, j);
       }
     }
   }
@@ -1737,252 +1132,190 @@ int ComputeRotamersEnergyByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* p
   return Success;
 }
 
-
-int ComputeWildtypeRotamersEnergyByBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pBBdepRotLib, AAppTable* pAAppTable, RamaTable* pRama, AtomParamsSet* atomParams, ResiTopoSet* resiTopos, char* pdbid)
+int ComputeWildtypeRotamersEnergy(Structure *pStruct, BBdepRotLib *pLib, AAppTable *pAAPP, RamaTable *pRama, AtomParams *pParams, ResTopos *pTops)
 {
-  char energyfile[MAX_LEN_ONE_LINE_CONTENT + 1];
-  sprintf(energyfile, "%s_rotenergy.txt", pdbid);
-  FILE* fp = fopen(energyfile, "w");
-  for (int i = 0; i < StructureGetChainCount(pStructure); ++i)
+  FILE *pFile = fopen("UD_rotamers_energy.txt", "w");
+  for (int i = 0; i < StructureGetChainNum(pStruct); ++i)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+    Chain *pChainI = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChainI) != Type_Chain_Protein)
+      continue;
+    for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      if (FLAG_PPI)
+      Residue *pResIJ = ChainGetResidue(pChainI, j);
+      if (FLAG_DESIGN_PPI)
       {
-        //check if residue is an interface residue
-        for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+        // check if residue is an interface residue
+        for (int k = 0; k < StructureGetChainNum(pStruct); k++)
         {
-          if (k == i) continue;
-          Chain* pChainK = StructureGetChain(pStructure, k);
-          for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+          if (k == i)
+            continue;
+          Chain *pChainK = StructureGetChain(pStruct, k);
+          for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
           {
-            Residue* pResiKS = ChainGetResidue(pChainK, s);
-            if (AtomArrayCalcMinDistance(&pResi->atoms, &pResiKS->atoms) < ENERGY_DISTANCE_CUTOFF)
+            Residue *pResKS = ChainGetResidue(pChainK, s);
+            if (AtomArrayCalcMinDistance(&pResIJ->atoms, &pResKS->atoms) < ENERGY_DISTANCE_CUTOFF)
             {
-              ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStructure, i, j, pBBdepRotLib, atomParams, resiTopos);
-              if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-              if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-              ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, fp);
-              ProteinSiteRemoveDesignSite(pStructure, i, j);
+              ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStruct, i, j, pLib, pParams, pTops);
+              if (FLAG_USE_INPUT_SC && pResIJ->isSCIntact)
+                ProteinSiteBuildNativeRotamer(pStruct, i, j, pTops);
+              if (FLAG_ROTATE_HYDROXYL)
+                ProteinSiteExpandHydroxylRotamers(pStruct, i, j, pTops);
+              ProteinSiteCalcRotamersEnergy(pStruct, pAAPP, pRama, i, j, pFile);
+              ProteinSiteRemoveDesignSite(pStruct, i, j);
             }
           }
         }
       }
-      else if (FLAG_ENZYME || FLAG_PROT_LIG)
+      else if (FLAG_DESIGN_ENZ || FLAG_DESIGN_PLI)
       {
-        Residue* pSmallMol = NULL;
-        StructureFindSmallMol(pStructure, &pSmallMol);
-        if (AtomArrayCalcMinDistance(&pResi->atoms, &pSmallMol->atoms) < ENERGY_DISTANCE_CUTOFF)
+        Residue *pSmallMol = NULL;
+        StructureFindSmallMol(pStruct, &pSmallMol);
+        if (AtomArrayCalcMinDistance(&pResIJ->atoms, &pSmallMol->atoms) < ENERGY_DISTANCE_CUTOFF)
         {
-          ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStructure, i, j, pBBdepRotLib, atomParams, resiTopos);
-          if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-          if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-          ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, fp);
-          ProteinSiteRemoveDesignSite(pStructure, i, j);
+          ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStruct, i, j, pLib, pParams, pTops);
+          if (FLAG_USE_INPUT_SC && pResIJ->isSCIntact)
+            ProteinSiteBuildNativeRotamer(pStruct, i, j, pTops);
+          if (FLAG_ROTATE_HYDROXYL)
+            ProteinSiteExpandHydroxylRotamers(pStruct, i, j, pTops);
+          ProteinSiteCalcRotamersEnergy(pStruct, pAAPP, pRama, i, j, pFile);
+          ProteinSiteRemoveDesignSite(pStruct, i, j);
         }
       }
       else
       {
-        ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStructure, i, j, pBBdepRotLib, atomParams, resiTopos);
-        if (FLAG_USE_INPUT_SC && pResi->isSCIntact) ProteinSiteBuildNativeRotamer(pStructure, i, j, resiTopos);
-        if (FLAG_ROTATE_HYDROXYL) ProteinSiteExpandHydroxylRotamers(pStructure, i, j, resiTopos);
-        ProteinSiteCalcRotamersEnergy(pStructure, pAAppTable, pRama, i, j, fp);
-        ProteinSiteRemoveDesignSite(pStructure, i, j);
+        ProteinSiteBuildWildtypeRotamersByBBdepRotLib(pStruct, i, j, pLib, pParams, pTops);
+        if (FLAG_USE_INPUT_SC && pResIJ->isSCIntact)
+          ProteinSiteBuildNativeRotamer(pStruct, i, j, pTops);
+        if (FLAG_ROTATE_HYDROXYL)
+          ProteinSiteExpandHydroxylRotamers(pStruct, i, j, pTops);
+        ProteinSiteCalcRotamersEnergy(pStruct, pAAPP, pRama, i, j, pFile);
+        ProteinSiteRemoveDesignSite(pStruct, i, j);
       }
     }
   }
-  fclose(fp);
+  fclose(pFile);
 
   return Success;
 }
 
-
-
-int CheckRotamerInBBindRotLib(Structure* pStructure, BBindRotamerLib* pBBindRotLib, ResiTopoSet* pTopos, double cutoff, char* pdbid)
+int CheckRotamerInBBdepRotLib(Structure *pStruct, BBdepRotLib *pLib, ResTopos *pTops, double cutoff)
 {
-  char FILE_TORSION[MAX_LEN_FILE_NAME + 1];
-  sprintf(FILE_TORSION, "%s_torsionrecover.txt", pdbid);
-  FILE* pf = fopen(FILE_TORSION, "w");  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  FILE *pFile = fopen("UD_torsion_recovery.txt", "w");
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain *pChain = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResidue = ChainGetResidue(pChain, j);
-      if (strcmp(ResidueGetName(pResidue), "ALA") != 0 && strcmp(ResidueGetName(pResidue), "GLY") != 0)
+      Residue *pRes = ChainGetResidue(pChain, j);
+      if (strcmp(ResidueGetName(pRes), "ALA") != 0 && strcmp(ResidueGetName(pRes), "GLY") != 0)
       {
-        BOOL result = IsNativeRotamerInBBindRotLib(pStructure, i, j, pTopos, pBBindRotLib, cutoff);
+        BOOL result = IsNativeRotamerInBBdepRotLib(pStruct, i, j, pTops, pLib, cutoff);
         if (result)
-        {
-          fprintf(pf, "%s %s 1\n", ChainGetName(pChain), ResidueGetName(pResidue));
-        }
+          fprintf(pFile, "%s %s 1\n", ChainGetName(pChain), ResidueGetName(pRes));
         else
-        {
-          fprintf(pf, "%s %s 0\n", ChainGetName(pChain), ResidueGetName(pResidue));
-        }
+          fprintf(pFile, "%s %s 0\n", ChainGetName(pChain), ResidueGetName(pRes));
       }
       else
-      {
-        fprintf(pf, "%s %s 1\n", ChainGetName(pChain), ResidueGetName(pResidue));
-      }
+        fprintf(pFile, "%s %s 1\n", ChainGetName(pChain), ResidueGetName(pRes));
     }
   }
-  fclose(pf);
+  fclose(pFile);
   return Success;
 }
 
-
-int CheckRotamerInBBdepRotLib(Structure* pStructure, BBdepRotamerLib* pBBdepRotLib, ResiTopoSet* pTopos, double cutoff, char* pdbid)
+int FindMinRmsdRotFromRotLib(Structure *pStruct)
 {
-  char FILE_TORSION[MAX_LEN_FILE_NAME + 1];
-  sprintf(FILE_TORSION, "%s_torsionrecover.txt", pdbid);
-  FILE* pf = fopen(FILE_TORSION, "w");
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  FILE *pFile = fopen("UD_MinRMSDRotamers.txt", "w");
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain *pChain = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResidue = ChainGetResidue(pChain, j);
-      if (strcmp(ResidueGetName(pResidue), "ALA") != 0 && strcmp(ResidueGetName(pResidue), "GLY") != 0)
-      {
-        BOOL result = IsNativeRotamerInBBdepRotLib(pStructure, i, j, pTopos, pBBdepRotLib, cutoff);
-        if (result)
-        {
-          fprintf(pf, "%s %s 1\n", ChainGetName(pChain), ResidueGetName(pResidue));
-        }
-        else
-        {
-          fprintf(pf, "%s %s 0\n", ChainGetName(pChain), ResidueGetName(pResidue));
-        }
-      }
-      else
-      {
-        fprintf(pf, "%s %s 1\n", ChainGetName(pChain), ResidueGetName(pResidue));
-      }
-    }
-  }
-  fclose(pf);
-  return Success;
-}
-
-
-int FindMinRmsdRotFromRotLib(Structure* pStructure, char* pdbid)
-{
-  char FILE_RMSD[MAX_LEN_FILE_NAME + 1];
-  sprintf(FILE_RMSD, "%s_minrmsd.txt", pdbid);
-  FILE* pf = fopen(FILE_RMSD, "w");
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
-  {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
-    {
-      Residue* pResidue = ChainGetResidue(pChain, j);
-      DesignSite* pSite = StructureFindDesignSite(pStructure, i, j);
+      Residue *pRes = ChainGetResidue(pChain, j);
+      DesignSite *pSite = StructureFindDesignSite(pStruct, i, j);
       if (pSite != NULL)
       {
         double minRMSD = 1e8;
-        RotamerSet* pSet = DesignSiteGetRotamers(pSite);
-        for (int k = 0;k < RotamerSetGetCount(pSet);k++)
+        Rotamers *pSet = DesignSiteGetRotamers(pSite);
+        for (int k = 0; k < RotamersGetNum(pSet); k++)
         {
-          Rotamer* pRotamer = RotamerSetGet(pSet, k);
-          RotamerRestore(pRotamer, pSet);
-          double rmsd = RotamerAndResidueSidechainRMSD(pRotamer, pResidue);
-          if (RotamerIsSymmetricalCheck(pRotamer))
+          Rotamer *pRot = RotamersGet(pSet, k);
+          RotamerRestore(pRot, pSet);
+          double rmsd = RotamerAndResidueSidechainRMSD(pRot, pRes);
+          if (RotamerIsSymmetricalCheck(pRot))
           {
             Rotamer tempRot;
             RotamerCreate(&tempRot);
-            SymmetricalRotamerGenerate(&tempRot, pRotamer);
-            double rmsd2 = RotamerAndResidueSidechainRMSD(&tempRot, pResidue);
-            if (rmsd2 < rmsd) rmsd = rmsd2;
+            SymmetricalRotamerGenerate(&tempRot, pRot);
+            double rmsd2 = RotamerAndResidueSidechainRMSD(&tempRot, pRes);
+            if (rmsd2 < rmsd)
+              rmsd = rmsd2;
             RotamerDestroy(&tempRot);
           }
-          if (rmsd < minRMSD) minRMSD = rmsd;
-          RotamerExtract(pRotamer);
+          if (rmsd < minRMSD)
+            minRMSD = rmsd;
+          RotamerExtract(pRot);
         }
-        fprintf(pf, "%s %s %f\n", ChainGetName(pChain), ResidueGetName(pResidue), minRMSD);
+        fprintf(pFile, "%s %s %f\n", ChainGetName(pChain), ResidueGetName(pRes), minRMSD);
       }
     }
   }
-  fclose(pf);
+  fclose(pFile);
   return Success;
 }
 
-int CompareSidechainsOf2Structures(Structure* pStructure, Structure* pStructure2, FILE* pTorsion, FILE* pRmsd)
+int CompareTwoStructureProteinSidechains(Structure *pStruct, Structure *pStruct2, FILE *pTorsion, FILE *pRmsd)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    Chain* pChain2 = StructureGetChain(pStructure2, i);
-    for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+    Chain *pChain = StructureGetChain(pStruct, i);
+    Chain *pChain2 = StructureGetChain(pStruct2, i);
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      Residue* pResi2 = ChainGetResidue(pChain2, j);
-      char res = AA3ToAA1(ResidueGetName(pResi));
-      char res2 = AA3ToAA1(ResidueGetName(pResi2));
+      Residue *pRes = ChainGetResidue(pChain, j);
+      Residue *pRes2 = ChainGetResidue(pChain2, j);
+      char res = AA3ToAA1(ResidueGetName(pRes));
+      char res2 = AA3ToAA1(ResidueGetName(pRes2));
       if (ChainGetType(pChain) == Type_Chain_Protein)
       {
         if (res != 'A' && res != 'G')
         {
-          double rmsd = ResidueAndResidueSidechainRMSD(pResi, pResi2);
-          if (ResidueIsSymmetricalCheck(pResi))
+          double rmsd = ResidueAndResidueSidechainRMSD(pRes, pRes2);
+          if (ResidueIsSymmetricalCheck(pRes))
           {
-            Residue tempRot;
-            ResidueCreate(&tempRot);
-            SymmetricalResidueGenerate(&tempRot, pResi);
-            double rmsd2 = ResidueAndResidueSidechainRMSD(&tempRot, pResi2);
-            if (rmsd2 < rmsd) rmsd = rmsd2;
-            ResidueDestroy(&tempRot);
+            Residue tempRes;
+            ResidueCreate(&tempRes);
+            SymmetricalResidueGenerate(&tempRes, pRes);
+            double rmsd2 = ResidueAndResidueSidechainRMSD(&tempRes, pRes2);
+            if (rmsd2 < rmsd)
+              rmsd = rmsd2;
+            ResidueDestroy(&tempRes);
           }
-          fprintf(pRmsd, "%s %s %f\n", ChainGetName(pChain), ResidueGetName(pResi), rmsd);
-#if 0
-          if (ResidueAndResidueAllTorsionsAreSimilar(pResi, pResi2, TORSION_DEVIATION_CUTOFF))
-          {
-            fprintf(pTorsion, "%s %s 1\n", ChainGetName(pChain), ResidueGetName(pResi));
-          }
-          else
-          {
-            fprintf(pTorsion, "%s %s 0\n", ChainGetName(pChain), ResidueGetName(pResi));
-          }
-#endif
-#if 1
-          IntArray simArray;
-          IntArrayCreate(&simArray, 0);
-          //BOOL sim=TRUE;
-          fprintf(pTorsion, "%s %s", ChainGetName(pChain), ResidueGetName(pResi));
-          if (ResidueAndResidueCheckTorsionSimilarity(pResi, pResi2, CUT_TORSION_DEVIATION, &simArray))
-          {
+          fprintf(pRmsd, "%s %s %f\n", ChainGetName(pChain), ResidueGetName(pRes), rmsd);
+          IntArray similarityArray;
+          IntArrayCreate(&similarityArray, 0);
+          fprintf(pTorsion, "%s %s", ChainGetName(pChain), ResidueGetName(pRes));
+          if (ResidueAndResidueCheckTorsionSimilarity(pRes, pRes2, TORSION_DEVIATION_THRESHOLD, &similarityArray))
             fprintf(pTorsion, " 1");
-          }
           else
-          {
             fprintf(pTorsion, " 0");
-          }
-          for (int k = 0;k < IntArrayGetLength(&simArray);k++)
+          // calculate torsion angle-wise similarity
+          for (int k = 0; k < IntArrayGetLength(&similarityArray); k++)
           {
-            if (IntArrayGet(&simArray, k) == 1 /*&& sim*/)
-            {
+            if (IntArrayGet(&similarityArray, k) == 1)
               fprintf(pTorsion, " 1");
-            }
-            else if (IntArrayGet(&simArray, k) == 2)
-            {
+            else if (IntArrayGet(&similarityArray, k) == 2)
               fprintf(pTorsion, " 0");
-              //sim=FALSE;
-            }
-            /*else{
-              fprintf(pTorsion," -");
-            }*/
           }
           fprintf(pTorsion, "\n");
-          IntArrayDestroy(&simArray);
-#endif
+          IntArrayDestroy(&similarityArray);
         }
         else
         {
           double rmsd = 0.0;
-          fprintf(pRmsd, "%s %s %f\n", ChainGetName(pChain), ResidueGetName(pResi), rmsd);
-          fprintf(pTorsion, "%s %s 1\n", ChainGetName(pChain), ResidueGetName(pResi));
+          fprintf(pRmsd, "%s %s %f\n", ChainGetName(pChain), ResidueGetName(pRes), rmsd);
+          fprintf(pTorsion, "%s %s 1\n", ChainGetName(pChain), ResidueGetName(pRes));
         }
       }
     }
@@ -1990,80 +1323,84 @@ int CompareSidechainsOf2Structures(Structure* pStructure, Structure* pStructure2
   return Success;
 }
 
-int CheckClash0(Structure* pStructure, double clashRatio)
+int CheckClash0(Structure *pStructure, double clashRatio)
 {
   printf("checking structure clashes with atom pairwise distance < %.2f*(ri+rj)\n", clashRatio);
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
+    Chain *pChainI = StructureGetChain(pStructure, i);
 
-    for (int j = 0;j < ChainGetResidueCount(pChainI);j++)
+    for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
     {
-      Residue* pResiIJ = ChainGetResidue(pChainI, j);
-      for (int j2 = j + 1;j2 < ChainGetResidueCount(pChainI);j2++)
+      Residue *pResiIJ = ChainGetResidue(pChainI, j);
+      for (int j2 = j + 1; j2 < ChainGetResidueNum(pChainI); j2++)
       {
-        Residue* pResiIJ2 = ChainGetResidue(pChainI, j2);
-        for (int atom1 = 0;atom1 < ResidueGetAtomCount(pResiIJ);atom1++)
+        Residue *pResiIJ2 = ChainGetResidue(pChainI, j2);
+        for (int atom1 = 0; atom1 < ResidueGetAtomNum(pResiIJ); atom1++)
         {
-          Atom* pAtom1 = ResidueGetAtom(pResiIJ, atom1);
-          if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1)) continue;
-          for (int atom2 = 0;atom2 < ResidueGetAtomCount(pResiIJ2);atom2++)
+          Atom *pAtom1 = ResidueGetAtom(pResiIJ, atom1);
+          if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1))
+            continue;
+          for (int atom2 = 0; atom2 < ResidueGetAtomNum(pResiIJ2); atom2++)
           {
-            Atom* pAtom2 = ResidueGetAtom(pResiIJ2, atom2);
-            if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2)) continue;
-            double dist = XYZDistance(&pAtom1->xyz, &pAtom2->xyz);
-            if (dist < clashRatio * (pAtom1->vdw_radius + pAtom2->vdw_radius))
+            Atom *pAtom2 = ResidueGetAtom(pResiIJ2, atom2);
+            if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2))
+              continue;
+            double dist = XYZDist(&pAtom1->xyz, &pAtom2->xyz);
+            if (dist < clashRatio * (pAtom1->vdw_rad + pAtom2->vdw_rad))
             {
               printf("protein residue %s%d%s atom %s and protein residue %s%d%s atom %s has clash, dist=%f\n",
-                AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiIJ2), AtomGetName(pAtom2),
-                dist);
+                     AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                     AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiIJ2), AtomGetName(pAtom2),
+                     dist);
             }
           }
         }
       }
     }
 
-    for (int k = i + 1;k < StructureGetChainCount(pStructure);k++)
+    for (int k = i + 1; k < StructureGetChainNum(pStructure); k++)
     {
-      Chain* pChainK = StructureGetChain(pStructure, k);
-      for (int j = 0;j < ChainGetResidueCount(pChainI);j++)
+      Chain *pChainK = StructureGetChain(pStructure, k);
+      for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
       {
-        Residue* pResiIJ = ChainGetResidue(pChainI, j);
-        for (int l = 0;l < ChainGetResidueCount(pChainK);l++)
+        Residue *pResiIJ = ChainGetResidue(pChainI, j);
+        for (int l = 0; l < ChainGetResidueNum(pChainK); l++)
         {
-          Residue* pResiKL = ChainGetResidue(pChainK, l);
-          for (int atom1 = 0;atom1 < ResidueGetAtomCount(pResiIJ);atom1++)
+          Residue *pResiKL = ChainGetResidue(pChainK, l);
+          for (int atom1 = 0; atom1 < ResidueGetAtomNum(pResiIJ); atom1++)
           {
-            Atom* pAtom1 = ResidueGetAtom(pResiIJ, atom1);
-            if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1)) continue;
-            for (int atom2 = 0;atom2 < ResidueGetAtomCount(pResiKL);atom2++)
+            Atom *pAtom1 = ResidueGetAtom(pResiIJ, atom1);
+            if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1))
+              continue;
+            for (int atom2 = 0; atom2 < ResidueGetAtomNum(pResiKL); atom2++)
             {
-              Atom* pAtom2 = ResidueGetAtom(pResiKL, atom2);
-              if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2)) continue;
-              double dist = XYZDistance(&pAtom1->xyz, &pAtom2->xyz);
-              if (dist < clashRatio * (pAtom1->vdw_radius + pAtom2->vdw_radius))
+              Atom *pAtom2 = ResidueGetAtom(pResiKL, atom2);
+              if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2))
+                continue;
+              double dist = XYZDist(&pAtom1->xyz, &pAtom2->xyz);
+              if (dist < clashRatio * (pAtom1->vdw_rad + pAtom2->vdw_rad))
               {
                 if (ChainGetType(pChainI) == Type_Chain_SmallMol)
                 {
                   printf("ligand residue %s%d%s atom %s and protein residue %s%d%s atom %s has clash, dist=%f\n",
-                    AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                    AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
-                    dist);
+                         AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                         AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
+                         dist);
                 }
                 else if (ChainGetType(pChainK) == Type_Chain_SmallMol)
                 {
                   printf("protein residue %s%d%s atom %s and ligand residue %s%d%s atom %s has clash, dist=%f\n",
-                    AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                    AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
-                    dist);
+                         AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                         AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
+                         dist);
                 }
                 else
                 {
                   printf("protein residue %s%d%s atom %s and protein residue %s%d%s atom %s has clash, dist=%f\n",
-                    AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                    AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
-                    dist);
+                         AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                         AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
+                         dist);
                 }
               }
             }
@@ -2076,80 +1413,84 @@ int CheckClash0(Structure* pStructure, double clashRatio)
   return Success;
 }
 
-int CheckClash1(Structure* pStructure, double clashRatio)
+int CheckClash1(Structure *pStructure, double clashRatio)
 {
   printf("checking structure clashes with atom pairwise distance < %.2f*(ri+rj)\n", clashRatio);
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
+    Chain *pChainI = StructureGetChain(pStructure, i);
 
-    for (int j = 0;j < ChainGetResidueCount(pChainI);j++)
+    for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
     {
-      Residue* pResiIJ = ChainGetResidue(pChainI, j);
-      for (int j2 = j + 1;j2 < ChainGetResidueCount(pChainI);j2++)
+      Residue *pResiIJ = ChainGetResidue(pChainI, j);
+      for (int j2 = j + 1; j2 < ChainGetResidueNum(pChainI); j2++)
       {
-        Residue* pResiIJ2 = ChainGetResidue(pChainI, j2);
-        for (int atom1 = 0;atom1 < ResidueGetAtomCount(pResiIJ);atom1++)
+        Residue *pResiIJ2 = ChainGetResidue(pChainI, j2);
+        for (int atom1 = 0; atom1 < ResidueGetAtomNum(pResiIJ); atom1++)
         {
-          Atom* pAtom1 = ResidueGetAtom(pResiIJ, atom1);
-          if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1)) continue;
-          for (int atom2 = 0;atom2 < ResidueGetAtomCount(pResiIJ2);atom2++)
+          Atom *pAtom1 = ResidueGetAtom(pResiIJ, atom1);
+          if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1))
+            continue;
+          for (int atom2 = 0; atom2 < ResidueGetAtomNum(pResiIJ2); atom2++)
           {
-            Atom* pAtom2 = ResidueGetAtom(pResiIJ2, atom2);
-            if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2)) continue;
-            double dist = XYZDistance(&pAtom1->xyz, &pAtom2->xyz);
-            if (dist < clashRatio * (pAtom1->vdw_radius + pAtom2->vdw_radius))
+            Atom *pAtom2 = ResidueGetAtom(pResiIJ2, atom2);
+            if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2))
+              continue;
+            double dist = XYZDist(&pAtom1->xyz, &pAtom2->xyz);
+            if (dist < clashRatio * (pAtom1->vdw_rad + pAtom2->vdw_rad))
             {
               printf("protein residue %s%d%s atom %s and protein residue %s%d%s atom %s has clash, dist=%f\n",
-                AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiIJ2), AtomGetName(pAtom2),
-                dist);
+                     AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                     AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiIJ2), AtomGetName(pAtom2),
+                     dist);
             }
           }
         }
       }
     }
 
-    for (int k = i + 1;k < StructureGetChainCount(pStructure);k++)
+    for (int k = i + 1; k < StructureGetChainNum(pStructure); k++)
     {
-      Chain* pChainK = StructureGetChain(pStructure, k);
-      for (int j = 0;j < ChainGetResidueCount(pChainI);j++)
+      Chain *pChainK = StructureGetChain(pStructure, k);
+      for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
       {
-        Residue* pResiIJ = ChainGetResidue(pChainI, j);
-        for (int l = 0;l < ChainGetResidueCount(pChainK);l++)
+        Residue *pResiIJ = ChainGetResidue(pChainI, j);
+        for (int l = 0; l < ChainGetResidueNum(pChainK); l++)
         {
-          Residue* pResiKL = ChainGetResidue(pChainK, l);
-          for (int atom1 = 0;atom1 < ResidueGetAtomCount(pResiIJ);atom1++)
+          Residue *pResiKL = ChainGetResidue(pChainK, l);
+          for (int atom1 = 0; atom1 < ResidueGetAtomNum(pResiIJ); atom1++)
           {
-            Atom* pAtom1 = ResidueGetAtom(pResiIJ, atom1);
-            if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1)) continue;
-            for (int atom2 = 0;atom2 < ResidueGetAtomCount(pResiKL);atom2++)
+            Atom *pAtom1 = ResidueGetAtom(pResiIJ, atom1);
+            if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1))
+              continue;
+            for (int atom2 = 0; atom2 < ResidueGetAtomNum(pResiKL); atom2++)
             {
-              Atom* pAtom2 = ResidueGetAtom(pResiKL, atom2);
-              if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2)) continue;
-              double dist = XYZDistance(&pAtom1->xyz, &pAtom2->xyz);
-              if (dist < clashRatio * (pAtom1->vdw_radius + pAtom2->vdw_radius))
+              Atom *pAtom2 = ResidueGetAtom(pResiKL, atom2);
+              if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2))
+                continue;
+              double dist = XYZDist(&pAtom1->xyz, &pAtom2->xyz);
+              if (dist < clashRatio * (pAtom1->vdw_rad + pAtom2->vdw_rad))
               {
                 if (ChainGetType(pChainI) == Type_Chain_SmallMol)
                 {
                   printf("ligand residue %s%d%s atom %s and protein residue %s%d%s atom %s has clash, dist=%f\n",
-                    AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                    AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
-                    dist);
+                         AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                         AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
+                         dist);
                 }
                 else if (ChainGetType(pChainK) == Type_Chain_SmallMol)
                 {
                   printf("protein residue %s%d%s atom %s and ligand residue %s%d%s atom %s has clash, dist=%f\n",
-                    AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                    AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
-                    dist);
+                         AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                         AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
+                         dist);
                 }
                 else
                 {
                   printf("protein residue %s%d%s atom %s and protein residue %s%d%s atom %s has clash, dist=%f\n",
-                    AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                    AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
-                    dist);
+                         AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                         AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
+                         dist);
                 }
               }
             }
@@ -2162,81 +1503,84 @@ int CheckClash1(Structure* pStructure, double clashRatio)
   return Success;
 }
 
-
-int CheckClash2(Structure* pStructure, double clashRatio)
+int CheckClash2(Structure *pStructure, double clashRatio)
 {
   printf("checking structure clashes with atom pairwise distance < %.2f*(ri+rj)\n", clashRatio);
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
+    Chain *pChainI = StructureGetChain(pStructure, i);
 
-    for (int j = 0;j < ChainGetResidueCount(pChainI);j++)
+    for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
     {
-      Residue* pResiIJ = ChainGetResidue(pChainI, j);
-      for (int j2 = j + 1;j2 < ChainGetResidueCount(pChainI);j2++)
+      Residue *pResiIJ = ChainGetResidue(pChainI, j);
+      for (int j2 = j + 1; j2 < ChainGetResidueNum(pChainI); j2++)
       {
-        Residue* pResiIJ2 = ChainGetResidue(pChainI, j2);
-        for (int atom1 = 0;atom1 < ResidueGetAtomCount(pResiIJ);atom1++)
+        Residue *pResiIJ2 = ChainGetResidue(pChainI, j2);
+        for (int atom1 = 0; atom1 < ResidueGetAtomNum(pResiIJ); atom1++)
         {
-          Atom* pAtom1 = ResidueGetAtom(pResiIJ, atom1);
-          if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1)) continue;
-          for (int atom2 = 0;atom2 < ResidueGetAtomCount(pResiIJ2);atom2++)
+          Atom *pAtom1 = ResidueGetAtom(pResiIJ, atom1);
+          if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1))
+            continue;
+          for (int atom2 = 0; atom2 < ResidueGetAtomNum(pResiIJ2); atom2++)
           {
-            Atom* pAtom2 = ResidueGetAtom(pResiIJ2, atom2);
-            if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2)) continue;
-            double dist = XYZDistance(&pAtom1->xyz, &pAtom2->xyz);
-            if (dist < clashRatio * (pAtom1->vdw_radius + pAtom2->vdw_radius))
+            Atom *pAtom2 = ResidueGetAtom(pResiIJ2, atom2);
+            if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2))
+              continue;
+            double dist = XYZDist(&pAtom1->xyz, &pAtom2->xyz);
+            if (dist < clashRatio * (pAtom1->vdw_rad + pAtom2->vdw_rad))
             {
               printf("protein residue %s%d%s atom %s and protein residue %s%d%s atom %s has clash, dist=%f\n",
-                AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiIJ2), AtomGetName(pAtom2),
-                dist);
+                     AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                     AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiIJ2), AtomGetName(pAtom2),
+                     dist);
             }
           }
         }
       }
     }
 
-    for (int k = i + 1;k < StructureGetChainCount(pStructure);k++)
+    for (int k = i + 1; k < StructureGetChainNum(pStructure); k++)
     {
-      Chain* pChainK = StructureGetChain(pStructure, k);
-      for (int j = 0;j < ChainGetResidueCount(pChainI);j++)
+      Chain *pChainK = StructureGetChain(pStructure, k);
+      for (int j = 0; j < ChainGetResidueNum(pChainI); j++)
       {
-        Residue* pResiIJ = ChainGetResidue(pChainI, j);
-        for (int l = 0;l < ChainGetResidueCount(pChainK);l++)
+        Residue *pResiIJ = ChainGetResidue(pChainI, j);
+        for (int l = 0; l < ChainGetResidueNum(pChainK); l++)
         {
-          Residue* pResiKL = ChainGetResidue(pChainK, l);
-          for (int atom1 = 0;atom1 < ResidueGetAtomCount(pResiIJ);atom1++)
+          Residue *pResiKL = ChainGetResidue(pChainK, l);
+          for (int atom1 = 0; atom1 < ResidueGetAtomNum(pResiIJ); atom1++)
           {
-            Atom* pAtom1 = ResidueGetAtom(pResiIJ, atom1);
-            if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1)) continue;
-            for (int atom2 = 0;atom2 < ResidueGetAtomCount(pResiKL);atom2++)
+            Atom *pAtom1 = ResidueGetAtom(pResiIJ, atom1);
+            if (pAtom1->isBBAtom || AtomIsHydrogen(pAtom1))
+              continue;
+            for (int atom2 = 0; atom2 < ResidueGetAtomNum(pResiKL); atom2++)
             {
-              Atom* pAtom2 = ResidueGetAtom(pResiKL, atom2);
-              if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2)) continue;
-              double dist = XYZDistance(&pAtom1->xyz, &pAtom2->xyz);
-              if (dist < clashRatio * (pAtom1->vdw_radius + pAtom2->vdw_radius))
+              Atom *pAtom2 = ResidueGetAtom(pResiKL, atom2);
+              if (pAtom2->isBBAtom || AtomIsHydrogen(pAtom2))
+                continue;
+              double dist = XYZDist(&pAtom1->xyz, &pAtom2->xyz);
+              if (dist < clashRatio * (pAtom1->vdw_rad + pAtom2->vdw_rad))
               {
                 if (ChainGetType(pChainI) == Type_Chain_SmallMol)
                 {
                   printf("ligand residue %s%d%s atom %s and protein residue %s%d%s atom %s has clash, dist=%f\n",
-                    AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                    AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
-                    dist);
+                         AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                         AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
+                         dist);
                 }
                 else if (ChainGetType(pChainK) == Type_Chain_SmallMol)
                 {
                   printf("protein residue %s%d%s atom %s and ligand residue %s%d%s atom %s has clash, dist=%f\n",
-                    AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                    AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
-                    dist);
+                         AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                         AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
+                         dist);
                 }
                 else
                 {
                   printf("protein residue %s%d%s atom %s and protein residue %s%d%s atom %s has clash, dist=%f\n",
-                    AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
-                    AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
-                    dist);
+                         AtomGetChainName(pAtom1), AtomGetPosInChain(pAtom1), ResidueGetName(pResiIJ), AtomGetName(pAtom1),
+                         AtomGetChainName(pAtom2), AtomGetPosInChain(pAtom2), ResidueGetName(pResiKL), AtomGetName(pAtom2),
+                         dist);
                 }
               }
             }
@@ -2249,45 +1593,74 @@ int CheckClash2(Structure* pStructure, double clashRatio)
   return Success;
 }
 
-
-int StructureGetAminoAcidComposition(Structure* pStructure, int* aas)
+int ComputeAminoAcidComposition(Structure *pStructure, int *aas)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+    Chain *pChain = StructureGetChain(pStructure, i);
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      if (strcmp(ResidueGetName(pResi), "ALA") == 0) aas[0]++;
-      else if (strcmp(ResidueGetName(pResi), "CYS") == 0) aas[1]++;
-      else if (strcmp(ResidueGetName(pResi), "ASP") == 0) aas[2]++;
-      else if (strcmp(ResidueGetName(pResi), "GLU") == 0) aas[3]++;
-      else if (strcmp(ResidueGetName(pResi), "PHE") == 0) aas[4]++;
-      else if (strcmp(ResidueGetName(pResi), "GLY") == 0) aas[5]++;
-      else if (strcmp(ResidueGetName(pResi), "HSD") == 0) aas[6]++;
-      else if (strcmp(ResidueGetName(pResi), "HSE") == 0) aas[6]++;
-      else if (strcmp(ResidueGetName(pResi), "HIS") == 0) aas[6]++;
-      else if (strcmp(ResidueGetName(pResi), "ILE") == 0) aas[7]++;
-      else if (strcmp(ResidueGetName(pResi), "LYS") == 0) aas[8]++;
-      else if (strcmp(ResidueGetName(pResi), "LEU") == 0) aas[9]++;
-      else if (strcmp(ResidueGetName(pResi), "MET") == 0) aas[10]++;
-      else if (strcmp(ResidueGetName(pResi), "ASN") == 0) aas[11]++;
-      else if (strcmp(ResidueGetName(pResi), "PRO") == 0) aas[12]++;
-      else if (strcmp(ResidueGetName(pResi), "GLN") == 0) aas[13]++;
-      else if (strcmp(ResidueGetName(pResi), "ARG") == 0) aas[14]++;
-      else if (strcmp(ResidueGetName(pResi), "SER") == 0) aas[15]++;
-      else if (strcmp(ResidueGetName(pResi), "THR") == 0) aas[16]++;
-      else if (strcmp(ResidueGetName(pResi), "VAL") == 0) aas[17]++;
-      else if (strcmp(ResidueGetName(pResi), "TRP") == 0) aas[18]++;
-      else if (strcmp(ResidueGetName(pResi), "TYR") == 0) aas[19]++;
-      else if (strcmp(ResidueGetName(pResi), "A") == 0) aas[20]++;
-      else if (strcmp(ResidueGetName(pResi), "C") == 0) aas[21]++;
-      else if (strcmp(ResidueGetName(pResi), "G") == 0) aas[22]++;
-      else if (strcmp(ResidueGetName(pResi), "T") == 0) aas[23]++;
-      else if (strcmp(ResidueGetName(pResi), "DA") == 0) aas[24]++;
-      else if (strcmp(ResidueGetName(pResi), "DC") == 0) aas[25]++;
-      else if (strcmp(ResidueGetName(pResi), "DG") == 0) aas[26]++;
-      else if (strcmp(ResidueGetName(pResi), "DT") == 0) aas[27]++;
+      Residue *pResi = ChainGetResidue(pChain, j);
+      if (strcmp(ResidueGetName(pResi), "ALA") == 0)
+        aas[0]++;
+      else if (strcmp(ResidueGetName(pResi), "CYS") == 0)
+        aas[1]++;
+      else if (strcmp(ResidueGetName(pResi), "ASP") == 0)
+        aas[2]++;
+      else if (strcmp(ResidueGetName(pResi), "GLU") == 0)
+        aas[3]++;
+      else if (strcmp(ResidueGetName(pResi), "PHE") == 0)
+        aas[4]++;
+      else if (strcmp(ResidueGetName(pResi), "GLY") == 0)
+        aas[5]++;
+      else if (strcmp(ResidueGetName(pResi), "HSD") == 0)
+        aas[6]++;
+      else if (strcmp(ResidueGetName(pResi), "HSE") == 0)
+        aas[6]++;
+      else if (strcmp(ResidueGetName(pResi), "HIS") == 0)
+        aas[6]++;
+      else if (strcmp(ResidueGetName(pResi), "ILE") == 0)
+        aas[7]++;
+      else if (strcmp(ResidueGetName(pResi), "LYS") == 0)
+        aas[8]++;
+      else if (strcmp(ResidueGetName(pResi), "LEU") == 0)
+        aas[9]++;
+      else if (strcmp(ResidueGetName(pResi), "MET") == 0)
+        aas[10]++;
+      else if (strcmp(ResidueGetName(pResi), "ASN") == 0)
+        aas[11]++;
+      else if (strcmp(ResidueGetName(pResi), "PRO") == 0)
+        aas[12]++;
+      else if (strcmp(ResidueGetName(pResi), "GLN") == 0)
+        aas[13]++;
+      else if (strcmp(ResidueGetName(pResi), "ARG") == 0)
+        aas[14]++;
+      else if (strcmp(ResidueGetName(pResi), "SER") == 0)
+        aas[15]++;
+      else if (strcmp(ResidueGetName(pResi), "THR") == 0)
+        aas[16]++;
+      else if (strcmp(ResidueGetName(pResi), "VAL") == 0)
+        aas[17]++;
+      else if (strcmp(ResidueGetName(pResi), "TRP") == 0)
+        aas[18]++;
+      else if (strcmp(ResidueGetName(pResi), "TYR") == 0)
+        aas[19]++;
+      else if (strcmp(ResidueGetName(pResi), "A") == 0)
+        aas[20]++;
+      else if (strcmp(ResidueGetName(pResi), "C") == 0)
+        aas[21]++;
+      else if (strcmp(ResidueGetName(pResi), "G") == 0)
+        aas[22]++;
+      else if (strcmp(ResidueGetName(pResi), "U") == 0)
+        aas[23]++;
+      else if (strcmp(ResidueGetName(pResi), "DA") == 0)
+        aas[24]++;
+      else if (strcmp(ResidueGetName(pResi), "DC") == 0)
+        aas[25]++;
+      else if (strcmp(ResidueGetName(pResi), "DG") == 0)
+        aas[26]++;
+      else if (strcmp(ResidueGetName(pResi), "DT") == 0)
+        aas[27]++;
     }
   }
   printf("\nResidue composition of the structure:\n");
@@ -2314,7 +1687,7 @@ int StructureGetAminoAcidComposition(Structure* pStructure, int* aas)
   printf("A(RNA)  = %4d\n", aas[20]);
   printf("C(RNA)  = %4d\n", aas[21]);
   printf("G(RNA)  = %4d\n", aas[22]);
-  printf("T(RNA)  = %4d\n", aas[23]);
+  printf("U(RNA)  = %4d\n", aas[23]);
   printf("DA(DNA) = %4d\n", aas[24]);
   printf("DC(DNA) = %4d\n", aas[25]);
   printf("DG(DNA) = %4d\n", aas[26]);
@@ -2323,40 +1696,39 @@ int StructureGetAminoAcidComposition(Structure* pStructure, int* aas)
   return Success;
 }
 
-
-int SelectResiduesInRange(Structure* pStructure)
+int SelectResiduesInRange(Structure *pStructure)
 {
   StringArray chain_and_positions;
   StringArrayCreate(&chain_and_positions);
   StringArraySplitString(&chain_and_positions, REFERENCE_RESIDUES, ',');
 
-  Residue** pResiduesWithin = (Residue**)malloc(sizeof(Residue*) * StringArrayGetCount(&chain_and_positions));
-  for (int res = 0; res < StringArrayGetCount(&chain_and_positions); res++)
+  Residue **pResiduesWithin = (Residue **)malloc(sizeof(Residue *) * StringArrayGetNum(&chain_and_positions));
+  for (int res = 0; res < StringArrayGetNum(&chain_and_positions); res++)
   {
     char chName[MAX_LEN_CHAIN_NAME + 1];
     int pos;
     sscanf(StringArrayGet(&chain_and_positions, res), "%c%d", &chName[0], &pos);
     chName[1] = '\0';
-    Chain* pChain = StructureFindChainByName(pStructure, chName);
+    Chain *pChain = StructureFindChainByName(pStructure, chName);
     int resNdx = -1;
-    ChainFindResidueByPosInChain(pChain, pos, &resNdx);
+    ChainFindResidueIndexByPosInChain(pChain, pos, &resNdx);
     if (resNdx != -1)
     {
       pResiduesWithin[res] = ChainGetResidue(pChain, resNdx);
     }
   }
 
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+    Chain *pChain = StructureGetChain(pStructure, i);
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
+      Residue *pResi = ChainGetResidue(pChain, j);
       BOOL resIsAwithinRes = FALSE;
       BOOL resIsWithinRange = FALSE;
-      for (int k = 0; k < StringArrayGetCount(&chain_and_positions); k++)
+      for (int k = 0; k < StringArrayGetNum(&chain_and_positions); k++)
       {
-        Residue* pResiWith = pResiduesWithin[k];
+        Residue *pResiWith = pResiduesWithin[k];
         if (pResi == pResiWith)
         {
           resIsAwithinRes = TRUE;
@@ -2364,7 +1736,7 @@ int SelectResiduesInRange(Structure* pStructure)
         }
         else
         {
-          if (AtomArrayCalcMinDistance(&pResi->atoms, &pResiWith->atoms) < DIST_RANGE_TO_REFERENCE)
+          if (AtomArrayCalcMinDistance(&pResi->atoms, &pResiWith->atoms) < DISTANCE_TO_REFERENCE_RESIDUES)
           {
             resIsWithinRange = TRUE;
             break;
@@ -2381,3 +1753,35 @@ int SelectResiduesInRange(Structure* pStructure)
   return Success;
 }
 
+int StructureFindMutations(Structure *pStruct, Structure *pStruct2, char *mutStr)
+{
+  char strs[2 * MAX_LEN_FILE_NAME + 1] = "";
+  BOOL firstMut = TRUE;
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
+  {
+    Chain *pChain = StructureGetChain(pStruct, i);
+    Chain *pChain2 = StructureGetChain(pStruct2, i);
+    if (ChainGetType(pChain) == Type_Chain_Protein)
+    {
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++)
+      {
+        Residue *pRes = ChainGetResidue(pChain, j);
+        Residue *pRes2 = ChainGetResidue(pChain2, j);
+        char res = AA3ToAA1(ResidueGetName(pRes));
+        char res2 = AA3ToAA1(ResidueGetName(pRes2));
+        if (res != res2)
+        {
+          if (firstMut == TRUE)
+          {
+            sprintf(strs, "%s%c%c%d%c", strs, res, ResidueGetChainName(pRes)[0], ResidueGetPosInChain(pRes), res2);
+            firstMut = FALSE;
+          }
+          else
+            sprintf(strs, "%s,%c%c%d%c", strs, res, ResidueGetChainName(pRes)[0], ResidueGetPosInChain(pRes), res2);
+        }
+      }
+    }
+  }
+  strcpy(mutStr, strs);
+  return Success;
+}

@@ -20,11 +20,11 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Rotamer.h"
 
 
-#define ENERGY_DEBUG_MODE_VDW_ATT          0
-#define ENERGY_DEBUG_MODE_VDW_REP          0
-#define ENERGY_DEBUG_MODE_HBOND            0
-#define ENERGY_DEBUG_MODE_ELEC             0
-#define ENERGY_DEBUG_MODE_DESOLV           0
+#define FLAG_DEBUGGING_VDW_ATT             0
+#define FLAG_DEBUGGING_VDW_REP             0
+#define FLAG_DEBUGGING_HBOND               0
+#define FLAG_DEBUGGING_ELEC                0
+#define FLAG_DEBUGGING_DESOLV              0
 
 
 // a maximum of energy weights
@@ -84,49 +84,40 @@ int EnergyTermShowComplex(double* energyTerms);
 int EnergyWeightRead(char* file);
 int EnergyWeightWrite(char* file);
 
-BOOL ResidueIntraBond12Check(char* atom1, char* atom2, BondSet* pBondSet);
-BOOL ResidueIntraBond13Check(char* atom1, char* atom2, BondSet* pBondSet);
-BOOL ResidueIntraBond14Check(char* atom1, char* atom2, BondSet* pBondSet);
-int ResidueIntraBondConnectionCheck(char* atom1, char* atom2, BondSet* pBondSet);
-int ResidueAndNextResidueInterBondConnectionCheck_charmm22(char* atomOnPreResi, char* atomOnNextResi, Residue* pPreResi, Residue* pNextResi);
-int ResidueAndNextResidueInterBondConnectionCheck_charmm19(char* atomOnPreResi, char* atomOnNextResi, char* nextResiName);
+BOOL ResidueIntraBond12Check(char* atom1, char* atom2, Bonds* pBondSet);
+BOOL ResidueIntraBond13Check(char* atom1, char* atom2, Bonds* pBondSet);
+BOOL ResidueIntraBond14Check(char* atom1, char* atom2, Bonds* pBondSet);
+int ResidueIntraBondConnectionCheck(char* atom1, char* atom2, Bonds* pBondSet);
+int ResidueAndNextResidueInterBondConnectionCheck_charmm22(char* atomPreRes, char* atomNextRes, Residue* pPreRes, Residue* pNextRes);
+int ResidueAndNextResidueInterBondConnectionCheck_charmm19(char* atomPreRes, char* atomNextRes, char* nextResName);
 
-//physics- and knowledge-based energy terms
-int VdwAttEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double distance, int bondType, double* vdwAtt);
-int VdwRepEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double distance, int bondType, double* vdwRep);
-int HBondEnergyAtomAndAtom(Atom* atomH, Atom* atomA, Atom* atomD, Atom* atomB, double distanceHA, int bondType, double* etotal, double* edist, double* etheta, double* ephi);
-int ElecEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double distance12, int bondType, double* elec);
-int LKDesolvationEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double distance, int bondType, double* energyP, double* energyH);
+int VdwAttEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double dist, int bondType, double* vdwAtt);
+int VdwRepEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double dist, int bondType, double* vdwRep);
+int HBondEnergyAtomAndAtom(Atom* atomH, Atom* atomA, Atom* atomD, Atom* atomB, double distHA, int bondType, double* etotal, double* edist, double* etheta, double* ephi);
+int ElecEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double dist12, int bondType, double* elec);
+int LKDesolvationEnergyAtomAndAtom(Atom* pAtom1, Atom* pAtom2, double dist, int bondType, double* energyP, double* energyH);
 int SSbondEnergyAtomAndAtom(Atom* pAtomS1, Atom* pAtomS2, Atom* pAtomCB1, Atom* pAtomCB2, Atom* pAtomCA1, Atom* pAtomCA2, double* sse);
+int AminoAcidReferenceEnergy(char* resName, double* energyTerms);
 
+int EnergyIntraResidue(Residue* pRes, double* energyTerms);
+int EnergyResidueAndNextResidue(Residue* pPre, Residue* pNext, double* energyTerms);
+int EnergyResidueAndOtherResidueSameChain(Residue* pThis, Residue* pOther, double* energyTerms);
+int EnergyResidueAndResidueSameChain(Residue* pThis, Residue* pOther, double* energyTerms);
+int EnergyResidueAndOtherResidueDiffChain(Residue* pThis, Residue* pOther, double* energyTerms);
+int EnergyResidueAndLigandResidue(Residue* pRes, Residue* pLig, double* energyTerms);
 
-//reference energy to balance the composition of designed sequence
-//make the designed sequences more native-like
-int AminoAcidReferenceEnergy(char* AAname, double energyTerm[MAX_ENERGY_TERM]);
+int EnergyIntraRotamer(Rotamer* pRot, double* energyTerms);
+int EnergyRotamerAndRotamerSameChain(Rotamer* pThis, Rotamer* pOther, double* energyTerms);
+int EnergyRotamerAndRotamerDiffChain(Rotamer* pThis, Rotamer* pOther, double* energyTerms);
+int EnergyRotamerAndFixedResidueSameChain(Rotamer* pRot, Residue* pRes, double* energyTerms);
+int EnergyRotamerAndFixedResidueDiffChain(Rotamer* pRot, Residue* pRes, double* energyTerms);
+int EnergyRotamerAndDesignResidueSameChain(Rotamer* pRot, Residue* pRes, double* energyTerms);
+int EnergyRotamerAndDesignResidueDiffChain(Rotamer* pRot, Residue* pRes, double* energyTerms);
 
-
-//residue-residue energy, including backbone and sidechain
-int EnergyIntraResidue(Residue* pThis, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyResidueAndNextResidue(Residue* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyResidueAndOtherResidueSameChain(Residue* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyResidueAndOtherResidueDiffChain(Residue* pThis, Residue* pOther, double energyTerms[MAX_ENERGY_TERM]);
-int EnergyResidueAndLigandResidue(Residue* pProtein, Residue* pLigand, double energyTerm[MAX_ENERGY_TERM]);
-
-
-//protein rotamer-specific energy, similar to residue-specific energy
-int EnergyIntraRotamer(Rotamer* pThis, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyRotamerAndRotamerSameChain(Rotamer* pThis, Rotamer* pOther, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyRotamerAndRotamerDiffChain(Rotamer* pThis, Rotamer* pOther, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyRotamerAndFixedResidueSameChain(Rotamer* pThis, Residue* pOther, double energyTerms[MAX_ENERGY_TERM]);
-int EnergyRotamerAndFixedResidueDiffChain(Rotamer* pThis, Residue* pOther, double energyTerms[MAX_ENERGY_TERM]);
-int EnergyRotamerAndDesignResidueSameChain(Rotamer* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyRotamerAndDesignResidueDiffChain(Rotamer* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
-
-//ligand related energy
-int EnergyRotamerAndFixedLigResidue(Rotamer* pThis, Residue* pLigand, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyLigRotamerAndFixedResidue(Rotamer* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyLigRotamerAndDesignResidue(Rotamer* pThis, Residue* pOther, double energyTerm[MAX_ENERGY_TERM]);
-int EnergyRotamerAndLigandRotamer(Rotamer* pThis, Rotamer* pOther, double energyTerms[MAX_ENERGY_TERM]);
+int EnergyRotamerAndFixedLigResidue(Rotamer* pRot, Residue* pLig, double* energyTerms);
+int EnergyLigRotamerAndFixedResidue(Rotamer* pRot, Residue* pFix, double* energyTerms);
+int EnergyLigRotamerAndDesignResidue(Rotamer* pRot, Residue* pDes, double* energyTerms);
+int EnergyRotamerAndLigRotamer(Rotamer* pRot, Rotamer* pLig, double* energyTerms);
 
 
 typedef struct _RamaTable
@@ -134,21 +125,18 @@ typedef struct _RamaTable
   double ramatable[36][36][20];
 }RamaTable;
 
-int RamaTableReadFromFile(RamaTable* pRama, char* ramafile);
-
 typedef struct _AAppTable
 {
   double aapptable[36][36][20];
 }AAppTable;
 
-int AApropensityTableReadFromFile(AAppTable* pAAppTable, char* aappfile);
+int RamaTableReadFromFile(RamaTable* pRama, char* filename);
+int AApropensityTableReadFromFile(AAppTable* pAAPP, char* filename);
+int AminoAcidPropensityAndRamachandranEnergy(Residue* pRes, AAppTable* pAAPP, RamaTable* pRama);
+int RotamerPropensityAndRamachandranEnergy(Rotamer* pRot, Residue* pRes, AAppTable* pAAPP, RamaTable* pRama, double* energyTerms);
+int AminoAcidDunbrackEnergy(Residue* pRes, BBdepRotLib* pLib);
+int RotamerDunbrackEnergy(Rotamer* pRot, double* energyTerms);
 
-int AminoAcidPropensityAndRamachandranEnergy(Residue* pThis, AAppTable* pAAppTable, RamaTable* pRama);
-int AminoAcidDunbrackEnergy(Residue* pThis, BBdepRotamerLib* pBBdepRotLib);
-int RotamerPropensityAndRamachandranEnergy(Rotamer* pThis, Residue* pResidue, AAppTable* pAAppTable, RamaTable* pRama, double energyTerms[MAX_ENERGY_TERM]);
-int RotamerDunbrackEnergy(Rotamer* pThis, double energyTerms[MAX_ENERGY_TERM]);
-
-int EnergyResidueAndResidueSameChain(Residue* pThis, Residue* pOther, double energyTerms[MAX_ENERGY_TERM]);
 
 #endif // ENERGY_FUNCTION_H
 

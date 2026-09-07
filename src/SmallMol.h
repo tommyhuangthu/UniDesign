@@ -21,7 +21,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Rotamer.h"
 
 #define DISTURBANCE_IN_RANGE_CHECK 1e-3 
-#define MAX_COUNT_CHECK_MULTI_CONS 50
+#define MAX_NUM_CHECK_MULTI_CONS   50
 #define SMALLMOL_ATOM_SYMBOL       '$'
 #define SECOND_CATACON_SITE_SYMBOL '$'
 #define PSEUDO_ATOM_SYMBOL         '+'
@@ -47,7 +47,7 @@ typedef enum _Type_CataConsAtomLocation
 typedef struct _CataConsItem
 {
   Type_CataCons type;
-  char atomName[4][MAX_LEN_ATOM_NAME + 1];
+  char atomName[4][MAX_LEN_ATOM_NAME+1];
   Type_CataConsAtomLocation atomLoc[4];
   int  atomIndex[4];
   double min;
@@ -59,8 +59,8 @@ int CataConsItemShow(CataConsItem* pThis);
 
 typedef struct _CataConsGroup
 {
-  char site1RotType[MAX_LEN_RES_NAME + 1];
-  char site2RotType[MAX_LEN_RES_NAME + 1];
+  char site1RotType[MAX_LEN_RES_NAME+1];
+  char site2RotType[MAX_LEN_RES_NAME+1];
   int nconsItems;
   CataConsItem* consItems;
   int npseudoAtoms;
@@ -82,12 +82,12 @@ typedef enum _Type_SitePairCons
 
 typedef struct _CataConsSitePair
 {
-  char chnName1[MAX_LEN_CHAIN_NAME + 1];
+  char chnName1[MAX_LEN_CHAIN_NAME+1];
   int  pos1;
-  char resName1[MAX_LEN_RES_NAME + 1];
-  char chnName2[MAX_LEN_CHAIN_NAME + 1];
+  char resName1[MAX_LEN_RES_NAME+1];
+  char chnName2[MAX_LEN_CHAIN_NAME+1];
   int  pos2;
-  char resName2[MAX_LEN_RES_NAME + 1];
+  char resName2[MAX_LEN_RES_NAME+1];
   int ngroups;
   CataConsGroup* groups;
   BOOL deployedFlag;
@@ -98,20 +98,20 @@ typedef struct _CataConsSitePair
 int CataConsSitePairCreate(CataConsSitePair* pThis, FileReader* file);
 void CataConsSitePairDestroy(CataConsSitePair* pThis);
 BOOL CataConsSitePairGetDeployedFlag(CataConsSitePair* pThis);
-int CataConsSitePairDeploy(CataConsSitePair* pThis, RotamerSet* pFirstSiteRotSet, RotamerSet* pSecondSiteRotSet);
+int CataConsSitePairDeploy(CataConsSitePair* pThis, Rotamers* pFirstSiteRotSet, Rotamers* pSecondSiteRotSet);
 int CataConsSitePairShow(CataConsSitePair* pThis);
 
 
 typedef struct _CataConsSitePairArray
 {
-  int count;
+  int num;
   CataConsSitePair* sites;
 } CataConsSitePairArray;
 
 
 int CataConsSitePairArrayCreate(CataConsSitePairArray* pThis, char* cataConsFile);
 void CataConsSitePairArrayDestroy(CataConsSitePairArray* pThis);
-int CataConsSitePairArrayGetCount(CataConsSitePairArray* pThis);
+int CataConsSitePairArrayGetNum(CataConsSitePairArray* pThis);
 CataConsSitePair* CataConsSitePairArrayGet(CataConsSitePairArray* pThis, int index);
 CataConsSitePair* CataConsSitePairArrayFind(CataConsSitePairArray* pThis, char* chnName1, int pos1, char* resiName1, char* chnName2, int pos2, char* resiName2);
 
@@ -149,8 +149,8 @@ typedef enum _Type_PlacingActionEvalParam
 typedef struct _CheckMultiConsStep
 {
   int designSite;
-  int countOfConsToCheckAtThisStep;
-  int consToCheckAtThisStep[MAX_COUNT_CHECK_MULTI_CONS];
+  int nConsToCheckAtThisStep;
+  int consToCheckAtThisStep[MAX_NUM_CHECK_MULTI_CONS];
 } CheckMultiConsStep;
 
 
@@ -172,42 +172,42 @@ typedef struct _PlacingAction
   IntArray calc_params;
 
   //Fields if actionType is "CHECK_CATA_CONS" 
-  char checkCataCons_firstSiteChainName[MAX_LEN_CHAIN_NAME + 1];
-  char checkCataCons_firstSiteResidueName[MAX_LEN_RES_NAME + 1];
+  char checkCataCons_firstSiteChainName[MAX_LEN_CHAIN_NAME+1];
+  char checkCataCons_firstSiteResidueName[MAX_LEN_RES_NAME+1];
   int  checkCataCons_firstSitePosInChain;
-  char checkCataCons_secondSiteChainName[MAX_LEN_CHAIN_NAME + 1];
-  char checkCataCons_secondSiteResidueName[MAX_LEN_RES_NAME + 1];
+  char checkCataCons_secondSiteChainName[MAX_LEN_CHAIN_NAME+1];
+  char checkCataCons_secondSiteResidueName[MAX_LEN_RES_NAME+1];
   int  checkCataCons_secondSitePosInChain;
   CataConsSitePair* checkCataCons_pCataCon;
   int checkCataCons_pSite[2];
 
   //Fields if actionType is "CHECK_MULTI_CONS"
-  int checkMultiCons_cataConsCount;
+  int checkMultiCons_cataConsNum;
   StringArray checkMultiCons_firstSiteChainNames;
   StringArray checkMultiCons_firstSiteResidueNames;
   IntArray    checkMultiCons_firstSitePosInChains;
   StringArray checkMultiCons_secondSiteChainNames;
   StringArray checkMultiCons_secondSiteResidueNames;
   IntArray    checkMultiCons_secondSitePosInChains;
-  CataConsSitePair* checkMultiCons_pCataCons[MAX_COUNT_CHECK_MULTI_CONS];
-  int checkMultiCons_siteIndexes[MAX_COUNT_CHECK_MULTI_CONS][2];
-  int checkMultiCons_rotamerCountOnEachSite[MAX_COUNT_CHECK_MULTI_CONS][2];
-  BOOL** checkMultiCons_predeterminedConsRelations[MAX_COUNT_CHECK_MULTI_CONS];
-  int checkMultiCons_stepCount;
-  CheckMultiConsStep checkMultiCons_steps[MAX_COUNT_CHECK_MULTI_CONS * 2];
+  CataConsSitePair* checkMultiCons_pCataCons[MAX_NUM_CHECK_MULTI_CONS];
+  int checkMultiCons_siteIndexes[MAX_NUM_CHECK_MULTI_CONS][2];
+  int checkMultiCons_rotNumOnEachSite[MAX_NUM_CHECK_MULTI_CONS][2];
+  BOOL** checkMultiCons_predeterminedConsRelations[MAX_NUM_CHECK_MULTI_CONS];
+  int checkMultiCons_stepNum;
+  CheckMultiConsStep checkMultiCons_steps[MAX_NUM_CHECK_MULTI_CONS*2];
 
   //Fields if actionType is "CHECK_VDW_BACKBONE"
   double checkVDW_backbone_maxAllowed;
   BOOL checkVDW_backbone_withHydrogen;
-  double checkVDW_backbone_activeRange;
-  double checkVDW_backbone_totalPotential;
+  //double checkVDW_backbone_activeRange;
+  double checkVDW_backbone_totalEnergy;
   IntArray checkVDW_backbone_smallmolAtomHasXyz;
 
   //Fields if actionType is "CHECK_VDW_INTERNAL"
   double checkVDW_internal_maxAllowed;
   BOOL checkVDW_internal_withHydrogen;
-  double checkVDW_internal_totalPotential;
-  int checkVDW_internal_smallMolAtomCount;
+  double checkVDW_internal_totalEnergy;
+  int checkVDW_internal_smallMolAtomNum;
   BOOL** checkVDW_internal_smallMolAtom13bondedMatrix;
   IntArray checkVDW_internal_smallmolAtomHasXyz;
 
@@ -240,16 +240,16 @@ int PlacingActionRead_VARIATE(PlacingAction* pThis, StringArray* pParamNames, Do
 
 typedef struct _PlacingRule
 {
-  char chainName[MAX_LEN_CHAIN_NAME + 1];
-  char residueName[MAX_LEN_RES_NAME + 1];
+  char chainName[MAX_LEN_CHAIN_NAME+1];
+  char residueName[MAX_LEN_RES_NAME+1];
   int  posInChain;
-  char rotamerType[MAX_LEN_RES_NAME + 1];
+  char rotamerType[MAX_LEN_RES_NAME+1];
   StringArray atomNames;
   XYZArray    atomXYZs;
   StringArray paramNames;
   DoubleArray params;
   PlacingAction* actions;
-  int actionCount;
+  int actionNum;
 
   // these two fields have no meaning before the rule is deployed;
   IntArray atomPosOnSmallMol;
@@ -272,7 +272,7 @@ char* PlacingRuleGetResiName(PlacingRule* pThis);
 int PlacingRuleGetPosInChain(PlacingRule* pThis);
 char* PlacingRuleGetChainName(PlacingRule* pThis);
 char* PlacingRuleGetRotamerType(PlacingRule* pThis);
-double PlacingRuleGetTruncatedBackboneRange(PlacingRule* pThis);
+//double PlacingRuleGetTruncatedBackboneRange(PlacingRule* pThis);
 
 int	PlacingRuleReadFile(PlacingRule* pThis, FileReader* pFileReader);
 
@@ -280,7 +280,7 @@ int	PlacingRuleReadFile(PlacingRule* pThis, FileReader* pFileReader);
 int PlacingRuleDeploy(PlacingRule* pThis,
   Residue* pSmallMol,
   CataConsSitePairArray* pCataConsArray,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite** relatedProteinSites,
   AtomArray* pTruncatedBackbone);
 
@@ -289,7 +289,7 @@ int PlacingActionDeploy_CheckCataCons(PlacingAction* pThis,
   CataConsSitePairArray* pCataConsArray,
   char* startingSiteChainName,
   int startingSitePosInChain,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite* relatedProteinSites);
 int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
   Residue* pSmallMol,
@@ -297,7 +297,7 @@ int PlacingActionDeploy_CheckMultiCons(PlacingAction* pThis,
   char* startingSiteChainName,
   char* startingSiteResidueName,
   int startingSitePosInChain,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite* relatedProteinSites);
 int PlacingActionDeploy_CheckRMSD(PlacingAction* pThis, IntArray* pSmallmolAtomGetXyzByThisStep);
 int PlacingActionDeploy_CheckVDWBackbone(PlacingAction* pThis, IntArray* pSmallmolAtomGetXyzByThisStep);
@@ -315,20 +315,20 @@ int PlacingActionDeploy_Load(PlacingAction* pThis,
 int PlacingRuleProcess(PlacingRule* pThis,
   Rotamer* pProteinRotamerOnStartingSite,
   CataConsSitePairArray* pCataConsArray,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite* relatedProteinSites,
-  RotamerSet* pSmallMolRotSetForOutput,
+  Rotamers* pSmallMolRotSetForOutput,
   int step);
 
 
 int PlacingRuleProcess_CALC(PlacingRule* pThis, PlacingAction* pAction);
 BOOL PlacingRuleProcess_CHECK_CATA_CONS(PlacingRule* pThis,
   Rotamer* pProteinRotamerOnStartingSite,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite* relatedProteinSites,
   PlacingAction* pAction);
 BOOL PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(PlacingAction* pAction,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite** relatedProteinSites,
   int* rotamersSelectedOnPreviousSteps,
   Rotamer* pSmallMolRotamer,
@@ -336,10 +336,10 @@ BOOL PlacingRuleProcess_CHECK_MULTI_CONS_Recurrence(PlacingAction* pAction,
   int currentStepIndex);
 BOOL PlacingRuleProcess_CHECK_MULTI_CONS(PlacingRule* pThis,
   Rotamer* pProteinRotamerOnStartingSite,
-  int relatedProteinSiteCount,
+  int relatedProteinSiteNum,
   DesignSite** relatedProteinSites,
   PlacingAction* pAction);
-BOOL PlacingRuleProcess_CHECK_RMSD(PlacingRule* pThis, RotamerSet* pSmallMolRotSet, PlacingAction* pAction);
+BOOL PlacingRuleProcess_CHECK_RMSD(PlacingRule* pThis, Rotamers* pSmallMolRotSet, PlacingAction* pAction);
 BOOL PlacingRuleProcess_CHECK_VDW_BACKBONE(PlacingRule* pThis, PlacingAction* pAction);
 BOOL PlacingRuleProcess_CHECK_VDW_INTERNAL(PlacingRule* pThis, PlacingAction* pAction);
 int PlacingRuleProcess_EVALUATE(PlacingRule* pThis, PlacingAction* pAction);
@@ -351,9 +351,9 @@ int PlacingRuleProcess_LOAD(PlacingRule* pThis,
 int PlacingRulePlaceSmallMol(PlacingRule* pThis,
   CataConsSitePairArray* pCataConsArray,
   DesignSite* pStartingSite,
-  int relatedProteinDesignSiteCount,
+  int relatedProteinSiteNum,
   DesignSite** relatedProteinDesignSites,
-  RotamerSet* pSmallMolRotSetForOutput);
+  Rotamers* pSmallMolRotSetForOutput);
 
 //Methods used for debugging 
 int PlacingRuleShowAtom(PlacingRule* pThis, int index);
@@ -370,6 +370,6 @@ int AnalyzeSmallMolRotamers(char* poseFile, Residue* pSmallMol);
 int AnalyzeSmallMolRotamersForSpecifiedAtoms(char* poseFile, Residue* pSmallMol, char* specificAtomFile);
 int CompareByInternalEnergy(const void* a, const void* b);
 int CompareByBackboneEnergy(const void* a, const void* b);
-int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* initialPoseFile, char* newPoseFile, double percent);
+int SmallMolRotamersGetBothHighRankOfBackboneVdwAndInternalVdw(char* oldRotamersFile, char* newRotamersFile, double bbVdwRankPerc, double internalVdwRankPerc);
 
 #endif  //SMALL_MOL_H 

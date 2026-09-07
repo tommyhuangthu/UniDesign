@@ -36,8 +36,8 @@ Type_Chain ChainTypeIdentifiedFromResidueName(char* resiName);
 typedef struct _Chain
 {
   Residue* residues;
-  char name[MAX_LEN_CHAIN_NAME + 1];
-  int residueNum;
+  char name[MAX_LEN_CHAIN_NAME+1];
+  int resNum;
   Type_Chain type;
 } Chain;
 
@@ -48,15 +48,15 @@ char* ChainGetName(Chain* pThis);
 int ChainSetName(Chain* pThis, char* newName);
 Type_Chain ChainGetType(Chain* pThis);
 int ChainSetType(Chain* pThis, Type_Chain newType);
-int ChainGetResidueCount(Chain* pThis);
+int ChainGetResidueNum(Chain* pThis);
 Residue* ChainGetResidue(Chain* pThis, int index);
 int ChainInsertResidue(Chain* pThis, int index, Residue* pNewResi);
 int ChainRemoveResidue(Chain* pThis, int index);
 int ChainAppendResidue(Chain* pThis, Residue* pNewResi);
 int ChainReadCoordinate(Chain* pThis, char* coordinateFile);
-int ChainCalcAllAtomXYZ(Chain* pThis, ResiTopoSet* topos);
+int ChainCalcAllAtomXYZ(Chain* pThis, ResTopos* topos);
 int ChainShowInPDBFormat(Chain* pThis, int resiIndex, int atomIndex, FILE* pFile);
-int ChainFindResidueByPosInChain(Chain* pThis, int posInchain, int* index);
+int ChainFindResidueIndexByPosInChain(Chain* pThis, int posInchain, int* index);
 int ChainShowAtomParameter(Chain* pThis);
 int ChainShowBondInformation(Chain* pThis);
 #endif

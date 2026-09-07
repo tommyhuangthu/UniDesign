@@ -20,11 +20,9 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "Structure.h"
 #include "EnergyFunction.h"
 
-
-int ProteinSiteOptimizeRotamer(Structure* pStructure, int chainIndex, int resiIndex);
-int ProteinSiteOptimizeRotamerHBondEnergy(Structure* pStructure, int chainIndex, int resiIndex);
-int ProteinSiteCalcRotamersEnergy(Structure* pStructure, AAppTable* pAAppTable, RamaTable* pRama, int chainIndex, int resiIndex, FILE* fp);
-int ProteinSiteOptimizeRotamerWithBBdepRotLib(Structure* pStructure, int chainIndex, int resiIndex, BBdepRotamerLib* pBBdepRotLib);
-
+int ProteinSiteOptimizeRotamer(Structure* pStruct, int chnNdx, int resNdx);
+int ProteinSiteOptimizeRotamerHBondEnergy(Structure* pStruct, int chnNdx, int resNdx);
+int ProteinSiteCalcRotamersEnergy(Structure* pStruct, AAppTable* pAAppTable, RamaTable* pRama, int chnNdx, int resNdx, FILE* pOut);
+int ProteinSiteOptimizeRotamer(Structure* pStruct, int chnNdx, int resNdx, BBdepRotLib* rotlib);
 
 #endif

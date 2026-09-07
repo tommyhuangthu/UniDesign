@@ -17,7 +17,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef RESIDUE_H
 #define RESIDUE_H
 
-#include "AtomParamsSet.h"
+#include "AtomParams.h"
 #include "ResidueTopology.h"
 
 // enum types associated with Residue
@@ -30,9 +30,9 @@ typedef enum _Type_ResiduePolarity
 
 typedef enum _Type_ResiduePosition
 {
-  Type_ResiduePosition_Buried,
-  Type_ResiduePosition_Intermediate,
-  Type_ResiduePosition_Exposed
+  Type_ResPos_Core,
+  Type_ResPos_Inter,
+  Type_ResPos_Surface
 }Type_ResiduePosition;
 
 typedef enum _Type_ResidueIsTerminal
@@ -56,12 +56,12 @@ typedef struct _Residue
 {
   StringArray patches;
   AtomArray atoms;
-  BondSet bonds;
-  char name[MAX_LEN_RES_NAME + 1];
-  char chainName[MAX_LEN_CHAIN_NAME + 1];
+  Bonds bonds;
+  char name[MAX_LEN_RES_NAME+1];
+  char chainName[MAX_LEN_CHAIN_NAME+1];
   int posInChain;
   int nCbIn10A;
-  Type_ResidueIsTerminal terminalType;
+  Type_ResidueIsTerminal terType;
   Type_ResidueDesignType desType;
   double internalEnergy;
   double backboneEnergy;
@@ -72,7 +72,7 @@ typedef struct _Residue
   double rama;
   BOOL isSCIntact;
   BOOL isBBIntact;
-  char designAATypes[30];
+  char desAATypes[30];
 } Residue;
 
 int ResidueCreate(Residue* pThis);
@@ -90,7 +90,7 @@ double ResidueGetDunbrack(Residue* pThis);
 int ResidueSetDunbrack(Residue* pThis, double dun);
 double ResidueGetCharge(Residue* pThis);
 int ResidueGetPolarity(Residue* pThis, Type_ResiduePolarity* pPolarity);
-int ResidueGetAtomCount(Residue* pThis);
+int ResidueGetAtomNum(Residue* pThis);
 Atom* ResidueGetAtom(Residue* pThis, int index);
 Atom* ResidueGetAtomByName(Residue* pThis, char* atomName);
 int ResidueFindAtom(Residue* pThis, char* atomName, int* pIndex);
@@ -102,21 +102,21 @@ int ResidueDeleteAtom(Residue* pThis, char* atomName);
 
 int PDBReaderCheckHisState(FileReader* pPDBFileReader, int* state);
 int ResidueReadXYZFromPDB(Residue* pThis, FileReader* pPDBFileReader);
-int ResidueAddAtomsFromAtomParams(Residue* pThis, AtomParamsSet* pAtomParams);
+int ResidueAddAtomsFromAtomParams(Residue* pThis, AtomParams* pAtomParams);
 
 
-BondSet* ResidueGetBonds(Residue* pThis);
-int ResidueAddBondsFromResiTopos(Residue* pThis, ResiTopoSet* pResiTopoCollection);
+Bonds* ResidueGetBonds(Residue* pThis);
+int ResidueAddBondsFromResiTopos(Residue* pThis, ResTopos* pResiTopoCollection);
 int ResidueShowInPDBFormat(Residue* pThis, char* header, char* chainName, int atomIndex, int resiIndex, FILE* pFile);
 
-int ResiduePatch(Residue* pThis, char* patchName, AtomParamsSet* pAtomParam, ResiTopoSet* pTopos);
-int ResiduePatchCTER(Residue* pThis, char* patchName, AtomParamsSet* pAtomParam, ResiTopoSet* pTopos);
-int ResiduePatchNTERorCTER(Residue* pThis, char* NTERorCTER, AtomParamsSet* pAtomParam, ResiTopoSet* pTopos);
+int ResiduePatch(Residue* pThis, char* patchName, AtomParams* pAtomParam, ResTopos* pTopos);
+int ResiduePatchCTER(Residue* pThis, char* patchName, AtomParams* pAtomParam, ResTopos* pTopos);
+int ResiduePatchNTERorCTER(Residue* pThis, char* NTERorCTER, AtomParams* pAtomParam, ResTopos* pTopos);
 StringArray* ResidueGetPatchingHistory(Residue* pThis);
-int ResidueCalcAtomXYZ(Residue* pThis, ResiTopoSet* pResiTopos, Residue* pPrevResi, Residue* pNextResi, char* atomName, XYZ* pDestXYZ);
-int ResidueCalcAllAtomXYZ(Residue* pThis, ResiTopoSet* pResiTopos, Residue* pPrevResi, Residue* pNextResi);
-int ResidueCalcAllBackboneAtomXYZ(Residue* pThis, ResiTopoSet* pResiTopos, Residue* pPrevResi, Residue* pNextResi);
-int ResidueCalcAllSidechainAtomXYZ(Residue* pThis, ResiTopoSet* pResiTopos);
+int ResidueCalcAtomXYZ(Residue* pThis, ResTopos* pResiTopos, Residue* pPrevResi, Residue* pNextResi, char* atomName, XYZ* pDestXYZ);
+int ResidueCalcAllAtomXYZ(Residue* pThis, ResTopos* pResiTopos, Residue* pPrevResi, Residue* pNextResi);
+int ResidueCalcAllBackboneAtomXYZ(Residue* pThis, ResTopos* pResiTopos, Residue* pPrevResi, Residue* pNextResi);
+int ResidueCalcAllSidechainAtomXYZ(Residue* pThis, ResTopos* pResiTopos);
 int ResidueShowAtomParameter(Residue* pThis);
 int ResidueShowBondInformation(Residue* pThis);
 double ResidueAndResidueSidechainRMSD(Residue* pThis, Residue* pOther);
@@ -126,7 +126,7 @@ BOOL ResidueIsSymmetricalCheck(Residue* pResidue);
 int SymmetricalResidueGenerate(Residue* pSymmetrical, Residue* pResidue);
 BOOL ResidueAndResidueInSameType(Residue* pThis, Residue* pOther);
 BOOL ResidueAndResidueAllTorsionsAreSimilar(Residue* pThis, Residue* pOther, double cutoff);
-BOOL ResidueAndResidueCheckTorsionSimilarity(Residue* pThis, Residue* pOther, double cutoff, IntArray* pSimArray);
+BOOL ResidueAndResidueCheckTorsionSimilarity(Residue* pThis, Residue* pOther, double cutoff, IntArray* pSimilarityArray);
 double ResidueGetAverageBfactor(Residue* pThis);
 BOOL IsResidueHistidine(char* resiName);
 

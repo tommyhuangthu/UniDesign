@@ -13,52 +13,48 @@ OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO 
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ********************************************************************************************************************************/
-#pragma warning(disable:6301)
-#pragma warning(disable:28182)
+#pragma warning(disable : 6301)
+#pragma warning(disable : 28182)
 
 #include "Structure.h"
 #include <string.h>
 
-//#define DEBUGGING_STRUCTURE
-
-
-int StructureCreate(Structure* pThis)
+int StructureCreate(Structure *pStruct)
 {
-  strcpy(pThis->name, "");
-  pThis->chainNum = 0;
-  pThis->chains = NULL;
-  pThis->desSiteCount = 0;
-  pThis->designSites = NULL;
+  strcpy(pStruct->name, "");
+  pStruct->chnNum = 0;
+  pStruct->chains = NULL;
+  pStruct->desSiteNum = 0;
+  pStruct->desSites = NULL;
   return Success;
 }
-int StructureDestroy(Structure* pThis)
+int StructureDestroy(Structure *pStruct)
 {
-  //first free the memory for design sites
-  for (int i = 0; i < pThis->desSiteCount; i++)
+  for (int i = 0; i < pStruct->desSiteNum; i++)
   {
-    DesignSiteDestroy(&pThis->designSites[i]);
+    DesignSiteDestroy(&pStruct->desSites[i]);
   }
-  pThis->designSites = NULL;
-  pThis->desSiteCount = 0;
-  for (int i = 0;i < pThis->chainNum;i++)
+  pStruct->desSites = NULL;
+  pStruct->desSiteNum = 0;
+  for (int i = 0; i < pStruct->chnNum; i++)
   {
-    ChainDestroy(&pThis->chains[i]);
+    ChainDestroy(&pStruct->chains[i]);
   }
-  free(pThis->chains);
-  strcpy(pThis->name, "");
-  pThis->chainNum = 0;
-  pThis->chains = NULL;
+  free(pStruct->chains);
+  strcpy(pStruct->name, "");
+  pStruct->chnNum = 0;
+  pStruct->chains = NULL;
   return Success;
 }
 
-char* StructureGetName(Structure* pThis)
+char *StructureGetName(Structure *pStruct)
 {
-  return pThis->name;
+  return pStruct->name;
 }
 
-int StructureSetName(Structure* pThis, char* newName)
+int StructureSetName(Structure *pStruct, char *name)
 {
-  if (strlen(newName) > MAX_LEN_STRUCTURE_NAME)
+  if (strlen(name) > MAX_LEN_STRUCTURE_NAME)
   {
     char errMsg[MAX_LEN_ERR_MSG + 1];
     int errorCode = ValueError;
@@ -66,255 +62,309 @@ int StructureSetName(Structure* pThis, char* newName)
     TraceError(errMsg, errorCode);
     return errorCode;
   }
-  strcpy(pThis->name, newName);
+  strcpy(pStruct->name, name);
   return Success;
 }
 
-int StructureGetChainCount(Structure* pThis)
+int StructureGetChainNum(Structure *pStruct)
 {
-  return pThis->chainNum;
+  return pStruct->chnNum;
 }
 
-Chain* StructureGetChain(Structure* pThis, int index)
+Chain *StructureGetChain(Structure *pStruct, int index)
 {
-  if (index < 0 || index >= StructureGetChainCount(pThis))
+  if (index < 0 || index >= StructureGetChainNum(pStruct))
   {
     return NULL;
   }
-  return &pThis->chains[index];
+  return &pStruct->chains[index];
 }
 
-Chain* StructureFindChainByName(Structure* pThis, char* chainName)
+Chain *StructureFindChainByName(Structure *pStruct, char *chainName)
 {
   int index = -1;
-  int result = StructureFindChainIndex(pThis, chainName, &index);
-  if (FAILED(result))
+  int result = StructureFindChainIndex(pStruct, chainName, &index);
+  if (FAILED(result) == TRUE || index == -1)
   {
     return NULL;
   }
-  else
-  {
-    return StructureGetChain(pThis, index);
-  }
+  return StructureGetChain(pStruct, index);
 }
 
-int StructureFindChainIndex(Structure* pThis, char* chainName, int* index)
+int StructureFindChainIndex(Structure *pStruct, char *chnName, int *ndx)
 {
   int i;
-  for (i = 0;i < pThis->chainNum;i++)
+  for (i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    if (strcmp(ChainGetName(&pThis->chains[i]), chainName) == 0)
+    if (strcmp(ChainGetName(&pStruct->chains[i]), chnName) == 0)
     {
-      *index = i;
+      *ndx = i;
       return Success;
     }
   }
   return DataNotExistError;
 }
 
-
-int StructureAddChain(Structure* pThis, Chain* newChain)
+int StructureAddChain(Structure *pStruct, Chain *pChain)
 {
-  int index = -1;
-  int result = StructureFindChainIndex(pThis, ChainGetName(newChain), &index);
+  int ndx = -1;
+  int result = StructureFindChainIndex(pStruct, ChainGetName(pChain), &ndx);
   if (FAILED(result))
   {
-    (pThis->chainNum)++;
-    pThis->chains = (Chain*)realloc(pThis->chains, sizeof(Chain) * pThis->chainNum);
-    ChainCreate(&pThis->chains[pThis->chainNum - 1]);
-    return ChainCopy(&pThis->chains[pThis->chainNum - 1], newChain);
+    (pStruct->chnNum)++;
+    pStruct->chains = (Chain *)realloc(pStruct->chains, sizeof(Chain) * pStruct->chnNum);
+    ChainCreate(&pStruct->chains[pStruct->chnNum - 1]);
+    return ChainCopy(&pStruct->chains[pStruct->chnNum - 1], pChain);
   }
-  else
-  {
-    return ChainCopy(&pThis->chains[index], newChain);
-  }
+  return ChainCopy(&pStruct->chains[ndx], pChain);
 }
 
-int StructureDeleteChain(Structure* pThis, char* chainName)
+int StructureDeleteChain(Structure *pStruct, char *chnName)
 {
-  int index;
-  int result = StructureFindChainIndex(pThis, chainName, &index);
+  int ndx;
+  int result = StructureFindChainIndex(pStruct, chnName, &ndx);
   if (FAILED(result))
-    return result;
-  for (int i = index;i < pThis->chainNum - 1;i++)
   {
-    ChainCopy(&pThis->chains[i], &pThis->chains[i + 1]);
+    return result;
   }
-  ChainDestroy(&pThis->chains[pThis->chainNum - 1]);
-  (pThis->chainNum)--;
+  for (int i = ndx; i < pStruct->chnNum - 1; i++)
+  {
+    ChainCopy(&pStruct->chains[i], &pStruct->chains[i + 1]);
+  }
+  ChainDestroy(&pStruct->chains[pStruct->chnNum - 1]);
+  (pStruct->chnNum)--;
   return Success;
 }
 
-int StructureShowInPDBFormat(Structure* pThis, FILE* pFile)
+int StructureShowInPDBFormat(Structure *pStruct, FILE *pFile)
 {
-  int atomIndex = 1;
-  for (int i = 0;i < StructureGetChainCount(pThis);i++)
+  int atomNdx = 1;
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pThis, i);
-    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+    Chain *pChn = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChn); j++)
     {
-      Residue* pResi = ChainGetResidue(pChain, j);
-      ResidueShowInPDBFormat(pResi, "ATOM", ResidueGetChainName(pResi), atomIndex, ResidueGetPosInChain(pResi), pFile);
-      atomIndex += ResidueGetAtomCount(pResi);
+      Residue *pRes = ChainGetResidue(pChn, j);
+      ResidueShowInPDBFormat(pRes, "ATOM", ResidueGetChainName(pRes), atomNdx, ResidueGetPosInChain(pRes), pFile);
+      atomNdx += ResidueGetAtomNum(pRes);
     }
   }
   return Success;
 }
 
-int StructureReadPDB(Structure* pStructure, char* pdbFile, AtomParamsSet* pAtomParams, ResiTopoSet* pTopos)
+int StructureReadPDB(Structure *pStruct, char *pdbfile, AtomParams *pParams, ResTopos *pTops)
 {
-  char initChainID[MAX_LEN_CHAIN_NAME + 1];
-  char initResPos[6];
-  strcpy(initChainID, "UNK");
-  initChainID[strlen(initChainID)] = '\0';
-  strcpy(initResPos, "UNK");
-  initResPos[strlen(initResPos)] = '\0';
-  BOOL firstResidueInChain = TRUE;
+  char iniChainID[MAX_LEN_CHAIN_NAME + 1] = "UNK";
+  char iniResPos[6] = "UNK";
+  BOOL firstResInChn = TRUE;
 
-  FileReader file;
-  if (FAILED(FileReaderCreate(&file, pdbFile)))
+  FileReader fr;
+  if (FAILED(FileReaderCreate(&fr, pdbfile)))
   {
     char errMsg[MAX_LEN_ERR_MSG + 1];
-    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, pdbFile);
+    sprintf(errMsg, "in file %s line %d, cannot read file %s", __FILE__, __LINE__, pdbfile);
     TraceError(errMsg, IOError);
     return IOError;
   }
+
   char line[MAX_LEN_ONE_LINE_CONTENT + 1];
-  while (!FAILED(FileReaderGetNextLine(&file, line)))
+  while (!FAILED(FileReaderGetNextLine(&fr, line)))
   {
     char keyword[6] = "";
-    char strAtomName[MAX_LEN_ATOM_NAME + 1] = "";
-    char strResName[MAX_LEN_RES_NAME + 1] = "";
-    char strChainID[MAX_LEN_CHAIN_NAME + 1] = "";
-    char strResPos[6] = "";
-
     ExtractTargetStringFromSourceString(keyword, line, 0, 4);
-    if (strcmp(keyword, "ATOM") != 0 && strcmp(keyword, "HETA") != 0) continue;
 
-    ExtractTargetStringFromSourceString(strAtomName, line, 12, 4);
+    // Only read ATOM records.
+    if (strcmp(keyword, "ATOM") != 0)
+    {
+      continue;
+    }
+
+    char strResName[MAX_LEN_RES_NAME + 1] = "";
     ExtractTargetStringFromSourceString(strResName, line, 17, 4);
+    Type_Chain chainType = ChainTypeIdentifiedFromResidueName(strResName);
+    if (chainType == Type_Chain_Unknown)
+    {
+      printf("residue name %s cannot be regonized, ignored it.\n", strResName);
+      continue;
+    }
+    char strAtomName[MAX_LEN_ATOM_NAME + 1] = "";
+    ExtractTargetStringFromSourceString(strAtomName, line, 12, 4);
+
+    char strChainID[MAX_LEN_CHAIN_NAME + 1] = "";
     ExtractTargetStringFromSourceString(strChainID, line, 21, 1);
-    ExtractTargetStringFromSourceString(strResPos, line, 22, 5);
     if (strcmp(strChainID, "") == 0 || strcmp(strChainID, " ") == 0)
     {
       strcpy(strChainID, "A");
     }
 
-    if (strcmp(initChainID, strChainID))
-    { // new chain
-      Chain* pChain = StructureGetChain(pStructure, StructureGetChainCount(pStructure) - 1);
-      if (pChain)
+    char strResPos[6] = "";
+    ExtractTargetStringFromSourceString(strResPos, line, 22, 5);
+    // Start a new chain.
+    if (strcmp(iniChainID, strChainID) != 0)
+    {
+      // Finish processing the previous chain.
+      Chain *pPreviousChain = StructureGetChain(pStruct, StructureGetChainNum(pStruct) - 1);
+      if (pPreviousChain != NULL && ChainGetResidueNum(pPreviousChain) > 0)
       {
-        if (ChainGetType(pChain) == Type_Chain_Protein)
+        // Patch the C-terminus of the previous protein chain.
+        if (ChainGetType(pPreviousChain) == Type_Chain_Protein)
         {
-          Residue* pFirsResidueInChain = ChainGetResidue(pChain, 0);
-          Residue* pLastResidueInChain = ChainGetResidue(pChain, ChainGetResidueCount(pChain) - 1);
-          if (ResidueGetAtomByName(pFirsResidueInChain, "HT1") || ResidueGetAtomByName(pFirsResidueInChain, "HN1"))
+          Residue *pFirstResInChn = ChainGetResidue(pPreviousChain, 0);
+          Residue *pLastResInChn = ChainGetResidue(pPreviousChain, ChainGetResidueNum(pPreviousChain) - 1);
+          if (pFirstResInChn != NULL &&
+              pLastResInChn != NULL &&
+              (ResidueGetAtomByName(pFirstResInChn, "HT1") 
+              || ResidueGetAtomByName(pFirstResInChn, "HN1")))
           {
-            ResiduePatchCTER(pLastResidueInChain, "CTER", pAtomParams, pTopos);
-            pLastResidueInChain->terminalType = Type_ResIsCter;
+            ResiduePatchCTER(pLastResInChn, "CTER", pParams, pTops);
+            pLastResInChn->terType = Type_ResIsCter;
           }
         }
-        for (int i = 0;i < ChainGetResidueCount(pChain);i++)
+        for (int i = 0; i < ChainGetResidueNum(pPreviousChain); i++)
         {
-          Residue* pResi = ChainGetResidue(pChain, i);
-          if (pResi->isSCIntact)
+          Residue *pRes = ChainGetResidue(pPreviousChain, i);
+          if (pRes->isSCIntact == TRUE)
           {
-            ResidueCalcAllAtomXYZ(pResi, pTopos, ChainGetResidue(pChain, i - 1), ChainGetResidue(pChain, i + 1));
-            ResidueCalcSidechainTorsion(pResi, pTopos);
+            ResidueCalcAllAtomXYZ(pRes, pTops, ChainGetResidue(pPreviousChain, i - 1), ChainGetResidue(pPreviousChain, i + 1));
+            ResidueCalcSidechainTorsion(pRes, pTops);
           }
-          else ResidueCalcAllBackboneAtomXYZ(pResi, pTopos, ChainGetResidue(pChain, i - 1), ChainGetResidue(pChain, i + 1));
+          else
+          {
+            ResidueCalcAllBackboneAtomXYZ(pRes, pTops, ChainGetResidue(pPreviousChain, i - 1), ChainGetResidue(pPreviousChain, i + 1));
+          }
         }
       }
+      
+      //Initialize the new chain.
+      strcpy(iniChainID, strChainID);
 
-      //deal with new chains
-      Type_Chain chainType = ChainTypeIdentifiedFromResidueName(strResName);
-      if (chainType == Type_Chain_Unknown) continue;
-      strcpy(initChainID, strChainID);
-      Chain newChain;
-      ChainCreate(&newChain);
-      ChainSetType(&newChain, chainType);
-      ChainSetName(&newChain, strChainID);
-      StructureAddChain(pStructure, &newChain);
-      ChainDestroy(&newChain);
-      FileReaderSetCurrentPos(&file, FileReaderGetCurrentPos(&file) - 1);
-      firstResidueInChain = TRUE;
+      // Important: residue state belongs to the previous chain,
+      // so it must be reset when a new chain begins.
+      strcpy(iniResPos, "UNK");
+      firstResInChn = TRUE;
+
+      Chain chain;
+      ChainCreate(&chain);
+      ChainSetType(&chain, chainType);
+      ChainSetName(&chain, strChainID);
+      StructureAddChain(pStruct, &chain);
+      ChainDestroy(&chain);
+
+      // Rewind so the current line is processed again as the
+      // first residue of the newly created chain.
+      FileReaderSetCurrentPos(&fr, FileReaderGetCurrentPos(&fr) - 1);
+      continue;
     }
-    else if (strcmp(initResPos, strResPos) != 0)
-    { // new residue
-      Residue newResi;
-      ResidueCreate(&newResi);
+
+    // Start of a new residue in the current chain.
+    if (strcmp(iniResPos, strResPos) != 0)
+    {
+      Residue res;
+      ResidueCreate(&res);
+
+      // Determine the protonation state of histidine.
       if (strcmp(strResName, "HIS") == 0)
       {
-        FileReaderSetCurrentPos(&file, FileReaderGetCurrentPos(&file) - 1);
+        FileReaderSetCurrentPos(&fr, FileReaderGetCurrentPos(&fr) - 1);
         int hisState = 1;
-        PDBReaderCheckHisState(&file, &hisState);
-        if (hisState == 1) strcpy(strResName, "HSD");
-        else if (hisState == 2) strcpy(strResName, "HSE");
-        else strcpy(strResName, "HSP");
+        PDBReaderCheckHisState(&fr, &hisState);
+        if (hisState == 1)
+        {
+          strcpy(strResName, "HSD");
+        }
+        else if (hisState == 2)
+        {
+          strcpy(strResName, "HSE");
+        }
+        else
+        {
+          strcpy(strResName, "HSP");
+        }
       }
 
-      ResidueSetName(&newResi, strResName);
-      ResidueSetChainName(&newResi, strChainID);
-      ResidueSetPosInChain(&newResi, atoi(strResPos));
-      ResidueAddAtomsFromAtomParams(&newResi, pAtomParams);
-      ResidueAddBondsFromResiTopos(&newResi, pTopos);
-      if (firstResidueInChain && StructureGetChain(pStructure, StructureGetChainCount(pStructure) - 1)->type == Type_Chain_Protein)
-      {
-        ResiduePatchNTERorCTER(&newResi, "NTER", pAtomParams, pTopos);
-        newResi.terminalType = Type_ResIsNter;
-        firstResidueInChain = FALSE;
-      }
-      FileReaderSetCurrentPos(&file, FileReaderGetCurrentPos(&file) - 1);
-      ResidueReadXYZFromPDB(&newResi, &file);
-      ResidueCheckAtomCoordinateValidity(&newResi);
-      if (StructureGetChain(pStructure, StructureGetChainCount(pStructure) - 1) == NULL)
+      ResidueSetName(&res, strResName);
+      ResidueSetChainName(&res, strChainID);
+
+      // atoi() reads the numeric part and ignores a possible
+      // insertion code. This preserves the original behavior.
+      ResidueSetPosInChain(&res, atoi(strResPos));
+      ResidueAddAtomsFromAtomParams(&res, pParams);
+      ResidueAddBondsFromResiTopos(&res, pTops);
+
+      Chain *pCurrentChain = StructureFindChainByName(pStruct, strChainID);
+      if (pCurrentChain == NULL)
       {
         char errMsg[MAX_LEN_ERR_MSG + 1];
         sprintf(errMsg, "in file %s line %d, cannot find the target chain in structure", __FILE__, __LINE__);
         TraceError(errMsg, DataNotExistError);
+        ResidueDestroy(&res);
+        FileReaderDestroy(&fr);
         return DataNotExistError;
       }
-      else ChainAppendResidue(StructureGetChain(pStructure, StructureGetChainCount(pStructure) - 1), &newResi);
-      ResidueDestroy(&newResi);
-      strcpy(initResPos, strResPos);
+
+      // Patch the N-terminus only for the first residue of
+      // a protein chain.
+      if (firstResInChn == TRUE && 
+          ChainGetType(pCurrentChain) == Type_Chain_Protein)
+      {
+        ResiduePatchNTERorCTER(&res, "NTER", pParams, pTops);
+        res.terType = Type_ResIsNter;
+      }
+      // firstResInChn must be cleared for every chain type,
+      // not only protein chains.
+      firstResInChn = FALSE;
+
+      // Rewind so ResidueReadXYZFromPDB() starts from the
+      // first atom record of this residue.
+      FileReaderSetCurrentPos(&fr, FileReaderGetCurrentPos(&fr) - 1);
+      ResidueReadXYZFromPDB(&res, &fr);
+      ResidueCheckAtomCoordinateValidity(&res);
+      ChainAppendResidue(pCurrentChain, &res);
+      ResidueDestroy(&res);
+      strcpy(iniResPos, strResPos);
     }
   }
 
-  // handle the last chain
-  Chain* pChain = StructureGetChain(pStructure, StructureGetChainCount(pStructure) - 1);
-  if (pChain != NULL)
+  // Finish processing the last polymer chain.
+  Chain *pLastChain = StructureGetChain(pStruct, StructureGetChainNum(pStruct) - 1);
+  if (pLastChain != NULL && ChainGetResidueNum(pLastChain) > 0)
   {
-    if (ChainGetType(pChain) == Type_Chain_Protein)
+    if (ChainGetType(pLastChain) == Type_Chain_Protein)
     {
-      Residue* pFirsResidueInChain = ChainGetResidue(pChain, 0);
-      Residue* pLastResidueInChain = ChainGetResidue(pChain, ChainGetResidueCount(pChain) - 1);
-      if (ResidueGetAtomByName(pFirsResidueInChain, "HT1") != NULL || ResidueGetAtomByName(pFirsResidueInChain, "HN1") != NULL)
+      Residue *pFirstResInChn = ChainGetResidue(pLastChain, 0);
+      Residue *pLastResInChn = ChainGetResidue(pLastChain, ChainGetResidueNum(pLastChain) - 1);
+      if (pFirstResInChn != NULL &&
+          pLastResInChn != NULL &&
+          (ResidueGetAtomByName(pFirstResInChn, "HT1") != NULL 
+          || ResidueGetAtomByName(pFirstResInChn, "HN1") != NULL))
       {
-        ResiduePatchCTER(pLastResidueInChain, "CTER", pAtomParams, pTopos);
-        pLastResidueInChain->terminalType = Type_ResIsCter;
+        ResiduePatchCTER(pLastResInChn, "CTER", pParams, pTops);
+        pLastResInChn->terType = Type_ResIsCter;
       }
     }
-    for (int i = 0;i < ChainGetResidueCount(pChain);i++)
+
+    for (int i = 0; i < ChainGetResidueNum(pLastChain); i++)
     {
-      Residue* pResi = ChainGetResidue(pChain, i);
-      if (pResi->isSCIntact)
+      Residue *pRes = ChainGetResidue(pLastChain, i);
+      if (pRes->isSCIntact == TRUE)
       {
-        ResidueCalcAllAtomXYZ(pResi, pTopos, ChainGetResidue(pChain, i - 1), ChainGetResidue(pChain, i + 1));
-        ResidueCalcSidechainTorsion(pResi, pTopos);
+        ResidueCalcAllAtomXYZ(pRes, pTops, ChainGetResidue(pLastChain, i - 1), ChainGetResidue(pLastChain, i + 1));
+        ResidueCalcSidechainTorsion(pRes, pTops);
       }
-      else ResidueCalcAllBackboneAtomXYZ(pResi, pTopos, ChainGetResidue(pChain, i - 1), ChainGetResidue(pChain, i + 1));
+      else
+      {
+        ResidueCalcAllBackboneAtomXYZ(pRes, pTops, ChainGetResidue(pLastChain, i - 1), ChainGetResidue(pLastChain, i + 1));
+      }
     }
   }
 
-  FileReaderDestroy(&file);
+  FileReaderDestroy(&fr);
   return Success;
 }
 
-
-int StructureReadMol2(Structure* pStructure, char* mol2file, AtomParamsSet* pAtomParams, ResiTopoSet* pTopos)
+int StructureReadMol2(Structure *pStruct, char *mol2file, AtomParams *pParams, ResTopos *pTops)
 {
-  FILE* pMol2 = fopen(mol2file, "r");
+  FILE *pMol2 = fopen(mol2file, "r");
 
   char line[MAX_LEN_ONE_LINE_CONTENT + 1];
   char keyword[MAX_LEN_ONE_LINE_CONTENT + 1];
@@ -323,7 +373,7 @@ int StructureReadMol2(Structure* pStructure, char* mol2file, AtomParamsSet* pAto
 
   char resiName[MAX_LEN_RES_NAME + 1] = "#";
 
-  //add a new chain
+  // add a new chain
   Chain newChain;
   Type_Chain chainType;
   ChainCreate(&newChain);
@@ -370,23 +420,26 @@ int StructureReadMol2(Structure* pStructure, char* mol2file, AtomParamsSet* pAto
       if (resiName[0] == '#')
       {
         strcpy(resiName, strResName);
-        if (strlen(resiName) > 3) resiName[3] = '\0';
-        if (strcmp(resiName, "***") == 0) strcpy(resiName, "LIG");
-        if (LigandResidueNameConflictWithAminoAcid(resiName)) strcpy(resiName, "LIG");
+        if (strlen(resiName) > 3)
+          resiName[3] = '\0';
+        if (strcmp(resiName, "***") == 0)
+          strcpy(resiName, "LIG");
+        if (LigandResidueNameConflictWithAminoAcid(resiName))
+          strcpy(resiName, "LIG");
       }
-      //deploy the residue first if it's not ready
-      if (ResidueGetAtomCount(&newResi) == 0)
+      // deploy the residue first if it's not ready
+      if (ResidueGetAtomNum(&newResi) == 0)
       {
         ResidueSetName(&newResi, resiName);
         ResidueSetPosInChain(&newResi, posInChain);
-        ResidueAddAtomsFromAtomParams(&newResi, pAtomParams);
-        ResidueAddBondsFromResiTopos(&newResi, pTopos);
-        //set chain name
-        //ChainSetName(&newChain, strChainID);
+        ResidueAddAtomsFromAtomParams(&newResi, pParams);
+        ResidueAddBondsFromResiTopos(&newResi, pTops);
+        // set chain name
+        // ChainSetName(&newChain, strChainID);
         ChainSetName(&newChain, "X");
       }
-      //Atom* pAtom=ResidueGetAtomByName(&newResi,strAtomName);
-      Atom* pAtom = ResidueGetAtom(&newResi, atomNdx - 1);
+      // Atom* pAtom=ResidueGetAtomByName(&newResi,strAtomName);
+      Atom *pAtom = ResidueGetAtom(&newResi, atomNdx - 1);
       pAtom->xyz.X = x;
       pAtom->xyz.Y = y;
       pAtom->xyz.Z = z;
@@ -394,7 +447,7 @@ int StructureReadMol2(Structure* pStructure, char* mol2file, AtomParamsSet* pAto
     }
   }
   ChainAppendResidue(&newChain, &newResi);
-  StructureAddChain(pStructure, &newChain);
+  StructureAddChain(pStruct, &newChain);
   ChainDestroy(&newChain);
   ResidueDestroy(&newResi);
   fclose(pMol2);
@@ -402,128 +455,132 @@ int StructureReadMol2(Structure* pStructure, char* mol2file, AtomParamsSet* pAto
   return Success;
 }
 
-
-
-int ChainComputeResiduePosition(Structure* pStructure, int chainIndex)
+int ChainComputeResiduePosition(Structure *pStructure, int chainIndex)
 {
-  Chain* pChainI = StructureGetChain(pStructure, chainIndex);
-  for (int ir = 0; ir < ChainGetResidueCount(pChainI); ir++)
+  Chain *pChainI = StructureGetChain(pStructure, chainIndex);
+  for (int ir = 0; ir < ChainGetResidueNum(pChainI); ir++)
   {
-    Residue* pResiIR = ChainGetResidue(pChainI, ir);
+    Residue *pResiIR = ChainGetResidue(pChainI, ir);
     pResiIR->nCbIn10A = 0;
   }
-  for (int ir = 0; ir < ChainGetResidueCount(pChainI); ir++)
+  for (int ir = 0; ir < ChainGetResidueNum(pChainI); ir++)
   {
-    Residue* pResiIR = ChainGetResidue(pChainI, ir);
-    Atom* pAtomCAorCB1 = ResidueGetAtomByName(pResiIR, "CB");
-    if (pAtomCAorCB1 == NULL) pAtomCAorCB1 = ResidueGetAtomByName(pResiIR, "CA");
-    for (int is = ir + 1; is < ChainGetResidueCount(pChainI); is++)
+    Residue *pResiIR = ChainGetResidue(pChainI, ir);
+    Atom *pAtomCAorCB1 = ResidueGetAtomByName(pResiIR, "CB");
+    if (pAtomCAorCB1 == NULL)
+      pAtomCAorCB1 = ResidueGetAtomByName(pResiIR, "CA");
+    for (int is = ir + 1; is < ChainGetResidueNum(pChainI); is++)
     {
-      Residue* pResiIS = ChainGetResidue(pChainI, is);
-      Atom* pAtomCAorCB2 = ResidueGetAtomByName(pResiIS, "CB");
-      if (pAtomCAorCB2 == NULL) pAtomCAorCB2 = ResidueGetAtomByName(pResiIS, "CA");
-      if (XYZDistance(&pAtomCAorCB1->xyz, &pAtomCAorCB2->xyz) < 10.0)
+      Residue *pResiIS = ChainGetResidue(pChainI, is);
+      Atom *pAtomCAorCB2 = ResidueGetAtomByName(pResiIS, "CB");
+      if (pAtomCAorCB2 == NULL)
+        pAtomCAorCB2 = ResidueGetAtomByName(pResiIS, "CA");
+      if (XYZDist(&pAtomCAorCB1->xyz, &pAtomCAorCB2->xyz) < 10.0)
       {
         pResiIR->nCbIn10A++;
         pResiIS->nCbIn10A++;
       }
     }
-    //printf("Residue: %s %d %s, NumCBwithin8AtoCurResi: %d\n",ResidueGetChainName(pResiIR), ResidueGetPosInChain(pResiIR), ResidueGetName(pResiIR), pResiIR->numCBwithin8AtoCurResidue);
+    // printf("Residue: %s %d %s, NumCBwithin8AtoCurResi: %d\n",ResidueGetChainName(pResiIR), ResidueGetPosInChain(pResiIR), ResidueGetName(pResiIR), pResiIR->numCBwithin8AtoCurResidue);
   }
 
   return Success;
 }
 
-int StructureComputeResiduePosition(Structure* pStructure)
+int StructureComputeResiduePosition(Structure *pStructure)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    for (int ir = 0; ir < ChainGetResidueCount(pChainI); ir++)
+    Chain *pChainI = StructureGetChain(pStructure, i);
+    for (int ir = 0; ir < ChainGetResidueNum(pChainI); ir++)
     {
-      Residue* pResiIR = ChainGetResidue(pChainI, ir);
+      Residue *pResiIR = ChainGetResidue(pChainI, ir);
       pResiIR->nCbIn10A = 0;
     }
   }
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChainI = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChainI) != Type_Chain_Protein) continue;
-    for (int ir = 0; ir < ChainGetResidueCount(pChainI); ir++)
+    Chain *pChainI = StructureGetChain(pStructure, i);
+    if (ChainGetType(pChainI) != Type_Chain_Protein)
+      continue;
+    for (int ir = 0; ir < ChainGetResidueNum(pChainI); ir++)
     {
-      Residue* pResiIR = ChainGetResidue(pChainI, ir);
-      Atom* pAtomCAorCB1 = ResidueGetAtomByName(pResiIR, "CB");
-      if (pAtomCAorCB1 == NULL) pAtomCAorCB1 = ResidueGetAtomByName(pResiIR, "CA");
-      for (int is = ir + 1; is < ChainGetResidueCount(pChainI); is++)
+      Residue *pResIR = ChainGetResidue(pChainI, ir);
+      Atom *pAtomCAorCB1 = ResidueGetAtomByName(pResIR, "CB");
+      if (pAtomCAorCB1 == NULL)
+        pAtomCAorCB1 = ResidueGetAtomByName(pResIR, "CA");
+      for (int is = ir + 1; is < ChainGetResidueNum(pChainI); is++)
       {
-        Residue* pResiIS = ChainGetResidue(pChainI, is);
-        Atom* pAtomCAorCB2 = ResidueGetAtomByName(pResiIS, "CB");
-        if (pAtomCAorCB2 == NULL) pAtomCAorCB2 = ResidueGetAtomByName(pResiIS, "CA");
-        if (XYZDistance(&pAtomCAorCB1->xyz, &pAtomCAorCB2->xyz) < 10.0)
+        Residue *pResIS = ChainGetResidue(pChainI, is);
+        Atom *pAtomCAorCB2 = ResidueGetAtomByName(pResIS, "CB");
+        if (pAtomCAorCB2 == NULL)
+          pAtomCAorCB2 = ResidueGetAtomByName(pResIS, "CA");
+        if (XYZDist(&pAtomCAorCB1->xyz, &pAtomCAorCB2->xyz) < 10.0)
         {
-          pResiIR->nCbIn10A++;
-          pResiIS->nCbIn10A++;
+          pResIR->nCbIn10A++;
+          pResIS->nCbIn10A++;
         }
       }
-      for (int k = i + 1; k < StructureGetChainCount(pStructure); k++)
+      for (int k = i + 1; k < StructureGetChainNum(pStructure); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
-        if (ChainGetType(pChainK) != Type_Chain_Protein) continue;
-        for (int ks = 0; ks < ChainGetResidueCount(pChainK); ks++)
+        Chain *pChainK = StructureGetChain(pStructure, k);
+        if (ChainGetType(pChainK) != Type_Chain_Protein)
+          continue;
+        for (int ks = 0; ks < ChainGetResidueNum(pChainK); ks++)
         {
-          Residue* pResiKS = ChainGetResidue(pChainK, ks);
-          Atom* pAtomCAorCB2 = pAtomCAorCB2 = ResidueGetAtomByName(pResiKS, "CB");
-          if (pAtomCAorCB2 == NULL) pAtomCAorCB2 = ResidueGetAtomByName(pResiKS, "CA");
-          if (XYZDistance(&pAtomCAorCB1->xyz, &pAtomCAorCB2->xyz) < 10.0)
+          Residue *pResKS = ChainGetResidue(pChainK, ks);
+          Atom *pAtomCAorCB2 = pAtomCAorCB2 = ResidueGetAtomByName(pResKS, "CB");
+          if (pAtomCAorCB2 == NULL)
+            pAtomCAorCB2 = ResidueGetAtomByName(pResKS, "CA");
+          if (XYZDist(&pAtomCAorCB1->xyz, &pAtomCAorCB2->xyz) < 10.0)
           {
-            pResiIR->nCbIn10A++;
-            pResiKS->nCbIn10A++;
+            pResIR->nCbIn10A++;
+            pResKS->nCbIn10A++;
           }
         }
       }
-      //printf("Residue: %s %d %s, NumCBwithin8AtoCurResi: %d\n",ResidueGetChainName(pResiIR), ResidueGetPosInChain(pResiIR), ResidueGetName(pResiIR), pResiIR->numCBwithin8AtoCurResidue);
+      // printf("Residue: %s %d %s, NumCBwithin8AtoCurResi: %d\n",ResidueGetChainName(pResiIR), ResidueGetPosInChain(pResiIR), ResidueGetName(pResiIR), pResiIR->numCBwithin8AtoCurResidue);
     }
   }
 
   return Success;
 }
 
-int StructureShowAtomParameter(Structure* pStructure)
+int StructureShowAtomParameter(Structure *pStruct)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    ChainShowAtomParameter(StructureGetChain(pStructure, i));
+    ChainShowAtomParameter(StructureGetChain(pStruct, i));
   }
   return Success;
 }
 
-int StructureShowBondInformation(Structure* pStructure)
+int StructureShowBondInformation(Structure *pStruct)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    ChainShowBondInformation(StructureGetChain(pStructure, i));
+    ChainShowBondInformation(StructureGetChain(pStruct, i));
   }
   return Success;
 }
 
-
-int StructureCheckIntraBondType(Structure* pStructure)
+int StructureCheckIntraBondType(Structure *pStruct)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+    Chain *pChain = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResidue = ChainGetResidue(pChain, j);
-      for (int k = 0; k < ResidueGetAtomCount(pResidue); k++)
+      Residue *pRes = ChainGetResidue(pChain, j);
+      for (int k = 0; k < ResidueGetAtomNum(pRes); k++)
       {
-        Atom* pAtom = ResidueGetAtom(pResidue, k);
-        for (int m = k + 1; m < ResidueGetAtomCount(pResidue); m++)
+        Atom *pAtom = ResidueGetAtom(pRes, k);
+        for (int m = k + 1; m < ResidueGetAtomNum(pRes); m++)
         {
-          Atom* pAtom2 = ResidueGetAtom(pResidue, m);
-          //int bondType = ResidueIntraBondConnectionCheck(AtomGetName(pAtom), AtomGetName(pAtom2), pRes);
-          int bondType = ResidueIntraBondConnectionCheck(AtomGetName(pAtom), AtomGetName(pAtom2), ResidueGetBonds(pResidue));
-          //printf("Residue: %s %d %s, Atom1: %s, Atom2: %s, BondType: %d\n",ResidueGetName(pRes), ResidueGetPosInChain(pRes), ResidueGetChainName(pRes),AtomGetName(pAtom),AtomGetName(pAtom2),bondType);
+          Atom *pAtom2 = ResidueGetAtom(pRes, m);
+          int bondType = ResidueIntraBondConnectionCheck(AtomGetName(pAtom), AtomGetName(pAtom2), ResidueGetBonds(pRes));
+          printf("Residue: %s %d %s, Atom1: %s, Atom2: %s, BondType: %d\n",
+            ResidueGetName(pRes), ResidueGetPosInChain(pRes), ResidueGetChainName(pRes),AtomGetName(pAtom),AtomGetName(pAtom2),bondType);
         }
       }
     }
@@ -531,23 +588,23 @@ int StructureCheckIntraBondType(Structure* pStructure)
   return Success;
 }
 
-int StructureCheckNeighbouringBondType(Structure* pStructure)
+int StructureCheckNeighbouringBondType(Structure *pStruct)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    for (int j = 0; j < ChainGetResidueCount(pChain) - 1; j++)
+    Chain *pChain = StructureGetChain(pStruct, i);
+    for (int j = 0; j < ChainGetResidueNum(pChain) - 1; j++)
     {
-      Residue* pResi1 = ChainGetResidue(pChain, j);
-      Residue* pResi2 = ChainGetResidue(pChain, j + 1);
-      for (int p = 0; p < pResi1->atoms.atomNum; p++)
+      Residue *pRes1 = ChainGetResidue(pChain, j);
+      Residue *pRes2 = ChainGetResidue(pChain, j + 1);
+      for (int p = 0; p < pRes1->atoms.atomNum; p++)
       {
-        Atom* pAtom1 = ResidueGetAtom(pResi1, p);
-        for (int q = 0; q < pResi2->atoms.atomNum; q++)
+        Atom *pAtom1 = ResidueGetAtom(pRes1, p);
+        for (int q = 0; q < pRes2->atoms.atomNum; q++)
         {
-          Atom* pAtom2 = ResidueGetAtom(pResi2, q);
-          int bondType = ResidueAndNextResidueInterBondConnectionCheck_charmm19(pAtom1->name, pAtom2->name, pResi2->name);
-          printf("Residue: %s %d %s, Atom1: %s, Residue: %s %d %s, Atom2: %s, BondType: %d\n", ResidueGetName(pResi1), ResidueGetPosInChain(pResi1), ResidueGetChainName(pResi1), AtomGetName(pAtom1), ResidueGetName(pResi2), ResidueGetPosInChain(pResi2), ResidueGetChainName(pResi2), AtomGetName(pAtom2), bondType);
+          Atom *pAtom2 = ResidueGetAtom(pRes2, q);
+          int bondType = ResidueAndNextResidueInterBondConnectionCheck_charmm19(pAtom1->name, pAtom2->name, pRes2->name);
+          printf("Residue: %s %d %s, Atom1: %s, Residue: %s %d %s, Atom2: %s, BondType: %d\n", ResidueGetName(pRes1), ResidueGetPosInChain(pRes1), ResidueGetChainName(pRes1), AtomGetName(pAtom1), ResidueGetName(pRes2), ResidueGetPosInChain(pRes2), ResidueGetChainName(pRes2), AtomGetName(pAtom2), bondType);
         }
       }
     }
@@ -556,59 +613,59 @@ int StructureCheckNeighbouringBondType(Structure* pStructure)
   return Success;
 }
 
-///////////////////////////////////////////////
-//functions for dealing with design sites
-//////////////////////////////////////////////
-int StructureGetDesignSiteCount(Structure* pThis)
+
+int StructureGetDesignSiteNum(Structure *pStruct)
 {
-  return pThis->desSiteCount;
+  return pStruct->desSiteNum;
 }
 
-DesignSite* StructureGetDesignSite(Structure* pThis, int index)
+DesignSite *StructureGetDesignSite(Structure *pStruct, int index)
 {
-  if (index < 0 || index >= pThis->desSiteCount) return NULL;
-  else return &pThis->designSites[index];
+  if (index < 0 || index >= pStruct->desSiteNum)
+    return NULL;
+  else
+    return &pStruct->desSites[index];
 }
 
-DesignSite* StructureFindDesignSite(Structure* pThis, int chainIndex, int resiIndex)
+DesignSite *StructureFindDesignSite(Structure *pStruct, int chainIndex, int resIndex)
 {
-  if (chainIndex < 0 || chainIndex >= StructureGetChainCount(pThis)) return NULL;
-  Chain* pChain = StructureGetChain(pThis, chainIndex);
-  if (resiIndex < 0 || resiIndex >= ChainGetResidueCount(pChain)) return NULL;
-  for (int i = 0; i < StructureGetDesignSiteCount(pThis); i++)
+  if (chainIndex < 0 || chainIndex >= StructureGetChainNum(pStruct))
+    return NULL;
+  Chain *pChain = StructureGetChain(pStruct, chainIndex);
+  if (resIndex < 0 || resIndex >= ChainGetResidueNum(pChain))
+    return NULL;
+  for (int i = 0; i < StructureGetDesignSiteNum(pStruct); i++)
   {
-    DesignSite* pDesignSite = StructureGetDesignSite(pThis, i);
-    if (pDesignSite->chnNdx == chainIndex && pDesignSite->resNdx == resiIndex)
+    DesignSite *pSite = StructureGetDesignSite(pStruct, i);
+    if (pSite->chnNdx == chainIndex && pSite->resNdx == resIndex)
     {
-      return pDesignSite;
+      return pSite;
     }
   }
   return NULL;
 }
 
-
-DesignSite* StructureFindDesignSiteByChainName(Structure* pStructure, char* chainName, int posInChain)
+DesignSite *StructureFindDesignSiteByChainName(Structure *pStruct, char *chainName, int posInChain)
 {
-  for (int i = 0; i < StructureGetDesignSiteCount(pStructure); i++)
+  for (int i = 0; i < StructureGetDesignSiteNum(pStruct); i++)
   {
-    DesignSite* pDesignSite = StructureGetDesignSite(pStructure, i);
-    if (strcmp(chainName, DesignSiteGetChainName(pDesignSite)) == 0 &&
-      DesignSiteGetPosInChain(pDesignSite) == posInChain)
+    DesignSite *pSite = StructureGetDesignSite(pStruct, i);
+    if (strcmp(chainName, DesignSiteGetChainName(pSite)) == 0 &&
+        DesignSiteGetPosInChain(pSite) == posInChain)
     {
-      return pDesignSite;
+      return pSite;
     }
   }
   return NULL;
 }
 
-
-int StructureFindDesignSiteIndexByChainNameAndPosInChain(Structure* pStructure, char* chainName, int posInChain)
+int StructureFindDesignSiteIndexByChainNameAndPosInChain(Structure *pStruct, char *chainName, int posInChain)
 {
-  for (int i = 0; i < StructureGetDesignSiteCount(pStructure); i++)
+  for (int i = 0; i < StructureGetDesignSiteNum(pStruct); i++)
   {
-    DesignSite* pDesignSite = StructureGetDesignSite(pStructure, i);
+    DesignSite *pDesignSite = StructureGetDesignSite(pStruct, i);
     if (strcmp(DesignSiteGetChainName(pDesignSite), chainName) == 0 &&
-      DesignSiteGetPosInChain(pDesignSite) == posInChain)
+        DesignSiteGetPosInChain(pDesignSite) == posInChain)
     {
       return i;
     }
@@ -616,13 +673,12 @@ int StructureFindDesignSiteIndexByChainNameAndPosInChain(Structure* pStructure, 
   return -1;
 }
 
-
-int StructureGetDesignSiteIndex(Structure* pStructure, int chainIndex, int resiIndex)
+int StructureGetDesignSiteIndex(Structure *pStruct, int chainIndex, int resIndex)
 {
-  for (int i = 0; i < StructureGetDesignSiteCount(pStructure); i++)
+  for (int i = 0; i < StructureGetDesignSiteNum(pStruct); i++)
   {
-    DesignSite* pDesignSite = StructureGetDesignSite(pStructure, i);
-    if (pDesignSite->chnNdx == chainIndex && pDesignSite->resNdx == resiIndex)
+    DesignSite *pDesignSite = StructureGetDesignSite(pStruct, i);
+    if (pDesignSite->chnNdx == chainIndex && pDesignSite->resNdx == resIndex)
     {
       return i;
     }
@@ -630,99 +686,99 @@ int StructureGetDesignSiteIndex(Structure* pStructure, int chainIndex, int resiI
   return -1;
 }
 
-
-int StructureShowDesignSites(Structure* pThis)
+int StructureShowDesignSites(Structure *pStruct)
 {
   double confSpace = 0.0;
-  int totRotCount = 0;
-  for (int i = 0; i < pThis->desSiteCount; i++)
+  int totRotNum = 0;
+  for (int i = 0; i < pStruct->desSiteNum; i++)
   {
-    DesignSite* pSite = StructureGetDesignSite(pThis, i);
-    int rotCount = RotamerSetGetCount(DesignSiteGetRotamers(pSite));
-    printf("site %3d : %3s %s %4d, %6d rotamers, ",
-      i, ResidueGetName(pSite->pRes), ResidueGetChainName(pSite->pRes), ResidueGetPosInChain(pSite->pRes), rotCount);
-    totRotCount += rotCount;
-    if (rotCount > 0)
-    {
-      confSpace += log((double)rotCount) / log(10.0);
-    }
+    DesignSite *pSite = StructureGetDesignSite(pStruct, i);
+    int rotNum = RotamersGetNum(DesignSiteGetRotamers(pSite));
+    printf("site %3d: %s %4d %3s, %6d rotamers, ",
+           i, ResidueGetChainName(pSite->pRes), ResidueGetPosInChain(pSite->pRes), ResidueGetName(pSite->pRes), rotNum);
+    totRotNum += rotNum;
+    if (rotNum > 0)
+      confSpace += log((double)rotNum) / log(10.0);
     switch (pSite->pRes->desType)
     {
     case Type_DesType_Catalytic:
-      printf("catalytic\n"); break;
+      printf("Catalytic\n");
+      break;
     case Type_DesType_Fixed:
-      printf("fixed\n"); break;
+      printf("Fixed\n");
+      break;
     case Type_DesType_Mutable:
-      printf("mutated\n"); break;
+      printf("Mutable\n");
+      break;
     case Type_DesType_SmallMol:
-      printf("smallmol\n"); break;
+      printf("Smallmol\n");
+      break;
     case Type_DesType_Repackable:
-      printf("rotameric\n"); break;
+      printf("Repackable\n");
+      break;
     case Type_DesType_NatRot:
-      printf("natrot\n"); break;
+      printf("Fixed_Natrot\n");
+      break;
     default:
       break;
     }
   }
-  printf("total rotamer count: %d, conformation space: 1e^%.1f\n", totRotCount, confSpace);
+  printf("number of total rotamers: %d, conformation space: 1e^%.1f\n", totRotNum, confSpace);
   return Success;
 }
 
-int ProteinSiteAddDesignSite(Structure* pThis, int chainIndex, int resiIndex)
+int ProteinSiteAddDesignSite(Structure *pStruct, int chainIndex, int resIndex)
 {
-  //this function add a new empty design site
   int result = Success;
-  DesignSite* pCurrentDesignSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
-  if (pCurrentDesignSite != NULL)
+  DesignSite *pSite = StructureFindDesignSite(pStruct, chainIndex, resIndex);
+  if (pSite != NULL)
   {
     return Success;
   }
-  (pThis->desSiteCount)++;
-  pThis->designSites = (DesignSite*)realloc(pThis->designSites, sizeof(DesignSite) * pThis->desSiteCount);
-  DesignSiteCreate(&pThis->designSites[pThis->desSiteCount - 1]);
-  pCurrentDesignSite = StructureGetDesignSite(pThis, pThis->desSiteCount - 1);
-  pCurrentDesignSite->pRes = ChainGetResidue(StructureGetChain(pThis, chainIndex), resiIndex);
-  pCurrentDesignSite->chnNdx = chainIndex;
-  pCurrentDesignSite->resNdx = resiIndex;
+  (pStruct->desSiteNum)++;
+  pStruct->desSites = (DesignSite *)realloc(pStruct->desSites, sizeof(DesignSite) * pStruct->desSiteNum);
+  DesignSiteCreate(&pStruct->desSites[pStruct->desSiteNum - 1]);
+  pSite = StructureGetDesignSite(pStruct, pStruct->desSiteNum - 1);
+  pSite->pRes = ChainGetResidue(StructureGetChain(pStruct, chainIndex), resIndex);
+  pSite->chnNdx = chainIndex;
+  pSite->resNdx = resIndex;
   return result;
 }
 
-int StructureRemoveAllDesignSites(Structure* pThis)
+int StructureRemoveAllDesignSites(Structure *pStruct)
 {
-  for (int i = 0; i < pThis->desSiteCount; i++)
+  for (int i = 0; i < pStruct->desSiteNum; i++)
   {
-    DesignSite* pDesignSite = &pThis->designSites[i];
-    DesignSiteDestroy(pDesignSite);
-    pDesignSite = NULL;
+    DesignSite *pSite = &pStruct->desSites[i];
+    DesignSiteDestroy(pSite);
+    pSite = NULL;
   }
-  free(pThis->designSites);
-  pThis->designSites = NULL;
-  pThis->desSiteCount = 0;
+  free(pStruct->desSites);
+  pStruct->desSites = NULL;
+  pStruct->desSiteNum = 0;
   return Success;
 }
 
-int ProteinSiteRemoveDesignSite(Structure* pThis, int chainIndex, int resiIndex)
+int ProteinSiteRemoveDesignSite(Structure *pStruct, int chainIndex, int resIndex)
 {
-  DesignSite* pDesignSite = StructureFindDesignSite(pThis, chainIndex, resiIndex);
-  if (pDesignSite != NULL)
+  DesignSite *pSite = StructureFindDesignSite(pStruct, chainIndex, resIndex);
+  if (pSite != NULL)
   {
-    DesignSiteDestroy(pDesignSite);
-    pDesignSite = NULL;
+    DesignSiteDestroy(pSite);
+    pSite = NULL;
   }
-  (pThis->desSiteCount)--;
+  (pStruct->desSiteNum)--;
   return Success;
 }
 
-
-
-int StructureFindSmallMol(Structure* pThis, Residue** ppSmallMol)
+int StructureFindSmallMol(Structure *pStruct, Residue **ppSmallMol)
 {
   int result = DataNotExistError;
-  for (int i = 0;i < pThis->chainNum;i++)
+  for (int i = 0; i < pStruct->chnNum; i++)
   {
-    if (pThis->chains[i].type == Type_Chain_SmallMol)
+    if (pStruct->chains[i].type == Type_Chain_SmallMol)
     {
-      *ppSmallMol = ChainGetResidue(&pThis->chains[i], 0);
+      *ppSmallMol = ChainGetResidue(&pStruct->chains[i], 0);
       if (*ppSmallMol != NULL)
       {
         result = Success;
@@ -733,86 +789,85 @@ int StructureFindSmallMol(Structure* pThis, Residue** ppSmallMol)
   return result;
 }
 
-
-int StructureCalcProteinResidueSidechainTorsion(Structure* pThis, ResiTopoSet* pTopos)
+int StructureCalcProteinResidueSidechainTorsion(Structure *pStruct, ResTopos *pTops)
 {
-  for (int i = 0;i < StructureGetChainCount(pThis);i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pThis, i);
+    Chain *pChain = StructureGetChain(pStruct, i);
     if (ChainGetType(pChain) == Type_Chain_Protein)
     {
-      for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++)
       {
-        Residue* pResidue = ChainGetResidue(pChain, j);
-        if (strcmp(ResidueGetName(pResidue), "ALA") == 0 || strcmp(ResidueGetName(pResidue), "GLY") == 0) continue;
-        ResidueCalcSidechainTorsion(pResidue, pTopos);
+        Residue *pResidue = ChainGetResidue(pChain, j);
+        if (strcmp(ResidueGetName(pResidue), "ALA") == 0 || strcmp(ResidueGetName(pResidue), "GLY") == 0)
+          continue;
+        ResidueCalcSidechainTorsion(pResidue, pTops);
       }
     }
   }
   return Success;
 }
 
-
-int StructureCalcPhiPsi(Structure* pStructure)
+int StructureCalcPhiPsi(Structure *pStruct)
 {
-  for (int i = 0; i < StructureGetChainCount(pStructure); i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
-    if (ChainGetType(pChain) != Type_Chain_Protein) continue;
-    for (int j = 0; j < ChainGetResidueCount(pChain); j++)
+    Chain *pChain = StructureGetChain(pStruct, i);
+    if (ChainGetType(pChain) != Type_Chain_Protein)
+      continue;
+    for (int j = 0; j < ChainGetResidueNum(pChain); j++)
     {
-      Residue* pResi0 = ChainGetResidue(pChain, j - 1);
-      Residue* pResi1 = ChainGetResidue(pChain, j);
-      Residue* pResi2 = ChainGetResidue(pChain, j + 1);
+      Residue *pRes0 = ChainGetResidue(pChain, j - 1);
+      Residue *pRes1 = ChainGetResidue(pChain, j);
+      Residue *pRes2 = ChainGetResidue(pChain, j + 1);
 
-      if (pResi0 != NULL && AA3GetIndex(ResidueGetName(pResi0)) < 0)
+      if (pRes0 != NULL && AA3GetIndex(ResidueGetName(pRes0)) < 0)
       {
-        pResi0 = NULL;
+        pRes0 = NULL;
       }
-      if (pResi1 != NULL && AA3GetIndex(ResidueGetName(pResi1)) < 0)
+      if (pRes1 != NULL && AA3GetIndex(ResidueGetName(pRes1)) < 0)
       {
-        pResi1 = NULL;
+        pRes1 = NULL;
         continue;
       }
-      if (pResi2 != NULL && AA3GetIndex(ResidueGetName(pResi2)) < 0)
+      if (pRes2 != NULL && AA3GetIndex(ResidueGetName(pRes2)) < 0)
       {
-        pResi2 = NULL;
+        pRes2 = NULL;
       }
 
-
-      Atom* pC0 = NULL;
-      Atom* pN1 = ResidueGetAtomByName(pResi1, "N");
-      Atom* pCA1 = ResidueGetAtomByName(pResi1, "CA");
-      Atom* pC1 = ResidueGetAtomByName(pResi1, "C");
-      Atom* pN2 = NULL;
+      Atom *pC0 = NULL;
+      Atom *pN1 = ResidueGetAtomByName(pRes1, "N");
+      Atom *pCA1 = ResidueGetAtomByName(pRes1, "CA");
+      Atom *pC1 = ResidueGetAtomByName(pRes1, "C");
+      Atom *pN2 = NULL;
 
       double phi = 0.0;
       double psi = 0.0;
-      if (pResi0 == NULL)
+      if (pRes0 == NULL)
       {
         phi = -60.0;
         pC0 = NULL;
       }
       else
       {
-        pC0 = ResidueGetAtomByName(pResi0, "C");
+        pC0 = ResidueGetAtomByName(pRes0, "C");
       }
 
-      if (pResi2 == NULL)
+      if (pRes2 == NULL)
       {
         psi = 60.0;
         pN2 = NULL;
       }
       else
       {
-        pN2 = ResidueGetAtomByName(pResi2, "N");
+        pN2 = ResidueGetAtomByName(pRes2, "N");
       }
 
       if (pC0 != NULL)
       {
-        double dist_C0N1 = XYZDistance(&pC0->xyz, &pN1->xyz);
+        double dist_C0N1 = XYZDist(&pC0->xyz, &pN1->xyz);
         if (dist_C0N1 < 1.45 && dist_C0N1 > 1.25)
-        {// indicative of an amide bond
+        { // indicative of an amide bond
           phi = RadToDeg(GetTorsionAngle(&pC0->xyz, &pN1->xyz, &pCA1->xyz, &pC1->xyz));
         }
         else
@@ -823,9 +878,9 @@ int StructureCalcPhiPsi(Structure* pStructure)
 
       if (pN2 != NULL)
       {
-        double dist_C1N2 = XYZDistance(&pC1->xyz, &pN2->xyz);
+        double dist_C1N2 = XYZDist(&pC1->xyz, &pN2->xyz);
         if (dist_C1N2 < 1.45 && dist_C1N2 > 1.25)
-        {// indicative of an amide bond
+        { // indicative of an amide bond
           psi = RadToDeg(GetTorsionAngle(&pN1->xyz, &pCA1->xyz, &pC1->xyz, &pN2->xyz));
         }
         else
@@ -834,87 +889,83 @@ int StructureCalcPhiPsi(Structure* pStructure)
         }
       }
 
-      //assign phi and psi values to residue1
-      pResi1->phipsi[0] = phi;
-      pResi1->phipsi[1] = psi;
+      // assign phi and psi values to residue1
+      pRes1->phipsi[0] = phi;
+      pRes1->phipsi[1] = psi;
     }
   }
 
   return Success;
 }
 
-
-int StructureCopy(Structure* pThis, Structure* pOther)
+int StructureCopy(Structure *pStruct1, Structure *pStruct2)
 {
-  for (int i = 0;i < StructureGetChainCount(pOther);i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct2); i++)
   {
-    //Chain tempChain;
-    //ChainCreate(&tempChain);
-    //ChainCopy(&tempChain,&pOther->chains[i]);
-    StructureAddChain(pThis, &pOther->chains[i]);
-    //ChainDestroy(&tempChain);
+    StructureAddChain(pStruct1, &pStruct2->chains[i]);
   }
-  pThis->chainNum = pOther->chainNum;
-  pThis->desSiteCount = pOther->desSiteCount;
-  strcpy(pThis->name, pOther->name);
-  for (int i = 0;i < pOther->desSiteCount;i++)
+  pStruct1->chnNum = pStruct2->chnNum;
+  pStruct1->desSiteNum = pStruct2->desSiteNum;
+  strcpy(pStruct1->name, pStruct2->name);
+  for (int i = 0; i < pStruct2->desSiteNum; i++)
   {
-    DesignSiteCopy(&pThis->designSites[i], &pOther->designSites[i]);
+    DesignSiteCopy(&pStruct1->desSites[i], &pStruct2->desSites[i]);
   }
   return Success;
 }
 
-//deal with nucleic acid
-Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery)
+
+Residue *StructureFindNucleotidePair(Structure *pStruct, Residue *pRes)
 {
-  Chain* pChainI = StructureFindChainByName(pStructure, ResidueGetChainName(pQuery));
+  Chain *pChainI = StructureFindChainByName(pStruct, ResidueGetChainName(pRes));
   if (ChainGetType(pChainI) == Type_Chain_DNA)
   {
-    if (!strcmp(ResidueGetName(pQuery), "DA"))
+    if (!strcmp(ResidueGetName(pRes), "DA"))
     {
-      //paired residue is DT or U;
-      for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+      // paired residue is DT or U;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
+        Chain *pChainK = StructureGetChain(pStruct, k);
         if (ChainGetType(pChainK) == Type_Chain_DNA || ChainGetType(pChainK) == Type_Chain_RNA)
         {
           if (!strcmp(ChainGetName(pChainK), ChainGetName(pChainI)))
           {
-            //paired residue must be DT;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DT;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (abs(ResidueGetPosInChain(pQuery) - ResidueGetPosInChain(pResiS)) <= 1) continue;
-              if (!strcmp(ResidueGetName(pResiS), "DT"))
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (abs(ResidueGetPosInChain(pRes) - ResidueGetPosInChain(pResS)) <= 1)
+                continue;
+              if (!strcmp(ResidueGetName(pResS), "DT"))
               {
-                //check the distance
-                //atom N1 and N6 from nucleotide DA
-                //atom N3 and O4 from nucleotide DT
-                double distN1N3 = XYZDistance(&ResidueGetAtomByName(pQuery, "N1")->xyz, &ResidueGetAtomByName(pResiS, "N3")->xyz);
-                double distN6O4 = XYZDistance(&ResidueGetAtomByName(pQuery, "N6")->xyz, &ResidueGetAtomByName(pResiS, "O4")->xyz);
+                // check the distance
+                // atom N1 and N6 from nucleotide DA
+                // atom N3 and O4 from nucleotide DT
+                double distN1N3 = XYZDist(&ResidueGetAtomByName(pRes, "N1")->xyz, &ResidueGetAtomByName(pResS, "N3")->xyz);
+                double distN6O4 = XYZDist(&ResidueGetAtomByName(pRes, "N6")->xyz, &ResidueGetAtomByName(pResS, "O4")->xyz);
                 if (distN1N3 >= 2.0 && distN1N3 <= 4.0 && distN6O4 >= 2.0 && distN6O4 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
           }
           else
           {
-            //paired residue must be DT or U;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DT or U;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (strcmp(ResidueGetName(pResiS), "DT") == 0 || strcmp(ResidueGetName(pResiS), "U") == 0)
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (strcmp(ResidueGetName(pResS), "DT") == 0 || strcmp(ResidueGetName(pResS), "U") == 0)
               {
-                //check the distance
-                //atom N1 and N6 from nucleotide DA
-                //atom N3 and O4 from nucleotide DT or U
-                double distN1N3 = XYZDistance(&ResidueGetAtomByName(pQuery, "N1")->xyz, &ResidueGetAtomByName(pResiS, "N3")->xyz);
-                double distN6O4 = XYZDistance(&ResidueGetAtomByName(pQuery, "N6")->xyz, &ResidueGetAtomByName(pResiS, "O4")->xyz);
+                // check the distance
+                // atom N1 and N6 from nucleotide DA
+                // atom N3 and O4 from nucleotide DT or U
+                double distN1N3 = XYZDist(&ResidueGetAtomByName(pRes, "N1")->xyz, &ResidueGetAtomByName(pResS, "N3")->xyz);
+                double distN6O4 = XYZDist(&ResidueGetAtomByName(pRes, "N6")->xyz, &ResidueGetAtomByName(pResS, "O4")->xyz);
                 if (distN1N3 >= 2.0 && distN1N3 <= 4.0 && distN6O4 >= 2.0 && distN6O4 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
@@ -922,53 +973,54 @@ Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery)
         }
       }
     }
-    else if (!strcmp(ResidueGetName(pQuery), "DC"))
+    else if (!strcmp(ResidueGetName(pRes), "DC"))
     {
-      //paired residue is DG or G;
-      for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+      // paired residue is DG or G;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
+        Chain *pChainK = StructureGetChain(pStruct, k);
         if (ChainGetType(pChainK) == Type_Chain_DNA || ChainGetType(pChainK) == Type_Chain_RNA)
         {
           if (!strcmp(ChainGetName(pChainK), ChainGetName(pChainI)))
           {
-            //paired residue must be DG;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DG;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (abs(ResidueGetPosInChain(pQuery) - ResidueGetPosInChain(pResiS)) <= 1) continue;
-              if (!strcmp(ResidueGetName(pResiS), "DG"))
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (abs(ResidueGetPosInChain(pRes) - ResidueGetPosInChain(pResS)) <= 1)
+                continue;
+              if (!strcmp(ResidueGetName(pResS), "DG"))
               {
-                //check the distance
-                //atom O2, N3 and N4 from nucleotide DC
-                //atom N2, N1 and O6 from nucleotide DG
-                double distO2N2 = XYZDistance(&ResidueGetAtomByName(pQuery, "O2")->xyz, &ResidueGetAtomByName(pResiS, "N2")->xyz);
-                double distN3N1 = XYZDistance(&ResidueGetAtomByName(pQuery, "N3")->xyz, &ResidueGetAtomByName(pResiS, "N1")->xyz);
-                double distN4O6 = XYZDistance(&ResidueGetAtomByName(pQuery, "N4")->xyz, &ResidueGetAtomByName(pResiS, "O6")->xyz);
+                // check the distance
+                // atom O2, N3 and N4 from nucleotide DC
+                // atom N2, N1 and O6 from nucleotide DG
+                double distO2N2 = XYZDist(&ResidueGetAtomByName(pRes, "O2")->xyz, &ResidueGetAtomByName(pResS, "N2")->xyz);
+                double distN3N1 = XYZDist(&ResidueGetAtomByName(pRes, "N3")->xyz, &ResidueGetAtomByName(pResS, "N1")->xyz);
+                double distN4O6 = XYZDist(&ResidueGetAtomByName(pRes, "N4")->xyz, &ResidueGetAtomByName(pResS, "O6")->xyz);
                 if (distO2N2 >= 2.0 && distO2N2 <= 4.0 && distN3N1 >= 2.0 && distN3N1 <= 4.0 && distN4O6 >= 2.0 && distN4O6 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
           }
           else
           {
-            //paired residue must be DG or G;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DG or G;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (strcmp(ResidueGetName(pResiS), "DG") == 0 || strcmp(ResidueGetName(pResiS), "G") == 0)
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (strcmp(ResidueGetName(pResS), "DG") == 0 || strcmp(ResidueGetName(pResS), "G") == 0)
               {
-                //check the distance
-                //atom O2, N3 and N4 from nucleotide DC
-                //atom N2, N1 and O6 from nucleotide DG
-                double distO2N2 = XYZDistance(&ResidueGetAtomByName(pQuery, "O2")->xyz, &ResidueGetAtomByName(pResiS, "N2")->xyz);
-                double distN3N1 = XYZDistance(&ResidueGetAtomByName(pQuery, "N3")->xyz, &ResidueGetAtomByName(pResiS, "N1")->xyz);
-                double distN4O6 = XYZDistance(&ResidueGetAtomByName(pQuery, "N4")->xyz, &ResidueGetAtomByName(pResiS, "O6")->xyz);
+                // check the distance
+                // atom O2, N3 and N4 from nucleotide DC
+                // atom N2, N1 and O6 from nucleotide DG
+                double distO2N2 = XYZDist(&ResidueGetAtomByName(pRes, "O2")->xyz, &ResidueGetAtomByName(pResS, "N2")->xyz);
+                double distN3N1 = XYZDist(&ResidueGetAtomByName(pRes, "N3")->xyz, &ResidueGetAtomByName(pResS, "N1")->xyz);
+                double distN4O6 = XYZDist(&ResidueGetAtomByName(pRes, "N4")->xyz, &ResidueGetAtomByName(pResS, "O6")->xyz);
                 if (distO2N2 >= 2.0 && distO2N2 <= 4.0 && distN3N1 >= 2.0 && distN3N1 <= 4.0 && distN4O6 >= 2.0 && distN4O6 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
@@ -976,53 +1028,54 @@ Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery)
         }
       }
     }
-    else if (!strcmp(ResidueGetName(pQuery), "DG"))
+    else if (!strcmp(ResidueGetName(pRes), "DG"))
     {
-      //paired residue is DC or C;
-      for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+      // paired residue is DC or C;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
+        Chain *pChainK = StructureGetChain(pStruct, k);
         if (ChainGetType(pChainK) == Type_Chain_DNA || ChainGetType(pChainK) == Type_Chain_RNA)
         {
           if (!strcmp(ChainGetName(pChainK), ChainGetName(pChainI)))
           {
-            //paired residue must be DC;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DC;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (abs(ResidueGetPosInChain(pQuery) - ResidueGetPosInChain(pResiS)) <= 1) continue;
-              if (!strcmp(ResidueGetName(pResiS), "DC"))
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (abs(ResidueGetPosInChain(pRes) - ResidueGetPosInChain(pResS)) <= 1)
+                continue;
+              if (!strcmp(ResidueGetName(pResS), "DC"))
               {
-                //check the distance
-                //atom O2, N3 and N4 from nucleotide DC
-                //atom N2, N1 and O6 from nucleotide DG
-                double distO2N2 = XYZDistance(&ResidueGetAtomByName(pResiS, "O2")->xyz, &ResidueGetAtomByName(pQuery, "N2")->xyz);
-                double distN3N1 = XYZDistance(&ResidueGetAtomByName(pResiS, "N3")->xyz, &ResidueGetAtomByName(pQuery, "N1")->xyz);
-                double distN4O6 = XYZDistance(&ResidueGetAtomByName(pResiS, "N4")->xyz, &ResidueGetAtomByName(pQuery, "O6")->xyz);
+                // check the distance
+                // atom O2, N3 and N4 from nucleotide DC
+                // atom N2, N1 and O6 from nucleotide DG
+                double distO2N2 = XYZDist(&ResidueGetAtomByName(pResS, "O2")->xyz, &ResidueGetAtomByName(pRes, "N2")->xyz);
+                double distN3N1 = XYZDist(&ResidueGetAtomByName(pResS, "N3")->xyz, &ResidueGetAtomByName(pRes, "N1")->xyz);
+                double distN4O6 = XYZDist(&ResidueGetAtomByName(pResS, "N4")->xyz, &ResidueGetAtomByName(pRes, "O6")->xyz);
                 if (distO2N2 >= 2.0 && distO2N2 <= 4.0 && distN3N1 >= 2.0 && distN3N1 <= 4.0 && distN4O6 >= 2.0 && distN4O6 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
           }
           else
           {
-            //paired residue must be DC or C;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DC or C;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (strcmp(ResidueGetName(pResiS), "DC") == 0 || strcmp(ResidueGetName(pResiS), "C") == 0)
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (strcmp(ResidueGetName(pResS), "DC") == 0 || strcmp(ResidueGetName(pResS), "C") == 0)
               {
-                //check the distance
-                //atom O2, N3 and N4 from nucleotide DC
-                //atom N2, N1 and O6 from nucleotide DG
-                double distO2N2 = XYZDistance(&ResidueGetAtomByName(pResiS, "O2")->xyz, &ResidueGetAtomByName(pQuery, "N2")->xyz);
-                double distN3N1 = XYZDistance(&ResidueGetAtomByName(pResiS, "N3")->xyz, &ResidueGetAtomByName(pQuery, "N1")->xyz);
-                double distN4O6 = XYZDistance(&ResidueGetAtomByName(pResiS, "N4")->xyz, &ResidueGetAtomByName(pQuery, "O6")->xyz);
+                // check the distance
+                // atom O2, N3 and N4 from nucleotide DC
+                // atom N2, N1 and O6 from nucleotide DG
+                double distO2N2 = XYZDist(&ResidueGetAtomByName(pResS, "O2")->xyz, &ResidueGetAtomByName(pRes, "N2")->xyz);
+                double distN3N1 = XYZDist(&ResidueGetAtomByName(pResS, "N3")->xyz, &ResidueGetAtomByName(pRes, "N1")->xyz);
+                double distN4O6 = XYZDist(&ResidueGetAtomByName(pResS, "N4")->xyz, &ResidueGetAtomByName(pRes, "O6")->xyz);
                 if (distO2N2 >= 2.0 && distO2N2 <= 4.0 && distN3N1 >= 2.0 && distN3N1 <= 4.0 && distN4O6 >= 2.0 && distN4O6 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
@@ -1031,50 +1084,51 @@ Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery)
       }
     }
     else
-    {//!strcmp(ResidueGetName(pQuery),"DT")
-  //paired residue is DA or A;
-      for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+    { //! strcmp(ResidueGetName(pQuery),"DT")
+      // paired residue is DA or A;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
+        Chain *pChainK = StructureGetChain(pStruct, k);
         if (ChainGetType(pChainK) == Type_Chain_DNA || ChainGetType(pChainK) == Type_Chain_RNA)
         {
           if (!strcmp(ChainGetName(pChainK), ChainGetName(pChainI)))
           {
-            //paired residue must be DA;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DA;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (abs(ResidueGetPosInChain(pQuery) - ResidueGetPosInChain(pResiS)) <= 1) continue;
-              if (!strcmp(ResidueGetName(pResiS), "DA"))
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (abs(ResidueGetPosInChain(pRes) - ResidueGetPosInChain(pResS)) <= 1)
+                continue;
+              if (!strcmp(ResidueGetName(pResS), "DA"))
               {
-                //check the distance
-                //atom N1 and N6 from nucleotide DA or A
-                //atom N3 and O4 from nucleotide DT
-                double distN1N3 = XYZDistance(&ResidueGetAtomByName(pResiS, "N1")->xyz, &ResidueGetAtomByName(pQuery, "N3")->xyz);
-                double distN6O4 = XYZDistance(&ResidueGetAtomByName(pResiS, "N6")->xyz, &ResidueGetAtomByName(pQuery, "O4")->xyz);
+                // check the distance
+                // atom N1 and N6 from nucleotide DA or A
+                // atom N3 and O4 from nucleotide DT
+                double distN1N3 = XYZDist(&ResidueGetAtomByName(pResS, "N1")->xyz, &ResidueGetAtomByName(pRes, "N3")->xyz);
+                double distN6O4 = XYZDist(&ResidueGetAtomByName(pResS, "N6")->xyz, &ResidueGetAtomByName(pRes, "O4")->xyz);
                 if (distN1N3 >= 2.0 && distN1N3 <= 4.0 && distN6O4 >= 2.0 && distN6O4 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
           }
           else
           {
-            //paired residue must be DA or A;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DA or A;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (strcmp(ResidueGetName(pResiS), "DA") == 0 || strcmp(ResidueGetName(pResiS), "A") == 0)
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (strcmp(ResidueGetName(pResS), "DA") == 0 || strcmp(ResidueGetName(pResS), "A") == 0)
               {
-                //check the distance
-                //atom N1 and N6 from nucleotide DA or A
-                //atom N3 and O4 from nucleotide DT
-                double distN1N3 = XYZDistance(&ResidueGetAtomByName(pResiS, "N1")->xyz, &ResidueGetAtomByName(pQuery, "N3")->xyz);
-                double distN6O4 = XYZDistance(&ResidueGetAtomByName(pResiS, "N6")->xyz, &ResidueGetAtomByName(pQuery, "O4")->xyz);
+                // check the distance
+                // atom N1 and N6 from nucleotide DA or A
+                // atom N3 and O4 from nucleotide DT
+                double distN1N3 = XYZDist(&ResidueGetAtomByName(pResS, "N1")->xyz, &ResidueGetAtomByName(pRes, "N3")->xyz);
+                double distN6O4 = XYZDist(&ResidueGetAtomByName(pResS, "N6")->xyz, &ResidueGetAtomByName(pRes, "O4")->xyz);
                 if (distN1N3 >= 2.0 && distN1N3 <= 4.0 && distN6O4 >= 2.0 && distN6O4 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
@@ -1085,51 +1139,52 @@ Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery)
   }
   else if (ChainGetType(pChainI) == Type_Chain_RNA)
   {
-    if (!strcmp(ResidueGetName(pQuery), "A"))
+    if (!strcmp(ResidueGetName(pRes), "A"))
     {
-      //paired residue is DT or U;
-      for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+      // paired residue is DT or U;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
+        Chain *pChainK = StructureGetChain(pStruct, k);
         if (ChainGetType(pChainK) == Type_Chain_DNA || ChainGetType(pChainK) == Type_Chain_RNA)
         {
           if (!strcmp(ChainGetName(pChainK), ChainGetName(pChainI)))
           {
-            //paired residue must be U;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be U;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (abs(ResidueGetPosInChain(pQuery) - ResidueGetPosInChain(pResiS)) <= 1) continue;
-              if (!strcmp(ResidueGetName(pResiS), "U"))
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (abs(ResidueGetPosInChain(pRes) - ResidueGetPosInChain(pResS)) <= 1)
+                continue;
+              if (!strcmp(ResidueGetName(pResS), "U"))
               {
-                //check the distance
-                //atom N1 and N6 from nucleotide A
-                //atom N3 and O4 from nucleotide U
-                double distN1N3 = XYZDistance(&ResidueGetAtomByName(pQuery, "N1")->xyz, &ResidueGetAtomByName(pResiS, "N3")->xyz);
-                double distN6O4 = XYZDistance(&ResidueGetAtomByName(pQuery, "N6")->xyz, &ResidueGetAtomByName(pResiS, "O4")->xyz);
+                // check the distance
+                // atom N1 and N6 from nucleotide A
+                // atom N3 and O4 from nucleotide U
+                double distN1N3 = XYZDist(&ResidueGetAtomByName(pRes, "N1")->xyz, &ResidueGetAtomByName(pResS, "N3")->xyz);
+                double distN6O4 = XYZDist(&ResidueGetAtomByName(pRes, "N6")->xyz, &ResidueGetAtomByName(pResS, "O4")->xyz);
                 if (distN1N3 >= 2.0 && distN1N3 <= 4.0 && distN6O4 >= 2.0 && distN6O4 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
           }
           else
           {
-            //paired residue must be DT or U;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DT or U;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (strcmp(ResidueGetName(pResiS), "DT") == 0 || strcmp(ResidueGetName(pResiS), "U") == 0)
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (strcmp(ResidueGetName(pResS), "DT") == 0 || strcmp(ResidueGetName(pResS), "U") == 0)
               {
-                //check the distance
-                //atom N1 and N6 from nucleotide A
-                //atom N3 and O4 from nucleotide DT or U
-                double distN1N3 = XYZDistance(&ResidueGetAtomByName(pQuery, "N1")->xyz, &ResidueGetAtomByName(pResiS, "N3")->xyz);
-                double distN6O4 = XYZDistance(&ResidueGetAtomByName(pQuery, "N6")->xyz, &ResidueGetAtomByName(pResiS, "O4")->xyz);
+                // check the distance
+                // atom N1 and N6 from nucleotide A
+                // atom N3 and O4 from nucleotide DT or U
+                double distN1N3 = XYZDist(&ResidueGetAtomByName(pRes, "N1")->xyz, &ResidueGetAtomByName(pResS, "N3")->xyz);
+                double distN6O4 = XYZDist(&ResidueGetAtomByName(pRes, "N6")->xyz, &ResidueGetAtomByName(pResS, "O4")->xyz);
                 if (distN1N3 >= 2.0 && distN1N3 <= 4.0 && distN6O4 >= 2.0 && distN6O4 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
@@ -1137,53 +1192,54 @@ Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery)
         }
       }
     }
-    else if (!strcmp(ResidueGetName(pQuery), "C"))
+    else if (!strcmp(ResidueGetName(pRes), "C"))
     {
-      //paired residue is DG or G;
-      for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+      // paired residue is DG or G;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
+        Chain *pChainK = StructureGetChain(pStruct, k);
         if (ChainGetType(pChainK) == Type_Chain_DNA || ChainGetType(pChainK) == Type_Chain_RNA)
         {
           if (!strcmp(ChainGetName(pChainK), ChainGetName(pChainI)))
           {
-            //paired residue must be G;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be G;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (abs(ResidueGetPosInChain(pQuery) - ResidueGetPosInChain(pResiS)) <= 1) continue;
-              if (!strcmp(ResidueGetName(pResiS), "G"))
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (abs(ResidueGetPosInChain(pRes) - ResidueGetPosInChain(pResS)) <= 1)
+                continue;
+              if (!strcmp(ResidueGetName(pResS), "G"))
               {
-                //check the distance
-                //atom O2, N3 and N4 from nucleotide C
-                //atom N2, N1 and O6 from nucleotide G
-                double distO2N2 = XYZDistance(&ResidueGetAtomByName(pQuery, "O2")->xyz, &ResidueGetAtomByName(pResiS, "N2")->xyz);
-                double distN3N1 = XYZDistance(&ResidueGetAtomByName(pQuery, "N3")->xyz, &ResidueGetAtomByName(pResiS, "N1")->xyz);
-                double distN4O6 = XYZDistance(&ResidueGetAtomByName(pQuery, "N4")->xyz, &ResidueGetAtomByName(pResiS, "O6")->xyz);
+                // check the distance
+                // atom O2, N3 and N4 from nucleotide C
+                // atom N2, N1 and O6 from nucleotide G
+                double distO2N2 = XYZDist(&ResidueGetAtomByName(pRes, "O2")->xyz, &ResidueGetAtomByName(pResS, "N2")->xyz);
+                double distN3N1 = XYZDist(&ResidueGetAtomByName(pRes, "N3")->xyz, &ResidueGetAtomByName(pResS, "N1")->xyz);
+                double distN4O6 = XYZDist(&ResidueGetAtomByName(pRes, "N4")->xyz, &ResidueGetAtomByName(pResS, "O6")->xyz);
                 if (distO2N2 >= 2.0 && distO2N2 <= 4.0 && distN3N1 >= 2.0 && distN3N1 <= 4.0 && distN4O6 >= 2.0 && distN4O6 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
           }
           else
           {
-            //paired residue must be DG or G;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DG or G;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (strcmp(ResidueGetName(pResiS), "DG") == 0 || strcmp(ResidueGetName(pResiS), "G") == 0)
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (strcmp(ResidueGetName(pResS), "DG") == 0 || strcmp(ResidueGetName(pResS), "G") == 0)
               {
-                //check the distance
-                //atom O2, N3 and N4 from nucleotide DC
-                //atom N2, N1 and O6 from nucleotide DG
-                double distO2N2 = XYZDistance(&ResidueGetAtomByName(pQuery, "O2")->xyz, &ResidueGetAtomByName(pResiS, "N2")->xyz);
-                double distN3N1 = XYZDistance(&ResidueGetAtomByName(pQuery, "N3")->xyz, &ResidueGetAtomByName(pResiS, "N1")->xyz);
-                double distN4O6 = XYZDistance(&ResidueGetAtomByName(pQuery, "N4")->xyz, &ResidueGetAtomByName(pResiS, "O6")->xyz);
+                // check the distance
+                // atom O2, N3 and N4 from nucleotide DC
+                // atom N2, N1 and O6 from nucleotide DG
+                double distO2N2 = XYZDist(&ResidueGetAtomByName(pRes, "O2")->xyz, &ResidueGetAtomByName(pResS, "N2")->xyz);
+                double distN3N1 = XYZDist(&ResidueGetAtomByName(pRes, "N3")->xyz, &ResidueGetAtomByName(pResS, "N1")->xyz);
+                double distN4O6 = XYZDist(&ResidueGetAtomByName(pRes, "N4")->xyz, &ResidueGetAtomByName(pResS, "O6")->xyz);
                 if (distO2N2 >= 2.0 && distO2N2 <= 4.0 && distN3N1 >= 2.0 && distN3N1 <= 4.0 && distN4O6 >= 2.0 && distN4O6 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
@@ -1191,53 +1247,54 @@ Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery)
         }
       }
     }
-    else if (!strcmp(ResidueGetName(pQuery), "G"))
+    else if (!strcmp(ResidueGetName(pRes), "G"))
     {
-      //paired residue is DC or C;
-      for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+      // paired residue is DC or C;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
+        Chain *pChainK = StructureGetChain(pStruct, k);
         if (ChainGetType(pChainK) == Type_Chain_DNA || ChainGetType(pChainK) == Type_Chain_RNA)
         {
           if (!strcmp(ChainGetName(pChainK), ChainGetName(pChainI)))
           {
-            //paired residue must be C;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be C;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (abs(ResidueGetPosInChain(pQuery) - ResidueGetPosInChain(pResiS)) <= 1) continue;
-              if (!strcmp(ResidueGetName(pResiS), "C"))
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (abs(ResidueGetPosInChain(pRes) - ResidueGetPosInChain(pResS)) <= 1)
+                continue;
+              if (!strcmp(ResidueGetName(pResS), "C"))
               {
-                //check the distance
-                //atom O2, N3 and N4 from nucleotide C
-                //atom N2, N1 and O6 from nucleotide G
-                double distO2N2 = XYZDistance(&ResidueGetAtomByName(pResiS, "O2")->xyz, &ResidueGetAtomByName(pQuery, "N2")->xyz);
-                double distN3N1 = XYZDistance(&ResidueGetAtomByName(pResiS, "N3")->xyz, &ResidueGetAtomByName(pQuery, "N1")->xyz);
-                double distN4O6 = XYZDistance(&ResidueGetAtomByName(pResiS, "N4")->xyz, &ResidueGetAtomByName(pQuery, "O6")->xyz);
+                // check the distance
+                // atom O2, N3 and N4 from nucleotide C
+                // atom N2, N1 and O6 from nucleotide G
+                double distO2N2 = XYZDist(&ResidueGetAtomByName(pResS, "O2")->xyz, &ResidueGetAtomByName(pRes, "N2")->xyz);
+                double distN3N1 = XYZDist(&ResidueGetAtomByName(pResS, "N3")->xyz, &ResidueGetAtomByName(pRes, "N1")->xyz);
+                double distN4O6 = XYZDist(&ResidueGetAtomByName(pResS, "N4")->xyz, &ResidueGetAtomByName(pRes, "O6")->xyz);
                 if (distO2N2 >= 2.0 && distO2N2 <= 4.0 && distN3N1 >= 2.0 && distN3N1 <= 4.0 && distN4O6 >= 2.0 && distN4O6 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
           }
           else
           {
-            //paired residue must be DC or C;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DC or C;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (strcmp(ResidueGetName(pResiS), "DC") == 0 || strcmp(ResidueGetName(pResiS), "C") == 0)
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (strcmp(ResidueGetName(pResS), "DC") == 0 || strcmp(ResidueGetName(pResS), "C") == 0)
               {
-                //check the distance
-                //atom O2, N3 and N4 from nucleotide DC
-                //atom N2, N1 and O6 from nucleotide DG
-                double distO2N2 = XYZDistance(&ResidueGetAtomByName(pResiS, "O2")->xyz, &ResidueGetAtomByName(pQuery, "N2")->xyz);
-                double distN3N1 = XYZDistance(&ResidueGetAtomByName(pResiS, "N3")->xyz, &ResidueGetAtomByName(pQuery, "N1")->xyz);
-                double distN4O6 = XYZDistance(&ResidueGetAtomByName(pResiS, "N4")->xyz, &ResidueGetAtomByName(pQuery, "O6")->xyz);
+                // check the distance
+                // atom O2, N3 and N4 from nucleotide DC
+                // atom N2, N1 and O6 from nucleotide DG
+                double distO2N2 = XYZDist(&ResidueGetAtomByName(pResS, "O2")->xyz, &ResidueGetAtomByName(pRes, "N2")->xyz);
+                double distN3N1 = XYZDist(&ResidueGetAtomByName(pResS, "N3")->xyz, &ResidueGetAtomByName(pRes, "N1")->xyz);
+                double distN4O6 = XYZDist(&ResidueGetAtomByName(pResS, "N4")->xyz, &ResidueGetAtomByName(pRes, "O6")->xyz);
                 if (distO2N2 >= 2.0 && distO2N2 <= 4.0 && distN3N1 >= 2.0 && distN3N1 <= 4.0 && distN4O6 >= 2.0 && distN4O6 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
@@ -1246,50 +1303,51 @@ Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery)
       }
     }
     else
-    {//!strcmp(ResidueGetName(pQuery),"U")
-  //paired residue is DA or A;
-      for (int k = 0;k < StructureGetChainCount(pStructure);k++)
+    { //! strcmp(ResidueGetName(pQuery),"U")
+      // paired residue is DA or A;
+      for (int k = 0; k < StructureGetChainNum(pStruct); k++)
       {
-        Chain* pChainK = StructureGetChain(pStructure, k);
+        Chain *pChainK = StructureGetChain(pStruct, k);
         if (ChainGetType(pChainK) == Type_Chain_DNA || ChainGetType(pChainK) == Type_Chain_RNA)
         {
           if (!strcmp(ChainGetName(pChainK), ChainGetName(pChainI)))
           {
-            //paired residue must be A;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be A;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (abs(ResidueGetPosInChain(pQuery) - ResidueGetPosInChain(pResiS)) <= 1) continue;
-              if (!strcmp(ResidueGetName(pResiS), "A"))
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (abs(ResidueGetPosInChain(pRes) - ResidueGetPosInChain(pResS)) <= 1)
+                continue;
+              if (!strcmp(ResidueGetName(pResS), "A"))
               {
-                //check the distance
-                //atom N1 and N6 from nucleotide A
-                //atom N3 and O4 from nucleotide U
-                double distN1N3 = XYZDistance(&ResidueGetAtomByName(pResiS, "N1")->xyz, &ResidueGetAtomByName(pQuery, "N3")->xyz);
-                double distN6O4 = XYZDistance(&ResidueGetAtomByName(pResiS, "N6")->xyz, &ResidueGetAtomByName(pQuery, "O4")->xyz);
+                // check the distance
+                // atom N1 and N6 from nucleotide A
+                // atom N3 and O4 from nucleotide U
+                double distN1N3 = XYZDist(&ResidueGetAtomByName(pResS, "N1")->xyz, &ResidueGetAtomByName(pRes, "N3")->xyz);
+                double distN6O4 = XYZDist(&ResidueGetAtomByName(pResS, "N6")->xyz, &ResidueGetAtomByName(pRes, "O4")->xyz);
                 if (distN1N3 >= 2.0 && distN1N3 <= 4.0 && distN6O4 >= 2.0 && distN6O4 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
           }
           else
           {
-            //paired residue must be DA or A;
-            for (int s = 0;s < ChainGetResidueCount(pChainK);s++)
+            // paired residue must be DA or A;
+            for (int s = 0; s < ChainGetResidueNum(pChainK); s++)
             {
-              Residue* pResiS = ChainGetResidue(pChainK, s);
-              if (strcmp(ResidueGetName(pResiS), "DA") == 0 || strcmp(ResidueGetName(pResiS), "A") == 0)
+              Residue *pResS = ChainGetResidue(pChainK, s);
+              if (strcmp(ResidueGetName(pResS), "DA") == 0 || strcmp(ResidueGetName(pResS), "A") == 0)
               {
-                //check the distance
-                //atom N1 and N6 from nucleotide DA or A
-                //atom N3 and O4 from nucleotide U
-                double distN1N3 = XYZDistance(&ResidueGetAtomByName(pResiS, "N1")->xyz, &ResidueGetAtomByName(pQuery, "N3")->xyz);
-                double distN6O4 = XYZDistance(&ResidueGetAtomByName(pResiS, "N6")->xyz, &ResidueGetAtomByName(pQuery, "O4")->xyz);
+                // check the distance
+                // atom N1 and N6 from nucleotide DA or A
+                // atom N3 and O4 from nucleotide U
+                double distN1N3 = XYZDist(&ResidueGetAtomByName(pResS, "N1")->xyz, &ResidueGetAtomByName(pRes, "N3")->xyz);
+                double distN6O4 = XYZDist(&ResidueGetAtomByName(pResS, "N6")->xyz, &ResidueGetAtomByName(pRes, "O4")->xyz);
                 if (distN1N3 >= 2.0 && distN1N3 <= 4.0 && distN6O4 >= 2.0 && distN6O4 <= 4.0)
                 {
-                  return pResiS;
+                  return pResS;
                 }
               }
             }
@@ -1302,17 +1360,32 @@ Residue* StructureFindNucleotidePair(Structure* pStructure, Residue* pQuery)
   return NULL;
 }
 
-int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pStructure, AtomParamsSet* pAtomParaSet, ResiTopoSet* pResiTopos)
+int StructureMutateNucleotide(Residue *pQuery, char oneLetterName, Structure *pStructure, AtomParams *pAtomParaSet, ResTopos *pResiTopos)
 {
   char newCleotideName[MAX_LEN_RES_NAME + 1];
-  Chain* pChainI = StructureFindChainByName(pStructure, ResidueGetChainName(pQuery));
+  Chain *pChainI = StructureFindChainByName(pStructure, ResidueGetChainName(pQuery));
   if (ChainGetType(pChainI) == Type_Chain_DNA)
   {
-    if (oneLetterName == 'a') { strcpy(newCleotideName, "DA"); }
-    else if (oneLetterName == 'c') { strcpy(newCleotideName, "DC"); }
-    else if (oneLetterName == 'g') { strcpy(newCleotideName, "DG"); }
-    else if (oneLetterName == 't') { strcpy(newCleotideName, "DT"); }
-    else if (oneLetterName == 'n') { strcpy(newCleotideName, "DN"); }
+    if (oneLetterName == 'a')
+    {
+      strcpy(newCleotideName, "DA");
+    }
+    else if (oneLetterName == 'c')
+    {
+      strcpy(newCleotideName, "DC");
+    }
+    else if (oneLetterName == 'g')
+    {
+      strcpy(newCleotideName, "DG");
+    }
+    else if (oneLetterName == 't')
+    {
+      strcpy(newCleotideName, "DT");
+    }
+    else if (oneLetterName == 'n')
+    {
+      strcpy(newCleotideName, "DN");
+    }
     else
     {
       char errMsg[MAX_LEN_ERR_MSG + 1];
@@ -1323,11 +1396,26 @@ int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pS
   }
   else if (ChainGetType(pChainI) == Type_Chain_RNA)
   {
-    if (oneLetterName == 'a') { strcpy(newCleotideName, "A"); }
-    else if (oneLetterName == 'c') { strcpy(newCleotideName, "C"); }
-    else if (oneLetterName == 'g') { strcpy(newCleotideName, "G"); }
-    else if (oneLetterName == 'u') { strcpy(newCleotideName, "U"); }
-    else if (oneLetterName == 'n') { strcpy(newCleotideName, "N"); }
+    if (oneLetterName == 'a')
+    {
+      strcpy(newCleotideName, "A");
+    }
+    else if (oneLetterName == 'c')
+    {
+      strcpy(newCleotideName, "C");
+    }
+    else if (oneLetterName == 'g')
+    {
+      strcpy(newCleotideName, "G");
+    }
+    else if (oneLetterName == 'u')
+    {
+      strcpy(newCleotideName, "U");
+    }
+    else if (oneLetterName == 'n')
+    {
+      strcpy(newCleotideName, "N");
+    }
     else
     {
       char errMsg[MAX_LEN_ERR_MSG + 1];
@@ -1341,18 +1429,18 @@ int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pS
   ResidueCreate(&newResi);
   ResidueCopy(&newResi, pQuery);
   AtomArrayDestroy(&newResi.atoms);
-  BondSetDestroy(&newResi.bonds);
-  //modify the new residue
+  BondsDestroy(&newResi.bonds);
+  // modify the new residue
   ResidueSetName(&newResi, newCleotideName);
   ResidueAddAtomsFromAtomParams(&newResi, pAtomParaSet);
   ResidueAddBondsFromResiTopos(&newResi, pResiTopos);
-  //copy coordinates for main-chain atoms
-  for (int i = 0;i < ResidueGetAtomCount(&newResi);i++)
+  // copy coordinates for main-chain atoms
+  for (int i = 0; i < ResidueGetAtomNum(&newResi); i++)
   {
-    Atom* pAtomNew = ResidueGetAtom(&newResi, i);
+    Atom *pAtomNew = ResidueGetAtom(&newResi, i);
     if (pAtomNew->isBBAtom)
     {
-      Atom* pAtomOld = ResidueGetAtomByName(pQuery, AtomGetName(pAtomNew));
+      Atom *pAtomOld = ResidueGetAtomByName(pQuery, AtomGetName(pAtomNew));
       if (pAtomOld != NULL)
       {
         pAtomNew->xyz = pAtomOld->xyz;
@@ -1360,7 +1448,7 @@ int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pS
       }
       else
       {
-        pAtomNew->xyz = { 0, 0, 0 };
+        pAtomNew->xyz.X = pAtomNew->xyz.Y = pAtomNew->xyz.Z = 0;
         pAtomNew->isXyzValid = FALSE;
       }
     }
@@ -1370,8 +1458,8 @@ int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pS
   {
     if (strcmp(ResidueGetName(&newResi), "DA") == 0 || strcmp(ResidueGetName(&newResi), "DG") == 0 || strcmp(ResidueGetName(&newResi), "A") == 0 || strcmp(ResidueGetName(&newResi), "G") == 0)
     {
-      Atom* pAtomNew = ResidueGetAtomByName(&newResi, "N9");
-      Atom* pAtomOld = ResidueGetAtomByName(pQuery, "N9");
+      Atom *pAtomNew = ResidueGetAtomByName(&newResi, "N9");
+      Atom *pAtomOld = ResidueGetAtomByName(pQuery, "N9");
       pAtomNew->xyz = pAtomOld->xyz;
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
       pAtomNew = ResidueGetAtomByName(&newResi, "C4");
@@ -1381,55 +1469,55 @@ int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pS
     }
     else if (strcmp(ResidueGetName(&newResi), "DC") == 0 || strcmp(ResidueGetName(&newResi), "DT") == 0 || strcmp(ResidueGetName(&newResi), "C") == 0 || strcmp(ResidueGetName(&newResi), "T") == 0 || strcmp(ResidueGetName(&newResi), "U") == 0)
     {
-      Atom* pAtomNew = ResidueGetAtomByName(&newResi, "N1");
-      Atom* pAtomOld = ResidueGetAtomByName(pQuery, "N9");
+      Atom *pAtomNew = ResidueGetAtomByName(&newResi, "N1");
+      Atom *pAtomOld = ResidueGetAtomByName(pQuery, "N9");
       pAtomNew->xyz = pAtomOld->xyz;
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
 
       pAtomNew = ResidueGetAtomByName(&newResi, "C2");
       pAtomOld = ResidueGetAtomByName(pQuery, "C4");
-      ResidueTopology topNew;
+      ResTopology topNew;
       CharmmIC icNew;
-      ResidueTopologyCreate(&topNew);
+      ResTopologyCreate(&topNew);
       CharmmICCreate(&icNew);
-      ResiTopoSetGet(pResiTopos, ResidueGetName(&newResi), &topNew);
-      ResidueTopologyFindCharmmIC(&topNew, AtomGetName(pAtomNew), &icNew);
+      ResToposGet(pResiTopos, ResidueGetName(&newResi), &topNew);
+      ResTopologyFindCharmmIC(&topNew, AtomGetName(pAtomNew), &icNew);
       icNew.icParam[2] = GetTorsionAngle(&ResidueGetAtomByName(pQuery, "O4'")->xyz,
-        &ResidueGetAtomByName(pQuery, "C1'")->xyz,
-        &ResidueGetAtomByName(pQuery, "N9")->xyz,
-        &pAtomOld->xyz);
+                                         &ResidueGetAtomByName(pQuery, "C1'")->xyz,
+                                         &ResidueGetAtomByName(pQuery, "N9")->xyz,
+                                         &pAtomOld->xyz);
       GetFourthAtom(&ResidueGetAtomByName(&newResi, "O4'")->xyz,
-        &ResidueGetAtomByName(&newResi, "C1'")->xyz,
-        &ResidueGetAtomByName(&newResi, "N1")->xyz,
-        icNew.icParam,
-        &pAtomNew->xyz);
+                    &ResidueGetAtomByName(&newResi, "C1'")->xyz,
+                    &ResidueGetAtomByName(&newResi, "N1")->xyz,
+                    icNew.icParam,
+                    &pAtomNew->xyz);
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
     }
     else
     {
-      Atom* pAtomNew = ResidueGetAtomByName(&newResi, "N10");
-      Atom* pAtomOld = ResidueGetAtomByName(pQuery, "N9");
+      Atom *pAtomNew = ResidueGetAtomByName(&newResi, "N10");
+      Atom *pAtomOld = ResidueGetAtomByName(pQuery, "N9");
       pAtomNew->xyz = pAtomOld->xyz;
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
 
       pAtomNew = ResidueGetAtomByName(&newResi, "C4");
       pAtomOld = ResidueGetAtomByName(pQuery, "C4");
       /*pAtomNew->xyz=pAtomOld->xyz;*/
-      ResidueTopology topNew;
+      ResTopology topNew;
       CharmmIC icNew;
-      ResidueTopologyCreate(&topNew);
+      ResTopologyCreate(&topNew);
       CharmmICCreate(&icNew);
-      ResiTopoSetGet(pResiTopos, ResidueGetName(&newResi), &topNew);
-      ResidueTopologyFindCharmmIC(&topNew, AtomGetName(pAtomNew), &icNew);
+      ResToposGet(pResiTopos, ResidueGetName(&newResi), &topNew);
+      ResTopologyFindCharmmIC(&topNew, AtomGetName(pAtomNew), &icNew);
       icNew.icParam[2] = GetTorsionAngle(&ResidueGetAtomByName(pQuery, "O4'")->xyz,
-        &ResidueGetAtomByName(pQuery, "C1'")->xyz,
-        &ResidueGetAtomByName(pQuery, "N9")->xyz,
-        &pAtomOld->xyz);
+                                         &ResidueGetAtomByName(pQuery, "C1'")->xyz,
+                                         &ResidueGetAtomByName(pQuery, "N9")->xyz,
+                                         &pAtomOld->xyz);
       GetFourthAtom(&ResidueGetAtomByName(&newResi, "O4'")->xyz,
-        &ResidueGetAtomByName(&newResi, "C1'")->xyz,
-        &ResidueGetAtomByName(&newResi, "N10")->xyz,
-        icNew.icParam,
-        &pAtomNew->xyz);
+                    &ResidueGetAtomByName(&newResi, "C1'")->xyz,
+                    &ResidueGetAtomByName(&newResi, "N10")->xyz,
+                    icNew.icParam,
+                    &pAtomNew->xyz);
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
     }
   }
@@ -1438,34 +1526,34 @@ int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pS
   {
     if (strcmp(ResidueGetName(&newResi), "DA") == 0 || strcmp(ResidueGetName(&newResi), "DG") == 0 || strcmp(ResidueGetName(&newResi), "A") == 0 || strcmp(ResidueGetName(&newResi), "G") == 0)
     {
-      Atom* pAtomNew = ResidueGetAtomByName(&newResi, "N9");
-      Atom* pAtomOld = ResidueGetAtomByName(pQuery, "N1");
+      Atom *pAtomNew = ResidueGetAtomByName(&newResi, "N9");
+      Atom *pAtomOld = ResidueGetAtomByName(pQuery, "N1");
       pAtomNew->xyz = pAtomOld->xyz;
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
 
       pAtomNew = ResidueGetAtomByName(&newResi, "C4");
       pAtomOld = ResidueGetAtomByName(pQuery, "C2");
-      ResidueTopology topNew;
+      ResTopology topNew;
       CharmmIC icNew;
-      ResidueTopologyCreate(&topNew);
+      ResTopologyCreate(&topNew);
       CharmmICCreate(&icNew);
-      ResiTopoSetGet(pResiTopos, ResidueGetName(&newResi), &topNew);
-      ResidueTopologyFindCharmmIC(&topNew, AtomGetName(pAtomNew), &icNew);
+      ResToposGet(pResiTopos, ResidueGetName(&newResi), &topNew);
+      ResTopologyFindCharmmIC(&topNew, AtomGetName(pAtomNew), &icNew);
       icNew.icParam[2] = GetTorsionAngle(&ResidueGetAtomByName(pQuery, "O4'")->xyz,
-        &ResidueGetAtomByName(pQuery, "C1'")->xyz,
-        &ResidueGetAtomByName(pQuery, "N1")->xyz,
-        &pAtomOld->xyz);
+                                         &ResidueGetAtomByName(pQuery, "C1'")->xyz,
+                                         &ResidueGetAtomByName(pQuery, "N1")->xyz,
+                                         &pAtomOld->xyz);
       GetFourthAtom(&ResidueGetAtomByName(&newResi, "O4'")->xyz,
-        &ResidueGetAtomByName(&newResi, "C1'")->xyz,
-        &ResidueGetAtomByName(&newResi, "N9")->xyz,
-        icNew.icParam,
-        &pAtomNew->xyz);
+                    &ResidueGetAtomByName(&newResi, "C1'")->xyz,
+                    &ResidueGetAtomByName(&newResi, "N9")->xyz,
+                    icNew.icParam,
+                    &pAtomNew->xyz);
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
     }
     else if (strcmp(ResidueGetName(&newResi), "DC") == 0 || strcmp(ResidueGetName(&newResi), "DT") == 0 || strcmp(ResidueGetName(&newResi), "C") == 0 || strcmp(ResidueGetName(&newResi), "T") == 0 || strcmp(ResidueGetName(&newResi), "U") == 0)
     {
-      Atom* pAtomNew = ResidueGetAtomByName(&newResi, "N1");
-      Atom* pAtomOld = ResidueGetAtomByName(pQuery, "N1");
+      Atom *pAtomNew = ResidueGetAtomByName(&newResi, "N1");
+      Atom *pAtomOld = ResidueGetAtomByName(pQuery, "N1");
       pAtomNew->xyz = pAtomOld->xyz;
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
 
@@ -1476,28 +1564,28 @@ int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pS
     }
     else
     {
-      Atom* pAtomNew = ResidueGetAtomByName(&newResi, "N10");
-      Atom* pAtomOld = ResidueGetAtomByName(pQuery, "N1");
+      Atom *pAtomNew = ResidueGetAtomByName(&newResi, "N10");
+      Atom *pAtomOld = ResidueGetAtomByName(pQuery, "N1");
       pAtomNew->xyz = pAtomOld->xyz;
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
 
       pAtomNew = ResidueGetAtomByName(&newResi, "C4");
       pAtomOld = ResidueGetAtomByName(pQuery, "C2");
-      ResidueTopology topNew;
+      ResTopology topNew;
       CharmmIC icNew;
-      ResidueTopologyCreate(&topNew);
+      ResTopologyCreate(&topNew);
       CharmmICCreate(&icNew);
-      ResiTopoSetGet(pResiTopos, ResidueGetName(&newResi), &topNew);
-      ResidueTopologyFindCharmmIC(&topNew, AtomGetName(pAtomNew), &icNew);
+      ResToposGet(pResiTopos, ResidueGetName(&newResi), &topNew);
+      ResTopologyFindCharmmIC(&topNew, AtomGetName(pAtomNew), &icNew);
       icNew.icParam[2] = GetTorsionAngle(&ResidueGetAtomByName(pQuery, "O4'")->xyz,
-        &ResidueGetAtomByName(pQuery, "C1'")->xyz,
-        &ResidueGetAtomByName(pQuery, "N1")->xyz,
-        &pAtomOld->xyz);
+                                         &ResidueGetAtomByName(pQuery, "C1'")->xyz,
+                                         &ResidueGetAtomByName(pQuery, "N1")->xyz,
+                                         &pAtomOld->xyz);
       GetFourthAtom(&ResidueGetAtomByName(&newResi, "O4'")->xyz,
-        &ResidueGetAtomByName(&newResi, "C1'")->xyz,
-        &ResidueGetAtomByName(&newResi, "N10")->xyz,
-        icNew.icParam,
-        &pAtomNew->xyz);
+                    &ResidueGetAtomByName(&newResi, "C1'")->xyz,
+                    &ResidueGetAtomByName(&newResi, "N10")->xyz,
+                    icNew.icParam,
+                    &pAtomNew->xyz);
       pAtomNew->isXyzValid = pAtomOld->isXyzValid;
     }
   }
@@ -1510,16 +1598,16 @@ int StructureMutateNucleotide(Residue* pQuery, char oneLetterName, Structure* pS
   return Success;
 }
 
-int StructureCalcAminoAcidPropensityAndRamaEnergy(Structure* pStructure, AAppTable* pAAPP, RamaTable* pRama)
+int StructureCalcAminoAcidPropensityAndRamaEnergy(Structure *pStruct, AAppTable *pAAPP, RamaTable *pRama)
 {
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStruct); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
+    Chain *pChain = StructureGetChain(pStruct, i);
     if (ChainGetType(pChain) == Type_Chain_Protein)
     {
-      for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++)
       {
-        Residue* pResi = ChainGetResidue(pChain, j);
+        Residue *pResi = ChainGetResidue(pChain, j);
         AminoAcidPropensityAndRamachandranEnergy(pResi, pAAPP, pRama);
       }
     }
@@ -1527,17 +1615,16 @@ int StructureCalcAminoAcidPropensityAndRamaEnergy(Structure* pStructure, AAppTab
   return Success;
 }
 
-
-int StructureCalcAminoAcidDunbrackEnergy(Structure* pStructure, BBdepRotamerLib* pBBdep)
+int StructureCalcAminoAcidDunbrackEnergy(Structure *pStructure, BBdepRotLib *pBBdep)
 {
-  for (int i = 0;i < StructureGetChainCount(pStructure);i++)
+  for (int i = 0; i < StructureGetChainNum(pStructure); i++)
   {
-    Chain* pChain = StructureGetChain(pStructure, i);
+    Chain *pChain = StructureGetChain(pStructure, i);
     if (ChainGetType(pChain) == Type_Chain_Protein)
     {
-      for (int j = 0;j < ChainGetResidueCount(pChain);j++)
+      for (int j = 0; j < ChainGetResidueNum(pChain); j++)
       {
-        Residue* pResi = ChainGetResidue(pChain, j);
+        Residue *pResi = ChainGetResidue(pChain, j);
         AminoAcidDunbrackEnergy(pResi, pBBdep);
       }
     }

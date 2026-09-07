@@ -21,7 +21,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 typedef struct _DesignSite
 {
-  RotamerSet rots;
+  Rotamers rots;
   Residue* pRes;
   int chnNdx;
   int resNdx;
@@ -29,15 +29,15 @@ typedef struct _DesignSite
 
 int DesignSiteCreate(DesignSite* pThis);
 int DesignSiteDestroy(DesignSite* pThis);
-RotamerSet* DesignSiteGetRotamers(DesignSite* pThis);
+Rotamers* DesignSiteGetRotamers(DesignSite* pThis);
 char* DesignSiteGetChainName(DesignSite* pThis);
 char* DesignSiteGetResiName(DesignSite* pThis);
 int DesignSiteGetPosInChain(DesignSite* pThis);
 int DesignSiteShow(DesignSite* pThis, FILE* pFile);
 Residue* DesignSiteGetResidue(DesignSite* pThis);
 int DesignSiteRemoveRotamers(DesignSite* pThis);
-int DesignSiteShowRepresentativeRotamerAtomParameter(DesignSite* pThis);
-int DesignSiteShowRepresentativeRotamerBondInformation(DesignSite* pThis);
+int DesignSiteShowRepresentativeRotamerAtomParam(DesignSite* pThis);
+int DesignSiteShowRepresentativeRotamerBondInfo(DesignSite* pThis);
 int DesignSiteCopy(DesignSite* pThis, DesignSite* pOther);
 
 

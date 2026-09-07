@@ -85,37 +85,33 @@ int utility::Blosum62::aanum(int ch)
 
 int Text::ncharLine(FILE* fp)
 {
-  int count = 0;
+  int num = 0;
   while (!feof(fp))
   {
 
     char tmp = '-';
     fscanf(fp, "%c", &tmp);
 
-    //putchar(tmp);
-
     if (tmp != '\n' && 64 < tmp && tmp < 91)
     {
-      count++;
-      //putchar(tmp);
-      //printf(" > [%d] %d\n", int(tmp), count);
+      num++;
     }
     else
       break;
   }
 
-  return count;
+  return num;
 }
 
 long int Text::nnewline(FILE* fp)
 {
-  long int count = 0;
+  long int num = 0;
   char tmp;
   while (fscanf(fp, "%c", &tmp) != EOF)
     if (tmp == '\n')
-      count++;
+      num++;
 
-  return count;
+  return num;
 }
 
 
