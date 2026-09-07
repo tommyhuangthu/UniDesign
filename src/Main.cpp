@@ -72,7 +72,7 @@ double SA_DECREASE_FACTOR = 0.8;
 int NUM_METROPOLIS_STEPS = 20000;
 
 // Paths, Parameters, and Paths that can be modified by users
-char PDB[MAX_LEN_FILE_NAME + 1] = "5AXW.pdb";
+char PDB[MAX_LEN_FILE_NAME + 1] = "PROTEIN.pdb";
 char PDB2[MAX_LEN_FILE_NAME + 1] = "PROTEIN2.pdb";
 char PDBPATH[MAX_LEN_FILE_NAME + 1] = ".";
 char PDBNAME[MAX_LEN_FILE_NAME + 1] = "PROTEIN.pdb";
@@ -132,7 +132,7 @@ char REFERENCE_RESIDUES[MAX_LEN_FILE_NAME + 1];
 double DISTANCE_TO_REFERENCE_RESIDUES = 9.0;
 
 // Flags to control UniDesign workflow
-BOOL FLAG_PDB = TRUE;                          // default: FALSE
+BOOL FLAG_PDB = FALSE;                          // default: FALSE
 BOOL FLAG_MOL2 = FALSE;                         // default: FALSE
 BOOL FLAG_CHAIN_SPLIT = FALSE;                  // default: FALSE
 BOOL FLAG_USE_LIG_POSES = FALSE;                // default: FALSE
@@ -327,7 +327,7 @@ int PrintCommandLine(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-  const char *cmdname = "RepairStructure";
+  const char *cmdname = "";
   char errMsg[MAX_LEN_ERR_MSG + 1];
   clock_t timestart = clock();
   setvbuf(stdout, NULL, _IONBF, 0);
