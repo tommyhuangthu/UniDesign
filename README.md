@@ -19,7 +19,7 @@ UniDesign is a computational framework for protein design, targeting a diversity
 • Design protein-nucleic acid interaction <br>
 • Design enzymes <br>
 <br>
-All protein design tasks are conducted with UniDesign command <i><b>ProteinDesign</b></i> with specific options. See the <a href=https://github.com/tommyhuangthu/UniDesign/blob/main/UniDesign_manual.docx>UniDesign manual</a> for details and examples.
+All protein design tasks are conducted with UniDesign command <i><b>ProteinDesign</b></i> with specific options. See the <a href=https://github.com/tommyhuangthu/UniDesign/blob/main/doc/UniDesign_manual.docx>UniDesign manual</a> for details and examples.
 
 #### Protein Structure Modeling
 
