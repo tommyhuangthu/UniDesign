@@ -263,7 +263,7 @@ struct option LONG_OPTS[] = {
     // 'val == 63' cannot be used, as the compilation always reports error C2196: case value '63' already used
     {"min_muts", required_argument, NULL, 64}, 
     {"max_muts", required_argument, NULL, 65}, 
-    {"penalize_exist_seqs", no_argument, NULL, 66}, 
+    {"penalize_identical_seqs", no_argument, NULL, 66}, 
     {"min_temperature", required_argument, NULL, 67}, 
     {"max_temperature", required_argument, NULL, 68}, 
     {"num_of_samc_cycles", required_argument, NULL, 69}, 
